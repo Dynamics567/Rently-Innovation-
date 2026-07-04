@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rently — Access Made Simple. Ownership Made Optional.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --blue:#155EEF; --blue-dark:#0B3FC4; --blue-soft:#EEF3FF;
+  --teal:#00A896; --teal-dark:#00786C; --teal-soft:#E4F8F5;
+  --navy:#0B1220; --ink:#101828; --gray-700:#344054; --gray-500:#667085; --gray-300:#D0D5DD; --gray-200:#E4E7EC; --gray-100:#F2F4F7; --gray-50:#F9FAFB;
+  --white:#FFFFFF;
+  --success:#12B76A; --success-soft:#ECFDF3; --warning:#F79009; --warning-soft:#FFFAEB; --danger:#F04438;
+  --font-d:'Plus Jakarta Sans',sans-serif; --font-b:'Inter',sans-serif;
+  --r-sm:8px; --r-md:12px; --r-lg:20px; --r-full:999px;
+  --sh-sm:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+  --sh-md:0 4px 12px rgba(16,24,40,.08),0 2px 4px rgba(16,24,40,.06);
+  --sh-lg:0 12px 32px rgba(16,24,40,.14),0 4px 8px rgba(16,24,40,.06);
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--font-b);color:var(--ink);background:var(--gray-50);line-height:1.55;-webkit-font-smoothing:antialiased;}
+h1,h2,h3,h4{font-family:var(--font-d);color:var(--navy);line-height:1.2;font-weight:700;}
+img{max-width:100%;display:block;}
+a{text-decoration:none;color:inherit;}
+button{font-family:inherit;cursor:pointer;}
+ul{list-style:none;}
+.container{max-width:1240px;margin:0 auto;padding:0 24px;}
+.view{display:none;animation:fadeIn .35s var(--ease);}
+.view.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.icon{width:20px;height:20px;flex-shrink:0;}
+.icon-lg{width:28px;height:28px;}
+
+/* ============ PROTO BAR ============ */
+.proto-bar{background:var(--navy);color:#fff;font-size:12.5px;padding:9px 24px;display:flex;align-items:center;justify-content:center;gap:14px;position:sticky;top:0;z-index:200;}
+.proto-bar b{color:#8FB4FF;}
+.proto-bar .seg{display:flex;gap:6px;background:rgba(255,255,255,.08);padding:3px;border-radius:var(--r-full);}
+.proto-bar .seg button{border:none;background:transparent;color:#C9D2E0;font-weight:600;font-size:12px;padding:5px 12px;border-radius:var(--r-full);transition:.2s;}
+.proto-bar .seg button.active{background:var(--blue);color:#fff;}
+
+/* ============ NAV ============ */
+.nav{position:sticky;top:34px;z-index:190;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--gray-200);}
+.nav-inner{max-width:1240px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:28px;}
+.logo{display:flex;align-items:center;gap:8px;font-family:var(--font-d);font-weight:800;font-size:21px;color:var(--navy);flex-shrink:0;}
+.logo .dot{width:9px;height:9px;border-radius:50%;background:var(--teal);}
+.nav-links{display:flex;gap:24px;font-size:14.5px;font-weight:600;color:var(--gray-700);flex-shrink:0;}
+.nav-links a{padding:6px 0;border-bottom:2px solid transparent;transition:.2s;}
+.nav-links a:hover{color:var(--blue);}
+.nav-search{flex:1;max-width:380px;display:flex;align-items:center;gap:8px;background:var(--gray-100);border:1px solid var(--gray-200);border-radius:var(--r-full);padding:9px 16px;color:var(--gray-500);font-size:13.5px;transition:.2s;}
+.nav-search:hover{border-color:var(--gray-300);background:#fff;box-shadow:var(--sh-sm);}
+.nav-right{display:flex;align-items:center;gap:14px;margin-left:auto;flex-shrink:0;}
+.icon-btn{width:38px;height:38px;border-radius:50%;border:1px solid var(--gray-200);background:#fff;display:flex;align-items:center;justify-content:center;color:var(--gray-700);transition:.2s;}
+.icon-btn:hover{border-color:var(--blue);color:var(--blue);}
+.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--teal));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;}
+@media(max-width:900px){.nav-links,.nav-search{display:none;}}
+
+/* ============ BUTTONS ============ */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font-b);font-weight:700;font-size:14.5px;border-radius:var(--r-sm);border:none;padding:12px 22px;transition:.2s var(--ease);white-space:nowrap;}
+.btn-primary{background:var(--blue);color:#fff;box-shadow:0 1px 2px rgba(16,24,40,.05);}
+.btn-primary:hover{background:var(--blue-dark);transform:translateY(-1px);box-shadow:var(--sh-md);}
+.btn-teal{background:var(--teal);color:#fff;}
+.btn-teal:hover{background:var(--teal-dark);transform:translateY(-1px);}
+.btn-outline{background:#fff;color:var(--gray-700);border:1.5px solid var(--gray-300);}
+.btn-outline:hover{border-color:var(--blue);color:var(--blue);}
+.btn-ghost{background:transparent;color:var(--gray-700);}
+.btn-ghost:hover{background:var(--gray-100);}
+.btn-block{width:100%;}
+.btn-lg{padding:15px 26px;font-size:15.5px;border-radius:var(--r-md);}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+
+/* ============ TAGS / BADGES ============ */
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:4px 10px;border-radius:var(--r-full);}
+.tag-blue{background:var(--blue-soft);color:var(--blue-dark);}
+.tag-teal{background:var(--teal-soft);color:var(--teal-dark);}
+.tag-success{background:var(--success-soft);color:var(--success);}
+.tag-warning{background:var(--warning-soft);color:var(--warning);}
+.tag-gray{background:var(--gray-100);color:var(--gray-700);}
+.badge-verified{display:inline-flex;align-items:center;gap:4px;color:var(--teal-dark);font-size:12.5px;font-weight:700;}
+
+/* ============ HERO ============ */
+.hero{background:linear-gradient(180deg,#0B1220 0%,#132038 100%);padding:64px 0 220px;position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;top:-120px;right:-120px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(21,94,239,.35),transparent 70%);}
+.hero::after{content:'';position:absolute;bottom:-160px;left:-100px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(0,168,150,.3),transparent 70%);}
+.hero-inner{position:relative;z-index:2;text-align:center;max-width:760px;margin:0 auto;}
+.hero .eyebrow{color:var(--teal);font-weight:700;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px;}
+.hero h1{color:#fff;font-size:44px;margin-bottom:16px;letter-spacing:-.5px;}
+.hero h1 span{background:linear-gradient(90deg,#8FB4FF,#7DE0D3);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.hero p{color:#B5C0D6;font-size:17px;max-width:520px;margin:0 auto 36px;}
+.search-card{background:#fff;border-radius:var(--r-lg);box-shadow:var(--sh-lg);padding:10px;display:flex;gap:6px;max-width:820px;margin:0 auto;position:relative;z-index:3;}
+.search-field{flex:1;padding:10px 16px;border-right:1px solid var(--gray-200);text-align:left;}
+.search-field:last-of-type{border-right:none;}
+.search-field label{display:block;font-size:11px;font-weight:700;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+.search-field input{border:none;outline:none;font-size:14px;font-family:inherit;width:100%;color:var(--ink);font-weight:600;background:transparent;}
+.search-card .btn{border-radius:var(--r-md);padding:0 26px;}
+.chips{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:26px;position:relative;z-index:3;}
+.chip{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#DCE3F0;font-size:13px;font-weight:600;padding:8px 15px;border-radius:var(--r-full);transition:.2s;}
+.chip:hover{background:rgba(255,255,255,.16);border-color:var(--blue);color:#fff;transform:translateY(-1px);}
+@media(max-width:760px){.hero h1{font-size:30px;}.search-card{flex-direction:column;}.search-field{border-right:none;border-bottom:1px solid var(--gray-200);}.search-field:last-of-type{border-bottom:none;}}
+
+/* ============ TRUST STRIP ============ */
+.trust-strip{max-width:900px;margin:-170px auto 60px;background:#fff;border-radius:var(--r-lg);box-shadow:var(--sh-lg);padding:26px 40px;display:flex;justify-content:space-between;gap:20px;position:relative;z-index:4;flex-wrap:wrap;}
+.trust-item{display:flex;align-items:center;gap:10px;font-size:13.5px;font-weight:700;color:var(--gray-700);}
+.trust-item .icon{color:var(--teal);}
+@media(max-width:760px){.trust-strip{margin-top:-190px;justify-content:center;}}
+
+/* ============ SECTIONS ============ */
+.section{padding:52px 0;}
+.section-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:28px;gap:16px;}
+.section-head h2{font-size:26px;}
+.section-head p{color:var(--gray-500);font-size:14.5px;margin-top:6px;}
+
+/* Category grid */
+.cat-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;}
+.cat-card{background:#fff;border:1px solid var(--gray-200);border-radius:var(--r-md);padding:20px 14px;text-align:center;transition:.25s var(--ease);}
+.cat-card:hover{transform:translateY(-4px);box-shadow:var(--sh-md);border-color:var(--blue);cursor:pointer;}
+.cat-card .icon-wrap{width:46px;height:46px;border-radius:var(--r-md);margin:0 auto 10px;display:flex;align-items:center;justify-content:center;}
+.cat-card span{font-size:12.5px;font-weight:700;color:var(--gray-700);}
+@media(max-width:900px){.cat-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:520px){.cat-grid{grid-template-columns:repeat(2,1fr);}}
+
+/* Listing card */
+.listing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
+.card{background:#fff;border:1px solid var(--gray-200);border-radius:var(--r-md);overflow:hidden;transition:.25s var(--ease);cursor:pointer;}
+.card:hover{box-shadow:var(--sh-lg);transform:translateY(-3px);border-color:transparent;}
+.card-media{height:170px;position:relative;display:flex;align-items:center;justify-content:center;color:#fff;}
+.card-media .icon{width:40px;height:40px;opacity:.85;}
+.card-fav{position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;color:var(--gray-700);transition:.2s;}
+.card-fav:hover{color:var(--danger);}
+.card-body{padding:16px;}
+.card-body .cat{font-size:11.5px;font-weight:700;color:var(--teal-dark);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
+.card-body h3{font-size:15.5px;margin-bottom:6px;font-weight:700;}
+.card-meta{display:flex;align-items:center;gap:5px;color:var(--gray-500);font-size:12.5px;margin-bottom:10px;}
+.card-foot{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--gray-100);}
+.card-price{font-weight:800;font-size:15px;color:var(--navy);}
+.card-price span{font-weight:500;font-size:12px;color:var(--gray-500);}
+.card-rating{display:flex;align-items:center;gap:4px;font-size:13px;font-weight:700;}
+.card-rating .icon{width:14px;height:14px;color:var(--warning);}
+@media(max-width:980px){.listing-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:620px){.listing-grid{grid-template-columns:1fr;}}
+
+/* Provider CTA banner */
+.cta-banner{background:linear-gradient(120deg,var(--blue) 0%,var(--teal) 100%);border-radius:var(--r-lg);padding:44px 48px;display:flex;align-items:center;justify-content:space-between;gap:24px;color:#fff;flex-wrap:wrap;}
+.cta-banner h2{color:#fff;font-size:24px;margin-bottom:8px;}
+.cta-banner p{color:rgba(255,255,255,.85);font-size:14.5px;max-width:420px;}
+.cta-banner .btn-outline{background:#fff;color:var(--blue-dark);border:none;}
+
+/* Footer */
+.footer{background:var(--navy);color:#8D99B3;padding:48px 0 24px;margin-top:40px;}
+.footer-grid{display:grid;grid-template-columns:2fr repeat(3,1fr);gap:32px;margin-bottom:32px;}
+.footer h4{color:#fff;font-size:13px;margin-bottom:14px;}
+.footer ul li{margin-bottom:9px;font-size:13.5px;}
+.footer ul li a:hover{color:#fff;}
+.footer-bottom{border-top:1px solid rgba(255,255,255,.1);padding-top:18px;font-size:12.5px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+@media(max-width:760px){.footer-grid{grid-template-columns:1fr 1fr;}}
+
+/* ============ SEARCH RESULTS VIEW ============ */
+.breadcrumb{font-size:13px;color:var(--gray-500);margin:22px 0 4px;}
+.breadcrumb b{color:var(--ink);}
+.results-layout{display:grid;grid-template-columns:260px 1fr;gap:28px;padding:20px 0 60px;align-items:flex-start;}
+.filters{background:#fff;border:1px solid var(--gray-200);border-radius:var(--r-md);padding:20px;position:sticky;top:100px;}
+.filters h4{font-size:14px;margin-bottom:14px;}
+.filter-group{margin-bottom:22px;}
+.filter-group>span{display:block;font-size:12.5px;font-weight:700;color:var(--gray-700);margin-bottom:10px;}
+.filter-chip-row{display:flex;flex-wrap:wrap;gap:7px;}
+.filter-chip{font-size:12px;font-weight:600;padding:6px 11px;border-radius:var(--r-full);border:1px solid var(--gray-300);color:var(--gray-700);transition:.2s;background:#fff;}
+.filter-chip.active{background:var(--blue);border-color:var(--blue);color:#fff;}
+.range-row{display:flex;align-items:center;gap:8px;}
+.range-row input[type=range]{flex:1;accent-color:var(--blue);}
+.results-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+.results-top h2{font-size:20px;}
+.select-mini{border:1px solid var(--gray-300);border-radius:var(--r-sm);padding:8px 12px;font-size:13px;font-weight:600;background:#fff;color:var(--gray-700);}
+.results-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+@media(max-width:980px){.results-layout{grid-template-columns:1fr;}.filters{position:static;}.results-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:620px){.results-grid{grid-template-columns:1fr;}}
+
+/* ============ LISTING DETAIL VIEW ============ */
+.detail-wrap{padding:20px 0 70px;}
+.back-link{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:700;color:var(--gray-700);margin-bottom:16px;}
+.back-link:hover{color:var(--blue);}
+.gallery{display:grid;grid-template-columns:2fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:8px;border-radius:var(--r-lg);overflow:hidden;height:380px;margin-bottom:28px;}
+.gallery>div{grid-row:span 2;}
+.gallery>div:nth-child(2){grid-row:span 1;}
+.gallery>div:nth-child(3){grid-row:span 1;}
+.gallery-tile{display:flex;align-items:center;justify-content:center;color:#fff;position:relative;}
+.gallery-tile .icon{width:34px;height:34px;opacity:.7;}
+.detail-layout{display:grid;grid-template-columns:1.6fr 1fr;gap:40px;align-items:flex-start;}
+.detail-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;gap:20px;}
+.detail-header h1{font-size:26px;margin-bottom:8px;}
+.detail-meta-row{display:flex;align-items:center;gap:16px;color:var(--gray-500);font-size:13.5px;flex-wrap:wrap;}
+.detail-meta-row .m{display:flex;align-items:center;gap:5px;}
+.detail-section{padding:26px 0;border-top:1px solid var(--gray-200);}
+.detail-section h3{font-size:16.5px;margin-bottom:12px;}
+.detail-section p{color:var(--gray-700);font-size:14.5px;line-height:1.7;}
+.spec-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 24px;}
+.spec-row{display:flex;justify-content:space-between;font-size:13.5px;padding:9px 0;border-bottom:1px dashed var(--gray-200);}
+.spec-row span:first-child{color:var(--gray-500);}
+.spec-row span:last-child{font-weight:700;color:var(--ink);}
+.provider-card{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--gray-200);border-radius:var(--r-md);padding:18px;}
+.provider-card .avatar{width:52px;height:52px;font-size:17px;}
+.provider-card .name{font-weight:700;font-size:15px;display:flex;align-items:center;gap:6px;}
+.provider-card .meta{font-size:12.5px;color:var(--gray-500);margin-top:2px;}
+.review{padding:16px 0;border-bottom:1px solid var(--gray-100);}
+.review-top{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.review-top .avatar{width:34px;height:34px;font-size:12px;}
+.review-top .name{font-weight:700;font-size:13.5px;}
+.review-top .date{color:var(--gray-500);font-size:12px;}
+.stars{color:var(--warning);display:flex;gap:1px;}
+.stars .icon{width:13px;height:13px;}
+.review p{font-size:13.5px;color:var(--gray-700);}
+
+/* Booking widget */
+.booking-widget{background:#fff;border:1px solid var(--gray-200);border-radius:var(--r-lg);box-shadow:var(--sh-md);padding:24px;position:sticky;top:100px;}
+.bw-price{display:flex;align-items:baseline;gap:6px;margin-bottom:4px;}
+.bw-price b{font-size:24px;font-family:var(--font-d);}
+.bw-price span{color:var(--gray-500);font-size:13.5px;}
+.bw-rating{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:700;margin-bottom:18px;}
+.bw-rating .icon{width:14px;height:14px;color:var(--warning);}
+.date-row{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--gray-300);border-radius:var(--r-sm);overflow:hidden;margin-bottom:12px;}
+.date-cell{padding:9px 12px;border-right:1px solid var(--gray-300);}
+.date-cell:last-child{border-right:none;}
+.date-cell label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;color:var(--gray-500);margin-bottom:2px;}
+.date-cell input{border:none;outline:none;font-size:13px;font-weight:600;width:100%;font-family:inherit;}
+.bw-mode{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;padding:10px 12px;border-radius:var(--r-sm);margin-bottom:16px;}
+.bw-breakdown{border-top:1px solid var(--gray-200);padding-top:14px;margin-top:6px;}
+.bw-line{display:flex;justify-content:space-between;font-size:13.5px;color:var(--gray-700);margin-bottom:9px;}
+.bw-total{display:flex;justify-content:space-between;font-weight:800;font-size:15.5px;border-top:1px solid var(--gray-200);padding-top:12px;margin-top:4px;}
+.bw-note{font-size:12px;color:var(--gray-500);margin-top:14px;text-align:center;}
+@media(max-width:900px){.detail-layout{grid-template-columns:1fr;}.booking-widget{position:static;}.gallery{grid-template-columns:1fr 1fr;height:300px;}}
+
+/* ============ CHECKOUT VIEW ============ */
+.steps{display:flex;align-items:center;justify-content:center;gap:0;margin:28px 0 40px;}
+.step{display:flex;align-items:center;gap:10px;}
+.step .num{width:30px;height:30px;border-radius:50%;background:var(--gray-200);color:var(--gray-500);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;}
+.step.done .num{background:var(--teal);color:#fff;}
+.step.current .num{background:var(--blue);color:#fff;}
+.step span.label{font-size:13.5px;font-weight:700;color:var(--gray-500);}
+.step.current span.label,.step.done span.label{color:var(--ink);}
+.step-line{width:60px;height:2px;background:var(--gray-200);margin:0 12px;}
+.checkout-layout{display:grid;grid-template-columns:1fr 380px;gap:32px;max-width:980px;margin:0 auto;padding-bottom:70px;}
+.panel{background:#fff;border:1px solid var(--gray-200);border-radius:var(--r-md);padding:24px;margin-bottom:20px;}
+.panel h3{font-size:15.5px;margin-bottom:16px;}
+.summary-row{display:flex;gap:14px;align-items:center;padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--gray-100);}
+.summary-thumb{width:66px;height:66px;border-radius:var(--r-sm);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;}
+.pay-option{display:flex;align-items:center;gap:12px;border:1.5px solid var(--gray-200);border-radius:var(--r-sm);padding:13px 14px;margin-bottom:10px;transition:.2s;}
+.pay-option.selected{border-color:var(--blue);background:var(--blue-soft);}
+.pay-option input{accent-color:var(--blue);width:16px;height:16px;}
+.pay-option .plabel{font-weight:700;font-size:13.5px;}
+.pay-option .psub{font-size:12px;color:var(--gray-500);}
+.agree-row{display:flex;align-items:flex-start;gap:9px;font-size:13px;color:var(--gray-700);margin:16px 0;}
+.agree-row input{margin-top:3px;accent-color:var(--blue);}
+@media(max-width:860px){.checkout-layout{grid-template-columns:1fr;}}
+
+/* ============ SUCCESS VIEW ============ */
+.success-wrap{max-width:520px;margin:60px auto;text-align:center;padding-bottom:80px;}
+.success-icon{width:84px;height:84px;border-radius:50%;background:var(--success-soft);color:var(--success);display:flex;align-items:center;justify-content:center;margin:0 auto 24px;}
+.success-icon .icon{width:42px;height:42px;}
+.success-wrap h1{font-size:24px;margin-bottom:10px;}
+.success-wrap>p{color:var(--gray-500);font-size:14.5px;margin-bottom:28px;}
+.ref-card{background:#fff;border:1px dashed var(--gray-300);border-radius:var(--r-md);padding:20px;text-align:left;margin-bottom:28px;}
+.ref-row{display:flex;justify-content:space-between;font-size:13.5px;padding:7px 0;}
+.ref-row span:first-child{color:var(--gray-500);}
+.ref-row span:last-child{font-weight:700;}
+.success-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+
+/* ============ PROVIDER DASHBOARD ============ */
+.dash-layout{display:grid;grid-template-columns:230px 1fr;gap:0;min-height:70vh;}
+.dash-sidebar{border-right:1px solid var(--gray-200);padding:24px 14px;background:#fff;}
+.dash-sidebar .plabel{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gray-500);padding:0 12px;margin:18px 0 8px;}
+.dash-link{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:var(--r-sm);font-size:13.5px;font-weight:600;color:var(--gray-700);margin-bottom:2px;transition:.2s;}
+.dash-link:hover{background:var(--gray-100);}
+.dash-link.active{background:var(--blue-soft);color:var(--blue-dark);}
+.dash-main{padding:28px 32px;}
+.dash-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;flex-wrap:wrap;gap:12px;}
+.dash-head h2{font-size:21px;}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+.stat-card{background:#fff;border:1px solid var(--gray-200);border-radius:var(--r-md);padding:18px;}
+.stat-card .lbl{font-size:12.5px;color:var(--gray-500);font-weight:600;margin-bottom:8px;}
+.stat-card .val{font-size:23px;font-weight:800;font-family:var(--font-d);}
+.stat-card .delta{font-size:12px;font-weight:700;margin-top:6px;display:flex;align-items:center;gap:4px;}
+.dash-grid2{display:grid;grid-template-columns:1.6fr 1fr;gap:20px;}
+.table{width:100%;border-collapse:collapse;font-size:13.5px;}
+.table th{text-align:left;color:var(--gray-500);font-size:11.5px;text-transform:uppercase;padding:10px 12px;border-bottom:1px solid var(--gray-200);}
+.table td{padding:13px 12px;border-bottom:1px solid var(--gray-100);}
+.table tr:last-child td{border-bottom:none;}
+.mini-cal{background:#fff;border:1px solid var(--gray-200);border-radius:var(--r-md);padding:18px;}
+.mini-cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;font-weight:700;font-size:13.5px;}
+.mini-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-size:11.5px;color:var(--gray-500);}
+.mini-cal-grid div.day{padding:7px 0;border-radius:6px;color:var(--ink);font-weight:600;}
+.mini-cal-grid div.day.booked{background:var(--blue-soft);color:var(--blue-dark);font-weight:800;}
+.mini-cal-grid div.day.today{outline:1.5px solid var(--blue);}
+@media(max-width:900px){.dash-layout{grid-template-columns:1fr;}.dash-sidebar{display:none;}.stat-grid{grid-template-columns:repeat(2,1fr);}.dash-grid2{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<!-- ============ PROTOTYPE CONTROL BAR ============ -->
+<div class="proto-bar">
+  <span>🔷 <b>Rently</b> — Interactive Prototype</span>
+  <div class="seg">
+    <button id="seg-renter" class="active" onclick="setMode('renter')">Renter Flow</button>
+    <button id="seg-provider" onclick="setMode('provider')">Provider Dashboard</button>
+  </div>
+</div>
+
+<!-- ============ NAV ============ -->
+<div class="nav">
+  <div class="nav-inner">
+    <a class="logo" onclick="showView('home')" style="cursor:pointer"><span class="dot"></span>Rently</a>
+    <div class="nav-links">
+      <a onclick="showView('search')" style="cursor:pointer">Browse</a>
+      <a href="#">How it Works</a>
+      <a href="#">Become a Provider</a>
+    </div>
+    <div class="nav-search" onclick="showView('search')" style="cursor:pointer">
+      <svg class="icon" style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      Search rentals, categories, providers…
+    </div>
+    <div class="nav-right">
+      <button class="icon-btn" title="Messages"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+      <button class="icon-btn" title="Notifications"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></button>
+      <div class="avatar">DA</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ HOME VIEW ============ -->
+<section id="view-home" class="view active">
+  <div class="hero">
+    <div class="container hero-inner">
+      <div class="eyebrow">Access Made Simple · Ownership Made Optional</div>
+      <h1>Rent almost <span>anything</span>,<br/>from people near you.</h1>
+      <p>From power tools to party tents, drones to dream cars — Rently connects you to thousands of verified providers across Nigeria.</p>
+      <div class="search-card">
+        <div class="search-field">
+          <label>What</label>
+          <input type="text" placeholder="e.g. Event tent, DJI drone…" />
+        </div>
+        <div class="search-field">
+          <label>Where</label>
+          <input type="text" placeholder="Lagos, Lekki…" />
+        </div>
+        <div class="search-field">
+          <label>When</label>
+          <input type="date" />
+        </div>
+        <button class="btn btn-primary" onclick="showView('search')">
+          <svg class="icon" style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          Search
+        </button>
+      </div>
+      <div class="chips">
+        <div class="chip" onclick="filterAndGo('Event & Party')">🎪 Event & Party</div>
+        <div class="chip" onclick="filterAndGo('AV Equipment')">🎥 AV Equipment</div>
+        <div class="chip" onclick="filterAndGo('Tools & Construction')">🛠 Tools & Construction</div>
+        <div class="chip" onclick="filterAndGo('Vehicles')">🚗 Vehicles</div>
+        <div class="chip" onclick="filterAndGo('Real Estate & Spaces')">🏠 Real Estate</div>
+        <div class="chip" onclick="filterAndGo('Musical Instruments')">🎹 Musical Instruments</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="trust-strip">
+      <div class="trust-item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg> Verified Providers</div>
+      <div class="trust-item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg> Secure Escrow Payments</div>
+      <div class="trust-item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 6 6 .9-4.5 4.3 1 6.3-5.5-3-5.5 3 1-6.3L3 8.9 9 8z"/></svg> 4.3★ Average Rating</div>
+      <div class="trust-item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg> &lt;24hr Response Time</div>
+    </div>
+  </div>
+
+  <div class="container section">
+    <div class="section-head">
+      <div><h2>Browse by category</h2><p>11 categories, dozens of subcategories — more added every month.</p></div>
+    </div>
+    <div class="cat-grid" id="cat-grid"></div>
+  </div>
+
+  <div class="container section" style="padding-top:0">
+    <div class="section-head">
+      <div><h2>Featured near you</h2><p>Popular rentals from top-rated providers in Lagos.</p></div>
+      <button class="btn btn-ghost" onclick="showView('search')">View all →</button>
+    </div>
+    <div class="listing-grid" id="featured-grid"></div>
+  </div>
+
+  <div class="container" style="padding-bottom:56px">
+    <div class="cta-banner">
+      <div>
+        <h2>Have something to rent out?</h2>
+        <p>Join thousands of providers earning extra income by listing their equipment, spaces and assets on Rently.</p>
+      </div>
+      <button class="btn btn-outline" onclick="setMode('provider')">Become a Provider →</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SEARCH RESULTS VIEW ============ -->
+<section id="view-search" class="view">
+  <div class="container">
+    <div class="breadcrumb"><a onclick="showView('home')" style="cursor:pointer">Home</a> &nbsp;›&nbsp; <b id="search-crumb">All Categories</b></div>
+    <div class="results-layout">
+      <aside class="filters">
+        <h4>Filters</h4>
+        <div class="filter-group">
+          <span>Category</span>
+          <div class="filter-chip-row" id="filter-cats"></div>
+        </div>
+        <div class="filter-group">
+          <span>Price range (₦/day)</span>
+          <div class="range-row"><input type="range" min="0" max="300000" value="300000" oninput="document.getElementById('price-val').textContent=Number(this.value).toLocaleString()"/></div>
+          <div style="font-size:12px;color:var(--gray-500);margin-top:6px">Up to ₦<span id="price-val">300,000</span></div>
+        </div>
+        <div class="filter-group">
+          <span>Rating</span>
+          <div class="filter-chip-row">
+            <div class="filter-chip">4.5+ ★</div>
+            <div class="filter-chip">4.0+ ★</div>
+            <div class="filter-chip">Any</div>
+          </div>
+        </div>
+        <div class="filter-group">
+          <span>Availability</span>
+          <input type="date" style="width:100%;padding:8px 10px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px;font-family:inherit"/>
+        </div>
+        <button class="btn btn-outline btn-block" onclick="filterAndGo('All')">Reset filters</button>
+      </aside>
+      <div>
+        <div class="results-top">
+          <h2 id="results-count">9 rentals found</h2>
+          <select class="select-mini"><option>Sort: Relevance</option><option>Price: Low to High</option><option>Price: High to Low</option><option>Highest Rated</option><option>Newest</option></select>
+        </div>
+        <div class="listing-grid results-grid" id="results-grid"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LISTING DETAIL VIEW ============ -->
+<section id="view-detail" class="view">
+  <div class="container detail-wrap">
+    <a class="back-link" onclick="showView('search')" style="cursor:pointer">
+      <svg class="icon" style="width:15px;height:15px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
+      Back to results
+    </a>
+    <div class="gallery" id="detail-gallery"></div>
+    <div class="detail-layout">
+      <div>
+        <div class="detail-header">
+          <div>
+            <span class="tag tag-teal" id="d-cat">Category</span>
+            <h1 id="d-title" style="margin-top:10px">Listing title</h1>
+            <div class="detail-meta-row">
+              <span class="m stars" id="d-stars"></span>
+              <span class="m" id="d-rating-text">4.8 (120 reviews)</span>
+              <span class="m"><svg class="icon" style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-7.5 8-13a8 8 0 1 0-16 0c0 5.5 8 13 8 13z"/><circle cx="12" cy="9" r="2.5"/></svg><span id="d-location">Lekki, Lagos</span></span>
+            </div>
+          </div>
+          <button class="icon-btn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/></svg></button>
+        </div>
+
+        <div class="detail-section" style="border-top:none;padding-top:6px">
+          <h3>About this rental</h3>
+          <p id="d-desc">Description goes here.</p>
+        </div>
+        <div class="detail-section">
+          <h3>Specifications</h3>
+          <div class="spec-grid" id="d-specs"></div>
+        </div>
+        <div class="detail-section">
+          <h3>Rental terms</h3>
+          <div class="spec-grid">
+            <div class="spec-row"><span>Minimum duration</span><span>1 day</span></div>
+            <div class="spec-row"><span>Maximum duration</span><span>30 days</span></div>
+            <div class="spec-row"><span>Delivery</span><span>Available (₦5,000)</span></div>
+            <div class="spec-row"><span>Cancellation policy</span><span id="d-cancel">Moderate</span></div>
+          </div>
+        </div>
+        <div class="detail-section">
+          <h3>Provider</h3>
+          <div class="provider-card">
+            <div class="avatar" id="d-provider-avatar">EC</div>
+            <div style="flex:1">
+              <div class="name"><span id="d-provider-name">EventCraft NG</span> <span class="badge-verified" id="d-provider-verified"><svg class="icon" style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6L9 17l-5-5"/></svg>Verified</span></div>
+              <div class="meta" id="d-provider-meta">4.9 ★ · 210 rentals · Responds in ~2 hrs · Member since 2023</div>
+            </div>
+            <button class="btn btn-outline">Message</button>
+          </div>
+        </div>
+        <div class="detail-section">
+          <h3>Reviews</h3>
+          <div class="review">
+            <div class="review-top"><div class="avatar" style="background:linear-gradient(135deg,#F79009,#F04438)">TA</div><div><div class="name">Tolu A.</div><div class="date">2 weeks ago</div></div><span class="stars" style="margin-left:auto">★★★★★</span></div>
+            <p>Exactly as described, smooth pickup and the provider was super responsive. Would rent again for our next event.</p>
+          </div>
+          <div class="review">
+            <div class="review-top"><div class="avatar" style="background:linear-gradient(135deg,#155EEF,#00A896)">CK</div><div><div class="name">Chidi K.</div><div class="date">1 month ago</div></div><span class="stars" style="margin-left:auto">★★★★☆</span></div>
+            <p>Great quality and fair pricing. Delivery was a little late but communication made up for it.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="booking-widget">
+        <div class="bw-price"><b id="bw-price">₦45,000</b><span>/ day</span></div>
+        <div class="bw-rating"><svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6 6 .9-4.5 4.3 1 6.3-5.5-3-5.5 3 1-6.3L3 8.9 9 8z"/></svg><span id="bw-rating-text">4.8 (120 reviews)</span></div>
+        <div class="date-row">
+          <div class="date-cell"><label>Start date</label><input type="date" id="bw-start" onchange="recalc()"/></div>
+          <div class="date-cell"><label>End date</label><input type="date" id="bw-end" onchange="recalc()"/></div>
+        </div>
+        <div class="bw-mode tag-success" id="bw-mode">⚡ Instant Book available</div>
+        <div class="bw-breakdown">
+          <div class="bw-line"><span id="bw-rate-label">₦45,000 × 3 days</span><span id="bw-rate-total">₦135,000</span></div>
+          <div class="bw-line"><span>Service fee (5%)</span><span id="bw-service">₦6,750</span></div>
+          <div class="bw-line"><span>Refundable deposit</span><span id="bw-deposit">₦20,000</span></div>
+          <div class="bw-total"><span>Total due now</span><span id="bw-total">₦161,750</span></div>
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" style="margin-top:18px" onclick="goCheckout()" id="bw-cta">Request to Book</button>
+        <div class="bw-note">You won't be charged until the provider approves.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CHECKOUT VIEW ============ -->
+<section id="view-checkout" class="view">
+  <div class="container">
+    <div class="steps">
+      <div class="step done"><div class="num">✓</div><span class="label">Review</span></div>
+      <div class="step-line"></div>
+      <div class="step current"><div class="num">2</div><span class="label">Pay</span></div>
+      <div class="step-line"></div>
+      <div class="step"><div class="num">3</div><span class="label">Confirmed</span></div>
+    </div>
+    <div class="checkout-layout">
+      <div>
+        <div class="panel">
+          <h3>Payment method</h3>
+          <label class="pay-option selected" onclick="selectPay(this)">
+            <input type="radio" name="pay" checked/>
+            <div><div class="plabel">Debit / Credit Card</div><div class="psub">Visa, Mastercard, Verve — via Paystack</div></div>
+          </label>
+          <label class="pay-option" onclick="selectPay(this)">
+            <input type="radio" name="pay"/>
+            <div><div class="plabel">Bank Transfer</div><div class="psub">Instant transfer via your banking app</div></div>
+          </label>
+          <label class="pay-option" onclick="selectPay(this)">
+            <input type="radio" name="pay"/>
+            <div><div class="plabel">Mobile Money</div><div class="psub">OPay, PalmPay, Moniepoint wallet</div></div>
+          </label>
+        </div>
+        <div class="panel">
+          <h3>Rental agreement</h3>
+          <p style="font-size:13.5px;color:var(--gray-700);margin-bottom:14px">By confirming, you agree to the provider's cancellation policy and Rently's Terms of Service. Payment is held securely in escrow until the rental period begins.</p>
+          <label class="agree-row"><input type="checkbox" checked/> I agree to the rental terms, cancellation policy and Rently's Terms of Service.</label>
+        </div>
+      </div>
+      <div>
+        <div class="panel">
+          <h3>Booking summary</h3>
+          <div class="summary-row">
+            <div class="summary-thumb" id="co-thumb"></div>
+            <div>
+              <div style="font-weight:700;font-size:14px" id="co-title">Listing title</div>
+              <div style="font-size:12.5px;color:var(--gray-500)" id="co-dates">Dates</div>
+              <div style="font-size:12.5px;color:var(--gray-500)" id="co-provider">Provider</div>
+            </div>
+          </div>
+          <div class="bw-line"><span id="co-rate-label">Rental fee</span><span id="co-rate">₦135,000</span></div>
+          <div class="bw-line"><span>Service fee</span><span id="co-service">₦6,750</span></div>
+          <div class="bw-line"><span>Refundable deposit</span><span id="co-deposit">₦20,000</span></div>
+          <div class="bw-total"><span>Total</span><span id="co-total">₦161,750</span></div>
+          <button class="btn btn-primary btn-block btn-lg" style="margin-top:18px" onclick="showView('success')">Confirm & Pay</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SUCCESS VIEW ============ -->
+<section id="view-success" class="view">
+  <div class="container success-wrap">
+    <div class="success-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg></div>
+    <h1>Booking request sent!</h1>
+    <p>We've notified the provider. You'll get a confirmation as soon as they respond — usually within 2 hours.</p>
+    <div class="ref-card">
+      <div class="ref-row"><span>Booking reference</span><span id="s-ref">RNT-84213</span></div>
+      <div class="ref-row"><span>Item</span><span id="s-item">Listing title</span></div>
+      <div class="ref-row"><span>Dates</span><span id="s-dates">—</span></div>
+      <div class="ref-row"><span>Total paid</span><span id="s-total">₦0</span></div>
+      <div class="ref-row"><span>Status</span><span class="tag tag-warning">Pending Approval</span></div>
+    </div>
+    <div class="success-actions">
+      <button class="btn btn-outline" onclick="showView('home')">Back to Home</button>
+      <button class="btn btn-primary">Message Provider</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER (renter views) ============ -->
+<footer class="footer" id="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div>
+        <div class="logo" style="color:#fff;margin-bottom:12px"><span class="dot"></span>Rently</div>
+        <p style="font-size:13.5px;max-width:280px">Access made simple. Ownership made optional. Nigeria's trusted rental marketplace.</p>
+      </div>
+      <div><h4>Company</h4><ul><li><a href="#">About Us</a></li><li><a href="#">Careers</a></li><li><a href="#">Blog</a></li></ul></div>
+      <div><h4>For Providers</h4><ul><li><a href="#">Become a Provider</a></li><li><a href="#">Provider Dashboard</a></li><li><a href="#">Pricing & Fees</a></li></ul></div>
+      <div><h4>Support</h4><ul><li><a href="#">Help Center</a></li><li><a href="#">Trust & Safety</a></li><li><a href="#">Contact Us</a></li></ul></div>
+    </div>
+    <div class="footer-bottom"><span>© 2026 Rently Innovation Hub, a Dynamic Technology Ltd. product.</span><span>Terms · Privacy · NDPR Compliance</span></div>
+  </div>
+</footer>
+
+<!-- ============ PROVIDER DASHBOARD VIEW ============ -->
+<section id="view-dashboard" class="view">
+  <div class="dash-layout">
+    <aside class="dash-sidebar">
+      <div class="avatar" style="margin:0 12px 14px">EC</div>
+      <div style="padding:0 12px;font-weight:700;font-size:14px">EventCraft NG</div>
+      <div style="padding:0 12px;font-size:12px;color:var(--gray-500);margin-bottom:6px" class="badge-verified"><svg class="icon" style="width:13px;height:13px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6L9 17l-5-5"/></svg>Verified Provider</div>
+      <div class="plabel">Main</div>
+      <a class="dash-link active">📊 Overview</a>
+      <a class="dash-link">📦 My Listings</a>
+      <a class="dash-link">📅 Calendar</a>
+      <a class="dash-link">🧾 Bookings</a>
+      <div class="plabel">Business</div>
+      <a class="dash-link">💰 Earnings & Payouts</a>
+      <a class="dash-link">💬 Messages</a>
+      <a class="dash-link">⭐ Reviews</a>
+      <a class="dash-link">⚙️ Settings</a>
+    </aside>
+    <div class="dash-main">
+      <div class="dash-head">
+        <h2>Welcome back, EventCraft NG 👋</h2>
+        <button class="btn btn-primary">+ Add New Listing</button>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="lbl">Active Listings</div><div class="val">14</div><div class="delta" style="color:var(--success)">↑ 2 this month</div></div>
+        <div class="stat-card"><div class="lbl">Upcoming Bookings</div><div class="val">7</div><div class="delta" style="color:var(--gray-500)">Next: Tomorrow, 9am</div></div>
+        <div class="stat-card"><div class="lbl">This Month Earnings</div><div class="val">₦842,500</div><div class="delta" style="color:var(--success)">↑ 18% vs last month</div></div>
+        <div class="stat-card"><div class="lbl">Average Rating</div><div class="val">4.9 ★</div><div class="delta" style="color:var(--gray-500)">From 210 reviews</div></div>
+      </div>
+      <div class="dash-grid2">
+        <div class="panel" style="margin-bottom:0">
+          <h3>Recent bookings</h3>
+          <table class="table">
+            <thead><tr><th>Renter</th><th>Item</th><th>Dates</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody id="dash-bookings"></tbody>
+          </table>
+        </div>
+        <div class="mini-cal">
+          <div class="mini-cal-head"><span>‹</span><span>July 2026</span><span>›</span></div>
+          <div class="mini-cal-grid" id="mini-cal-grid"></div>
+          <div style="display:flex;gap:10px;margin-top:14px;font-size:11.5px;color:var(--gray-500)">
+            <span><span style="display:inline-block;width:9px;height:9px;background:var(--blue-soft);border-radius:2px;margin-right:4px"></span>Booked</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+/* ============ ICONS ============ */
+const ICONS = {
+  event: '<path d="M3 21h18M5 21V10l7-6 7 6v11M9 21v-6h6v6"/>',
+  av: '<rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3z"/>',
+  tools: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.8 2.8-2-2z"/>',
+  vehicle: '<path d="M3 13l1.5-5A2 2 0 0 1 6.4 6h11.2a2 2 0 0 1 1.9 1.4L21 13v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H6v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/>',
+  realestate: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',
+  music: '<circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/><path d="M9 18V5l12-2v13"/>',
+  clothing: '<path d="M8 3l4 2 4-2 4 4-3 3v11H7V10L4 7z"/>',
+};
+const CAT_META = {
+  'Event & Party':{icon:'event',from:'#FF7A59',to:'#F04438'},
+  'AV Equipment':{icon:'av',from:'#155EEF',to:'#7DA6FF'},
+  'Tools & Construction':{icon:'tools',from:'#F79009',to:'#FDB022'},
+  'Vehicles':{icon:'vehicle',from:'#101828',to:'#475467'},
+  'Real Estate & Spaces':{icon:'realestate',from:'#00A896',to:'#00786C'},
+  'Musical Instruments':{icon:'music',from:'#7A5AF8',to:'#B692F6'},
+  'Clothing':{icon:'clothing',from:'#EC4899',to:'#F472B6'},
+};
+function svgIcon(key,size=40){return `<svg class="icon" style="width:${size}px;height:${size}px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ICONS[key]}</svg>`;}
+function grad(m){return `linear-gradient(135deg,${m.from},${m.to})`;}
+
+/* ============ MOCK DATA ============ */
+const LISTINGS = [
+  {id:1,title:'Premium Event Tent & Décor Package',cat:'Event & Party',price:45000,unit:'day',rating:4.8,reviews:120,loc:'Lekki, Lagos',provider:'EventCraft NG',pAvatar:'EC',pVerified:true,pRating:4.9,pRentals:210,pResponse:'~2 hrs',pSince:2023,instant:true,cancel:'Moderate',deposit:20000,
+    desc:'A complete event setup including a 20x30ft weatherproof tent, elegant drapery, and matching décor — perfect for weddings, corporate events and garden parties. Delivery and setup crew included within Lagos.',
+    specs:[['Capacity','150 guests'],['Tent size','20 × 30 ft'],['Setup included','Yes'],['Color options','White, Ivory, Navy']]},
+  {id:2,title:'DJI Mavic 3 Pro Drone Kit',cat:'AV Equipment',price:25000,unit:'day',rating:4.7,reviews:86,loc:'Victoria Island, Lagos',provider:'AeroLens Rentals',pAvatar:'AL',pVerified:true,pRating:4.6,pRentals:97,pResponse:'~1 hr',pSince:2024,instant:true,cancel:'Flexible',deposit:50000,
+    desc:'Professional 4K cinema drone with 3 extra batteries, ND filter set and hard case. Ideal for weddings, real estate shoots and commercial video production. Basic flight briefing available on request.',
+    specs:[['Camera','4/3 CMOS, 5.1K video'],['Flight time','~43 min/battery'],['Included','3 batteries, ND filters, case'],['License required','Drone operator ID']]},
+  {id:3,title:'Professional PA & DJ Equipment Set',cat:'Musical Instruments',price:35000,unit:'day',rating:4.9,reviews:64,loc:'Ikeja, Lagos',provider:'SoundWave Pro',pAvatar:'SW',pVerified:true,pRating:4.9,pRentals:150,pResponse:'~3 hrs',pSince:2022,instant:false,cancel:'Strict',deposit:30000,
+    desc:'Full PA system with dual 15" speakers, mixer, two wireless mics and a Pioneer DJ controller — everything you need to run sound for a party of up to 300 guests.',
+    specs:[['Speakers','2× 15" active, 1000W'],['Mics included','2 wireless handheld'],['Mixer','Pioneer DJM'],['Setup support','On request, ₦10,000']]},
+  {id:4,title:'Heavy-Duty Scaffolding Set (Full Bay)',cat:'Tools & Construction',price:18000,unit:'day',rating:4.5,reviews:41,loc:'Ajah, Lagos',provider:'BuildRight Equipment',pAvatar:'BR',pVerified:true,pRating:4.5,pRentals:73,pResponse:'~4 hrs',pSince:2021,instant:true,cancel:'Moderate',deposit:25000,
+    desc:'Galvanized steel scaffolding, full bay set with toe boards and guard rails. Suitable for building facades up to 4 storeys. Delivery available for sites within Lagos mainland and island.',
+    specs:[['Max height','12 metres'],['Material','Galvanized steel'],['Load capacity','225 kg/bay'],['Min. rental','3 days']]},
+  {id:5,title:'Lamborghini Huracán EVO',cat:'Vehicles',price:250000,unit:'day',rating:5.0,reviews:22,loc:'Banana Island, Lagos',provider:'Prestige Auto Rentals',pAvatar:'PA',pVerified:true,pRating:5.0,pRentals:34,pResponse:'~30 min',pSince:2023,instant:false,cancel:'Strict',deposit:500000,
+    desc:'Turn heads at your next event or shoot with this pristine Huracán EVO. Comes with a chauffeur option or self-drive for verified license holders. Full insurance and 100km/day included.',
+    specs:[['Transmission','7-speed dual-clutch'],['Mileage cap','100 km/day'],['License required','Valid driver license + deposit'],['Chauffeur option','Available, +₦40,000/day']]},
+  {id:6,title:'Furnished 2-Bed Shortlet Apartment',cat:'Real Estate & Spaces',price:60000,unit:'night',rating:4.6,reviews:98,loc:'Lekki Phase 1, Lagos',provider:'UrbanStay Lekki',pAvatar:'US',pVerified:true,pRating:4.7,pRentals:340,pResponse:'~1 hr',pSince:2022,instant:true,cancel:'Flexible',deposit:0,
+    desc:'A bright, fully furnished 2-bedroom apartment with 24/7 power, high-speed wifi, and a private pool in a gated estate. Walking distance to restaurants and the beach.',
+    specs:[['Bedrooms','2'],['Square footage','1,150 sqft'],['Min. lease','1 night'],['Amenities','Pool, wifi, generator, gym']]},
+  {id:7,title:'Canon EOS R5 + L-Series Lens Kit',cat:'AV Equipment',price:30000,unit:'day',rating:4.8,reviews:73,loc:'Yaba, Lagos',provider:'Canon Pro Rentals',pAvatar:'CP',pVerified:true,pRating:4.8,pRentals:112,pResponse:'~2 hrs',pSince:2023,instant:true,cancel:'Moderate',deposit:60000,
+    desc:'Mirrorless full-frame body with 24-70mm and 70-200mm L lenses, extra batteries and a 128GB CFexpress card. Great for weddings, portraits and commercial shoots.',
+    specs:[['Sensor','45MP full-frame'],['Video','8K RAW'],['Lenses included','24-70mm f/2.8, 70-200mm f/2.8'],['Extras','2 batteries, 128GB card']]},
+  {id:8,title:'Wedding Tuxedo (Size L, Slim Fit)',cat:'Clothing',price:12000,unit:'day',rating:4.4,reviews:29,loc:'Surulere, Lagos',provider:'Tux & Tails',pAvatar:'TT',pVerified:false,pRating:4.4,pRentals:58,pResponse:'~5 hrs',pSince:2024,instant:true,cancel:'Flexible',deposit:15000,
+    desc:'Classic black slim-fit tuxedo with satin lapel, includes bowtie and cufflinks. Dry-cleaned and pressed before every rental. Alterations available for a small fee.',
+    specs:[['Size','L (Chest 40-42")'],['Includes','Bowtie, cufflinks, pocket square'],['Dry cleaning','Included'],['Alterations','+₦3,000']]},
+  {id:9,title:'Industrial Concrete Mixer (500L)',cat:'Tools & Construction',price:20000,unit:'day',rating:4.3,reviews:18,loc:'Agege, Lagos',provider:'BuildRight Equipment',pAvatar:'BR',pVerified:true,pRating:4.5,pRentals:73,pResponse:'~4 hrs',pSince:2021,instant:false,cancel:'Moderate',deposit:35000,
+    desc:'Diesel-powered 500L drum mixer, well-maintained and serviced monthly. Suitable for medium to large construction jobs. Operator training briefing included.',
+    specs:[['Drum capacity','500 litres'],['Power source','Diesel engine'],['Output','~6m³/hour'],['Min. rental','2 days']]},
+];
+
+let currentCategory='All';
+let selectedListing=LISTINGS[0];
+
+/* ============ RENDER: category grid ============ */
+function renderCategories(){
+  const cats=Object.keys(CAT_META);
+  document.getElementById('cat-grid').innerHTML=cats.map(c=>{
+    const m=CAT_META[c];
+    return `<div class="cat-card" onclick="filterAndGo('${c}')">
+      <div class="icon-wrap" style="background:${grad(m)};color:#fff">${svgIcon(m.icon,22)}</div>
+      <span>${c}</span>
+    </div>`;
+  }).join('');
+}
+
+/* ============ RENDER: listing card ============ */
+function listingCard(l){
+  const m=CAT_META[l.cat];
+  return `<div class="card" onclick="openDetail(${l.id})">
+    <div class="card-media" style="background:${grad(m)}">
+      ${svgIcon(m.icon,40)}
+      <div class="card-fav" onclick="event.stopPropagation()"><svg class="icon" style="width:16px;height:16px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/></svg></div>
+    </div>
+    <div class="card-body">
+      <div class="cat">${l.cat}</div>
+      <h3>${l.title}</h3>
+      <div class="card-meta"><svg class="icon" style="width:13px;height:13px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-7.5 8-13a8 8 0 1 0-16 0c0 5.5 8 13 8 13z"/><circle cx="12" cy="9" r="2.5"/></svg>${l.loc}</div>
+      <div class="card-foot">
+        <div class="card-price">₦${l.price.toLocaleString()}<span>/${l.unit}</span></div>
+        <div class="card-rating"><svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3 6 6 .9-4.5 4.3 1 6.3-5.5-3-5.5 3 1-6.3L3 8.9 9 8z"/></svg>${l.rating}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderFeatured(){
+  document.getElementById('featured-grid').innerHTML=LISTINGS.slice(0,6).map(listingCard).join('');
+}
+
+function renderResults(){
+  const list = currentCategory==='All' ? LISTINGS : LISTINGS.filter(l=>l.cat===currentCategory);
+  document.getElementById('results-grid').innerHTML = list.map(listingCard).join('') || `<p style="color:var(--gray-500)">No rentals found in this category yet.</p>`;
+  document.getElementById('results-count').textContent = `${list.length} rental${list.length!==1?'s':''} found`;
+  document.getElementById('search-crumb').textContent = currentCategory==='All'?'All Categories':currentCategory;
+
+  const cats=['All',...Object.keys(CAT_META)];
+  document.getElementById('filter-cats').innerHTML = cats.map(c=>
+    `<div class="filter-chip ${c===currentCategory?'active':''}" onclick="filterAndGo('${c}')">${c}</div>`
+  ).join('');
+}
+
+function filterAndGo(cat){
+  currentCategory=cat;
+  renderResults();
+  showView('search');
+}
+
+/* ============ DETAIL VIEW ============ */
+function openDetail(id){
+  selectedListing = LISTINGS.find(l=>l.id===id);
+  renderDetail();
+  showView('detail');
+}
+
+function renderDetail(){
+  const l=selectedListing, m=CAT_META[l.cat];
+  document.getElementById('detail-gallery').innerHTML = [1,2,3].map(i=>
+    `<div class="gallery-tile" style="background:${grad(m)}">${svgIcon(m.icon,i===1?60:32)}</div>`
+  ).join('');
+  document.getElementById('d-cat').textContent=l.cat;
+  document.getElementById('d-title').textContent=l.title;
+  document.getElementById('d-stars').innerHTML='★★★★★'.slice(0,Math.round(l.rating));
+  document.getElementById('d-rating-text').textContent=`${l.rating} (${l.reviews} reviews)`;
+  document.getElementById('d-location').textContent=l.loc;
+  document.getElementById('d-desc').textContent=l.desc;
+  document.getElementById('d-specs').innerHTML=l.specs.map(s=>`<div class="spec-row"><span>${s[0]}</span><span>${s[1]}</span></div>`).join('');
+  document.getElementById('d-cancel').textContent=l.cancel;
+  document.getElementById('d-provider-avatar').textContent=l.pAvatar;
+  document.getElementById('d-provider-avatar').style.background=grad(m);
+  document.getElementById('d-provider-name').textContent=l.provider;
+  document.getElementById('d-provider-verified').style.display=l.pVerified?'inline-flex':'none';
+  document.getElementById('d-provider-meta').textContent=`${l.pRating} ★ · ${l.pRentals} rentals · Responds in ${l.pResponse} · Member since ${l.pSince}`;
+  document.getElementById('bw-price').textContent=`₦${l.price.toLocaleString()}`;
+  document.getElementById('bw-rating-text').textContent=`${l.rating} (${l.reviews} reviews)`;
+  document.getElementById('bw-mode').innerHTML = l.instant? '⚡ Instant Book available' : '🕐 Request to Book — approval within 24hrs';
+  document.getElementById('bw-mode').className = 'bw-mode ' + (l.instant?'tag-success':'tag-warning');
+  document.getElementById('bw-cta').textContent = l.instant? 'Book Instantly' : 'Request to Book';
+
+  const today=new Date(); const end=new Date(); end.setDate(today.getDate()+3);
+  document.getElementById('bw-start').value = today.toISOString().slice(0,10);
+  document.getElementById('bw-end').value = end.toISOString().slice(0,10);
+  recalc();
+}
+
+function recalc(){
+  const l=selectedListing;
+  const start=new Date(document.getElementById('bw-start').value);
+  const end=new Date(document.getElementById('bw-end').value);
+  let days=Math.round((end-start)/(1000*60*60*24)); if(!days||days<1) days=1;
+  const rate=l.price*days;
+  const service=Math.round(rate*0.05);
+  const total=rate+service;
+  document.getElementById('bw-rate-label').textContent=`₦${l.price.toLocaleString()} × ${days} ${days===1?l.unit:l.unit+'s'}`;
+  document.getElementById('bw-rate-total').textContent=`₦${rate.toLocaleString()}`;
+  document.getElementById('bw-service').textContent=`₦${service.toLocaleString()}`;
+  document.getElementById('bw-deposit').textContent=l.deposit? `₦${l.deposit.toLocaleString()}`:'None';
+  document.getElementById('bw-total').textContent=`₦${total.toLocaleString()}`;
+  window._checkoutData={days,rate,service,total,start:document.getElementById('bw-start').value,end:document.getElementById('bw-end').value};
+}
+
+function goCheckout(){
+  const l=selectedListing, d=window._checkoutData, m=CAT_META[l.cat];
+  document.getElementById('co-thumb').style.background=grad(m);
+  document.getElementById('co-thumb').innerHTML=svgIcon(m.icon,26);
+  document.getElementById('co-title').textContent=l.title;
+  document.getElementById('co-dates').textContent=`${d.start} → ${d.end} (${d.days} ${l.unit}s)`;
+  document.getElementById('co-provider').textContent=`Hosted by ${l.provider}`;
+  document.getElementById('co-rate-label').textContent=`₦${l.price.toLocaleString()} × ${d.days} ${l.unit}s`;
+  document.getElementById('co-rate').textContent=`₦${d.rate.toLocaleString()}`;
+  document.getElementById('co-service').textContent=`₦${d.service.toLocaleString()}`;
+  document.getElementById('co-deposit').textContent=l.deposit? `₦${l.deposit.toLocaleString()}`:'None';
+  document.getElementById('co-total').textContent=`₦${d.total.toLocaleString()}`;
+
+  document.getElementById('s-ref').textContent='RNT-'+Math.floor(80000+Math.random()*9999);
+  document.getElementById('s-item').textContent=l.title;
+  document.getElementById('s-dates').textContent=`${d.start} → ${d.end}`;
+  document.getElementById('s-total').textContent=`₦${d.total.toLocaleString()}`;
+
+  showView('checkout');
+}
+
+function selectPay(el){
+  document.querySelectorAll('.pay-option').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  el.querySelector('input').checked=true;
+}
+
+/* ============ DASHBOARD ============ */
+function renderDashboard(){
+  const bookings=[
+    ['Tolu Adebayo','Event Tent & Décor Package','Jul 6 – Jul 8','₦135,000','<span class="tag tag-success">Confirmed</span>'],
+    ['Chidinma Okoro','Scaffolding Set (Full Bay)','Jul 9 – Jul 12','₦72,000','<span class="tag tag-warning">Pending</span>'],
+    ['Femi Balogun','Concrete Mixer 500L','Jul 14 – Jul 15','₦40,000','<span class="tag tag-success">Confirmed</span>'],
+    ['Ngozi Umeh','Event Tent & Décor Package','Jul 20 – Jul 21','₦90,000','<span class="tag tag-gray">Completed</span>'],
+  ];
+  document.getElementById('dash-bookings').innerHTML=bookings.map(b=>
+    `<tr><td>${b[0]}</td><td>${b[1]}</td><td>${b[2]}</td><td>${b[3]}</td><td>${b[4]}</td></tr>`
+  ).join('');
+
+  const days=31, bookedDays=[6,8,9,12,14,15,20,21], todayNum=4;
+  const dow=['S','M','T','W','T','F','S'];
+  let html=dow.map(d=>`<div style="font-weight:700">${d}</div>`).join('');
+  for(let i=1;i<=days;i++){
+    let cls='day'+(bookedDays.includes(i)?' booked':'')+(i===todayNum?' today':'');
+    html+=`<div class="${cls}">${i}</div>`;
+  }
+  document.getElementById('mini-cal-grid').innerHTML=html;
+}
+
+/* ============ VIEW ROUTER ============ */
+function showView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.getElementById('footer').style.display = (name==='dashboard')?'none':'block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function setMode(mode){
+  document.getElementById('seg-renter').classList.toggle('active',mode==='renter');
+  document.getElementById('seg-provider').classList.toggle('active',mode==='provider');
+  if(mode==='provider'){ showView('dashboard'); } else { showView('home'); }
+}
+
+/* ============ INIT ============ */
+renderCategories();
+renderFeatured();
+renderResults();
+renderDashboard();
+</script>
+</body>
+</html>
