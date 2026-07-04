@@ -12,7 +12,8 @@ This repository holds the product design and technical architecture for Rently, 
 
 | | |
 |---|---|
-| 🖱️ [`prototype/index.html`](prototype/index.html) | Fully clickable, self-contained hi-fi prototype — Discover → Search → Listing → Book → Pay → Confirmation, plus a Provider Dashboard. Open it directly in any browser, no build step. |
+| ✨ [`prototype/homepage.html`](prototype/homepage.html) | **v2 — editorial redesign.** The current design direction: asymmetric imagery-led opener, an Airbnb-grade floating search (recent/popular searches, location autocomplete, custom date-range calendar), premium bento categories, and an editorial rental-card marketplace grid. Serif/sans type pairing, restrained color, motion-on-scroll. This supersedes the visual language of `index.html` on the homepage — the rest of the flow (browse/detail/checkout/dashboard) is still due the same pass. |
+| 🖱️ [`prototype/index.html`](prototype/index.html) | **v1 — full flow prototype.** Discover → Search → Listing → Book → Pay → Confirmation, plus a Provider Dashboard. Functionally complete end-to-end; visual language is being superseded by `homepage.html`. |
 | 🏗️ [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System architecture: modular monolith design, domain boundaries, tech stack rationale, the three hardest technical problems (double-booking, payment idempotency, escrow correctness) solved explicitly, scalability path, security, CI/CD, cloud topology. |
 | 🗄️ [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md) | Full entity model with an ERD, table-by-table field definitions, and the reasoning behind the harder calls (JSONB category attributes, ledger-based escrow, `EXCLUDE` constraints for availability). |
 | 🔌 [`docs/API_DESIGN.md`](docs/API_DESIGN.md) | REST API surface by resource, idempotency/pagination/error conventions, and why each convention exists. |
@@ -21,14 +22,15 @@ This repository holds the product design and technical architecture for Rently, 
 
 ## Viewing the prototype
 
-No install required — it's a single self-contained HTML file:
+No install required — each is a single self-contained HTML file:
 
 ```bash
-open prototype/index.html        # macOS
-start prototype/index.html       # Windows
+open prototype/homepage.html     # macOS — v2 editorial redesign
+start prototype/homepage.html    # Windows
+open prototype/index.html        # v1 full flow (search → book → pay → dashboard)
 ```
 
-Or serve it locally for a more realistic feel:
+Or serve them locally for a more realistic feel:
 
 ```bash
 npx serve prototype
@@ -62,8 +64,10 @@ Observability  OpenTelemetry + Grafana stack · Sentry
 ```
 Rently-Innovation-Hub/
 ├── README.md
+├── vercel.json
 ├── prototype/
-│   └── index.html              interactive hi-fi mockup (renter flow + provider dashboard)
+│   ├── homepage.html           v2 — editorial redesign (current design direction)
+│   └── index.html              v1 — full flow prototype (renter journey + provider dashboard)
 └── docs/
     ├── ARCHITECTURE.md
     ├── DATABASE_SCHEMA.md
@@ -74,7 +78,7 @@ Rently-Innovation-Hub/
 
 ## Status
 
-**Draft v1.0 — design & architecture phase.** Not yet implemented in code. Open questions tracked against the source PRD include final commission structure, Instant Book vs. Request-to-Book policy at launch, and the verification standard for providers (ID-only vs. business registration). See `docs/ARCHITECTURE.md` §9 for what is deliberately deferred past MVP.
+**Draft v1.0 — design & architecture phase.** Not yet implemented in code. The visual design direction shifted with `homepage.html` (editorial, imagery-led, restrained color) — `docs/DESIGN_SYSTEM.md` still documents the v1 token set and needs a pass to match. Browse, listing detail, checkout, and dashboard screens are still on the v1 visual language and are next in line for the same redesign treatment. Open questions tracked against the source PRD include final commission structure, Instant Book vs. Request-to-Book policy at launch, and the verification standard for providers (ID-only vs. business registration). See `docs/ARCHITECTURE.md` §9 for what is deliberately deferred past MVP.
 
 ---
 
