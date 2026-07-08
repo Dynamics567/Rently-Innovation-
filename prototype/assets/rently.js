@@ -214,6 +214,27 @@ const PROVIDER_ACTIVE_RENTALS=[
   {id:'ar4',listingId:'l9',cat:'clothing',title:'Tailored Agbada, 3-Piece',renter:'Femi K.',renterAvatar:'FK',dateFrom:'2026-06-28',dateTo:'2026-06-30',stage:'returned',deposit:10000},
 ];
 
+/* ---------------- ADMIN / PLATFORM-WIDE MOCK DATA ---------------- */
+const ADMIN_STATS={totalBookings:1842,gmvMonth:18400000,activeRentals:62,openDisputes:2,pendingVerifications:3,avgRating:4.7};
+const DISPUTES=[
+  {id:'d1',bookingRef:'RNT-B5XXXX-2026',listing:'Heavy-Duty Scaffolding Set',renter:'Segun A.',provider:'BuildRight Equipment',issue:'Item arrived with a damaged guard rail',status:'open',opened:'2026-07-06'},
+  {id:'d2',bookingRef:'RNT-B2XXXX-2026',listing:'DJI Mavic 3 Pro Drone Kit',renter:'Kemi O.',provider:'AeroLens Rentals',issue:'Provider disputes claimed battery damage',status:'investigating',opened:'2026-07-03'},
+  {id:'d3',bookingRef:'RNT-B7XXXX-2026',listing:'Toyota Hiace Event Shuttle Bus',renter:'Yusuf M.',provider:'Prestige Auto',issue:'Late return, deposit deduction disputed by renter',status:'resolved',opened:'2026-06-28'},
+];
+const VERIFICATION_QUEUE=[
+  {id:'v1',name:'GreenLeaf Event Hire',type:'Business',submitted:'2026-07-08',docs:'CAC certificate, utility bill'},
+  {id:'v2',name:'Adaeze Okafor',type:'Individual (ID only)',submitted:'2026-07-07',docs:'NIN slip, selfie verification'},
+  {id:'v3',name:'FastTrack Logistics NG',type:'Business',submitted:'2026-07-06',docs:'CAC certificate, proof of address'},
+];
+const ADMIN_RECENT_BOOKINGS=[
+  {ref:'RNT-B1XXXX-2026',listing:'Furnished 2-Bed Shortlet Apartment',renter:'Damilola A.',provider:'UrbanStay Lekki',amount:180000,status:'reserved'},
+  {ref:'RNT-B6XXXX-2026',listing:'10KVA Soundproof Generator',renter:'Damilola A.',provider:'PowerGen Rentals',amount:79500,status:'active'},
+  {ref:'RNT-B3XXXX-2026',listing:'Premium Event Tent & Décor Package',renter:'Damilola A.',provider:'EventCraft NG',amount:90000,status:'requested'},
+  {ref:'RNT-ARXXXX-2026',listing:'Canopy, Chairs & Tables Package',renter:'Chioma O.',provider:'EventCraft NG',amount:120000,status:'returnsched'},
+  {ref:'RNT-B2XXXX-2026',listing:'DJI Mavic 3 Pro Drone Kit',renter:'Kemi O.',provider:'AeroLens Rentals',amount:50000,status:'completed'},
+  {ref:'RNT-B4XXXX-2026',listing:'Canon EOS R5 + L-Series Kit',renter:'Yusuf M.',provider:'Canon Pro Rentals',amount:30000,status:'completed'},
+];
+
 const TRANSACTIONS=[
   {date:'2026-07-01',listing:'Premium Event Tent & Décor Package',renter:'Bola S.',amount:90000,commission:4500,status:'paid',payout:'2026-07-08'},
   {date:'2026-06-24',listing:'Tailored Agbada, 3-Piece',renter:'Chioma O.',amount:20000,commission:1000,status:'paid',payout:'2026-07-01'},
