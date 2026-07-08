@@ -32,10 +32,10 @@ body{padding-top:0;}
 
 <nav class="nav app-nav">
   <div class="container nav-inner">
-    <a class="wordmark" href="homepage.html"><img src="assets/images/logo.png" alt="Rently" /></a>
+    <a class="wordmark" href="homepage"><img src="assets/images/logo.png" alt="Rently" /></a>
     <div class="nav-links">
-      <a href="homepage.html#categories">Explore</a>
-      <a href="browse.html">Marketplace</a>
+      <a href="homepage#categories">Explore</a>
+      <a href="browse">Marketplace</a>
     </div>
     <button class="nav-icon-btn" id="searchNavBtn" aria-label="Search" style="margin-left:auto;"></button>
     <button class="nav-icon-btn" id="bellBtn" aria-label="Notifications"><span class="dot"></span></button>
@@ -43,9 +43,9 @@ body{padding-top:0;}
       <button class="nav-avatar" id="avatarBtn">DA</button>
       <div class="avatar-dropdown" id="avatarDropdown">
         <div class="who"><div class="n">Damilola Adeyemi</div><div class="e">damilola.a@gmail.com</div></div>
-        <a class="dd-item" href="dashboard-renter.html" id="ddBookings"></a>
-        <a class="dd-item" href="dashboard-provider.html" id="ddSwitch"></a>
-        <a class="dd-item danger" href="auth.html" id="ddLogout"></a>
+        <a class="dd-item" href="dashboard-renter" id="ddBookings"></a>
+        <a class="dd-item" href="dashboard-provider" id="ddSwitch"></a>
+        <a class="dd-item danger" href="auth" id="ddLogout"></a>
       </div>
     </div>
   </div>
@@ -56,7 +56,7 @@ body{padding-top:0;}
   <a class="side-link" data-view="favorites" id="mLinkFavorites"></a>
   <a class="side-link" data-view="messages" id="mLinkMessages"></a>
   <a class="side-link" data-view="settings" id="mLinkSettings"></a>
-  <a class="side-link" href="dashboard-provider.html" id="mLinkProviderSwitch"></a>
+  <a class="side-link" href="dashboard-provider" id="mLinkProviderSwitch"></a>
 </div>
 
 <div class="app-shell">
@@ -67,7 +67,7 @@ body{padding-top:0;}
     <a class="side-link" data-view="messages" id="linkMessages"></a>
     <a class="side-link" data-view="settings" id="linkSettings"></a>
     <div class="side-group-lbl">Switch role</div>
-    <a class="side-link" href="dashboard-provider.html" id="linkProviderSwitch"></a>
+    <a class="side-link" href="dashboard-provider" id="linkProviderSwitch"></a>
   </aside>
 
   <main class="app-main">
@@ -75,7 +75,7 @@ body{padding-top:0;}
     <div class="d-view active" id="view-bookings">
       <div class="app-head">
         <div><h1>My bookings</h1><p>Everything you've rented, requested, or completed on Rently.</p></div>
-        <a class="pill-btn blue" href="browse.html">Book something new</a>
+        <a class="pill-btn blue" href="browse">Book something new</a>
       </div>
       <div class="tabs" id="bookingTabs"></div>
       <div style="margin-top:24px;display:flex;flex-direction:column;gap:14px;" id="bookingList"></div>
@@ -83,7 +83,7 @@ body{padding-top:0;}
         <div class="ic" id="bookingsEmptyIcon"></div>
         <h3>Nothing here yet</h3>
         <p>Once you book something in this category, it'll show up here with its status and dates.</p>
-        <a class="pill-btn ghost" href="browse.html">Browse listings</a>
+        <a class="pill-btn ghost" href="browse">Browse listings</a>
       </div>
     </div>
 
@@ -175,7 +175,7 @@ function renderBookings(){
   empty.style.display='none';
   wrap.innerHTML = list.map(b=>{
     const l=LISTINGS.find(x=>x.id===b.listingId);
-    return `<a class="row-card booking-row" href="listing.html?id=${b.listingId}">
+    return `<a class="row-card booking-row" href="listing?id=${b.listingId}">
       <div class="thumb">${artDiv(b.cat,120,.22)}</div>
       <div class="main">
         <div class="t">${b.title}${statusBadge(b.status)}</div>

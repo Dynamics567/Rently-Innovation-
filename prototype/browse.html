@@ -73,15 +73,15 @@ select.sort-select{border:1.5px solid var(--line-strong);border-radius:999px;pad
 
 <div class="b-search-bar" id="nav">
   <div class="container nav-inner">
-    <a class="wordmark" href="homepage.html"><img src="assets/images/logo.png" alt="Rently" /></a>
+    <a class="wordmark" href="homepage"><img src="assets/images/logo.png" alt="Rently" /></a>
     <div class="nav-links">
-      <a href="homepage.html#categories">Explore</a>
-      <a href="browse.html" class="on">Marketplace</a>
-      <a href="auth.html?role=provider">Become a Provider</a>
+      <a href="homepage#categories">Explore</a>
+      <a href="browse" class="on">Marketplace</a>
+      <a href="auth?role=provider">Become a Provider</a>
     </div>
     <div class="nav-cta">
-      <a class="become" href="auth.html?role=provider">List your first item</a>
-      <a class="pill-btn ghost" href="auth.html">Log in</a>
+      <a class="become" href="auth?role=provider">List your first item</a>
+      <a class="pill-btn ghost" href="auth">Log in</a>
     </div>
   </div>
   <div class="b-search-row">
@@ -91,6 +91,8 @@ select.sort-select{border:1.5px solid var(--line-strong);border-radius:999px;pad
       <div class="seg" data-panel="when" onclick="toggleSeg(this,'when')"><label>When</label><div class="val" id="valWhen">Add dates</div></div>
       <div class="search-go" id="searchGoBtn"></div>
       <div class="search-panel" id="panel-what">
+        <div class="panel-h">Browse by category</div>
+        <div class="chip-row" id="categorySearchChips"></div>
         <div class="panel-h">Popular right now</div>
         <div class="chip-row" id="popularSearches"></div>
       </div>
@@ -204,6 +206,27 @@ function syncFilterCats(){
 }
 syncFilterCats();
 
+/* ---- "What" search field: pick a category or a popular term, filters live ---- */
+function updateWhatDisplay(){
+  const catObj = CATEGORIES.find(c=>c.key===state.cat);
+  const val = catObj ? catObj.name : (state.q || 'Anything, anywhere');
+  document.getElementById('valWhat').textContent = val;
+  document.querySelector('[data-panel="what"]').classList.toggle('filled', !!(catObj || state.q));
+}
+document.getElementById('categorySearchChips').innerHTML = CATEGORIES.map(c=>`<div class="pchip" data-cat="${c.key}">${icon(CATEGORY_ICON[c.key]||'grid',{size:13,stroke:2})}${c.name}</div>`).join('');
+document.getElementById('categorySearchChips').addEventListener('click',e=>{
+  const chip=e.target.closest('.pchip'); if(!chip) return;
+  state.q=''; state.cat=chip.dataset.cat; state.visible=9;
+  syncFilterCats(); updateWhatDisplay(); render(); closePanels();
+});
+document.getElementById('popularSearches').innerHTML = POPULAR_SEARCHES.map(r=>`<div class="pchip" data-q="${r}">${r}</div>`).join('');
+document.getElementById('popularSearches').addEventListener('click',e=>{
+  const chip=e.target.closest('.pchip'); if(!chip) return;
+  state.cat='all'; state.q=chip.dataset.q; state.visible=9;
+  syncFilterCats(); updateWhatDisplay(); render(); closePanels();
+});
+updateWhatDisplay();
+
 /* ---- price filter ---- */
 document.getElementById('priceMin').addEventListener('input',e=>{state.priceMin=e.target.value?+e.target.value:null;state.visible=9;render();});
 document.getElementById('priceMax').addEventListener('input',e=>{state.priceMax=e.target.value?+e.target.value:null;state.visible=9;render();});
@@ -247,6 +270,7 @@ document.getElementById('loadMoreBtn').addEventListener('click',()=>{state.visib
 
 /* ---- render ---- */
 function render(){
+  const q = (state.q||'').trim().toLowerCase();
   let list = LISTINGS.filter(l=>{
     if(state.cat!=='all' && l.cat!==state.cat) return false;
     if(state.priceMin!=null && l.price<state.priceMin) return false;
@@ -254,6 +278,7 @@ function render(){
     if(state.instant && l.mode!=='instant') return false;
     if(state.verified && !l.verified) return false;
     if(l.rating<state.minRating) return false;
+    if(q && !(l.title.toLowerCase().includes(q) || l.catName.toLowerCase().includes(q) || l.loc.toLowerCase().includes(q) || l.provider.toLowerCase().includes(q))) return false;
     return true;
   });
   if(state.sort==='price-asc') list.sort((a,b)=>a.price-b.price);
@@ -275,8 +300,9 @@ function render(){
   }
 }
 
-/* ---- search panel: popular / locations / calendar (shared with homepage) ---- */
-document.getElementById('popularSearches').innerHTML = POPULAR_SEARCHES.map(r=>`<div class="pchip" onclick="document.getElementById('valWhat').textContent='${r}';closePanels()">${r}</div>`).join('');
+document.getElementById('searchGoBtn').addEventListener('click',()=>{ closePanels(); render(); document.getElementById('resultsGrid').scrollIntoView({behavior:'smooth',block:'start'}); });
+
+/* ---- search panel: locations / calendar (shared with homepage) ---- */
 function renderLocations(filter=''){
   const list=LOCATIONS.filter(l=>l[0].toLowerCase().includes(filter.toLowerCase()));
   document.getElementById('locationList').innerHTML = list.map(l=>`<div class="auto-item" onclick="document.getElementById('valWhere').textContent='${l[0]}';closePanels()"><div class="pin">${icon('pin',{size:14})}</div><div>${l[0]}<div class="sub">${l[1]}, Nigeria</div></div></div>`).join('');

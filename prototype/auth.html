@@ -52,7 +52,7 @@ body{min-height:100vh;}
 <div class="auth-shell">
   <div class="auth-brand">
     <div class="collage-mini" id="brandCollage"></div>
-    <div class="top"><a class="wordmark wordmark-lg" href="homepage.html"><img src="assets/images/logo-dark.png" alt="Rently" /></a></div>
+    <div class="top"><a class="wordmark wordmark-lg" href="homepage"><img src="assets/images/logo-dark.png" alt="Rently" /></a></div>
     <div class="quote">
       <blockquote id="brandQuote">"I stopped chasing tent suppliers on WhatsApp groups. Now I compare providers, see real ratings, and my deposit's protected until setup day."</blockquote>
       <div class="who" id="brandWho">Bola S. — Renter, Lagos</div>
@@ -61,7 +61,7 @@ body{min-height:100vh;}
 
   <div class="auth-form-wrap">
     <div class="auth-card">
-      <a class="back" href="homepage.html" id="backLink"></a>
+      <a class="back" href="homepage" id="backLink"></a>
 
       <!-- SCREEN: auth form -->
       <div id="screenForm">
@@ -183,11 +183,11 @@ document.getElementById('submitAuthBtn').addEventListener('click',()=>{
     inputs.forEach((inp,i)=>{ inp.addEventListener('input',()=>{ if(inp.value && inputs[i+1]) inputs[i+1].focus(); }); });
     inputs[0].focus();
   } else {
-    window.location.href = role==='provider' ? 'dashboard-provider.html' : 'dashboard-renter.html';
+    window.location.href = role==='provider' ? 'dashboard-provider' : 'dashboard-renter';
   }
 });
 document.getElementById('finishSignupBtn').addEventListener('click',()=>{
-  window.location.href = role==='provider' ? 'dashboard-provider.html' : 'dashboard-renter.html';
+  window.location.href = role==='provider' ? 'dashboard-provider' : 'dashboard-renter';
 });
 </script>
 </body>

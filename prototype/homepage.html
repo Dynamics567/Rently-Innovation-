@@ -160,22 +160,22 @@
 <!-- ============ NAV ============ -->
 <nav class="nav on-dark" id="nav">
   <div class="container nav-inner">
-    <a class="wordmark" href="homepage.html">
+    <a class="wordmark" href="homepage">
       <img class="logo-light" src="assets/images/logo.png" alt="Rently" />
       <img class="logo-ondark" src="assets/images/logo-dark.png" alt="Rently" />
     </a>
     <div class="nav-links">
       <a href="#categories">Explore</a>
-      <a href="browse.html">Marketplace</a>
-      <a href="auth.html?role=provider">Become a Provider</a>
+      <a href="browse">Marketplace</a>
+      <a href="auth?role=provider">Become a Provider</a>
     </div>
     <div class="nav-search-mini" id="navSearchMini">
       <span>Where to?</span><span class="dot"></span><span>Add dates</span>
       <div class="go"></div>
     </div>
     <div class="nav-cta">
-      <a class="become" href="auth.html?role=provider">List your first item</a>
-      <a class="pill-btn ghost" href="auth.html">Log in</a>
+      <a class="become" href="auth?role=provider">List your first item</a>
+      <a class="pill-btn ghost" href="auth">Log in</a>
     </div>
   </div>
 </nav>
@@ -215,6 +215,8 @@
       <div class="search-go" id="searchGoBtn"></div>
 
       <div class="search-panel" id="panel-what">
+        <div class="panel-h">Browse by category</div>
+        <div class="chip-row" id="categorySearchChips"></div>
         <div class="panel-h">Recent searches</div>
         <div class="chip-row" id="recentSearches"></div>
         <div class="panel-h">Popular right now</div>
@@ -266,7 +268,7 @@
   <div class="container">
     <div class="sec-head reveal">
       <div><div class="eyebrow">Browse</div><h2>Ten categories.<br/><em>One standard of trust.</em></h2></div>
-      <a class="text-link" href="browse.html">See full taxonomy <span id="arr1"></span></a>
+      <a class="text-link" href="browse">See full taxonomy <span id="arr1"></span></a>
     </div>
     <div class="cat-bento" id="catBento"></div>
   </div>
@@ -277,7 +279,7 @@
   <div class="container">
     <div class="sec-head reveal">
       <div><div class="eyebrow">Live on Rently</div><h2>What people are <em>renting</em> today.</h2></div>
-      <a class="text-link" href="browse.html">Browse all listings <span id="arr2"></span></a>
+      <a class="text-link" href="browse">Browse all listings <span id="arr2"></span></a>
     </div>
     <div class="market-grid" id="marketGrid"></div>
   </div>
@@ -344,7 +346,7 @@
         <div><b>7 days</b><span>Or on-completion payout schedule</span></div>
         <div><b>24hrs</b><span>Target verification turnaround</span></div>
       </div>
-      <a class="pill-btn green" href="auth.html?role=provider">Become a Provider <span id="arr3"></span></a>
+      <a class="pill-btn green" href="auth?role=provider">Become a Provider <span id="arr3"></span></a>
     </div>
   </div>
 </section>
@@ -357,8 +359,8 @@
         <span class="wordmark wordmark-lg"><img src="assets/images/logo-dark.png" alt="Rently" /></span>
         <p>Access made simple. Ownership made optional. A Dynamic Technology Ltd. product, built for Nigeria's rental economy.</p>
       </div>
-      <div><h5>Explore</h5><ul><li><a href="browse.html">Categories</a></li><li><a href="#intro">How it works</a></li><li><a href="#">Trust &amp; Safety</a></li></ul></div>
-      <div><h5>Providers</h5><ul><li><a href="auth.html?role=provider">Become a Provider</a></li><li><a href="dashboard-provider.html">Provider Dashboard</a></li><li><a href="#provider">Pricing</a></li></ul></div>
+      <div><h5>Explore</h5><ul><li><a href="browse">Categories</a></li><li><a href="#intro">How it works</a></li><li><a href="#">Trust &amp; Safety</a></li></ul></div>
+      <div><h5>Providers</h5><ul><li><a href="auth?role=provider">Become a Provider</a></li><li><a href="dashboard-provider">Provider Dashboard</a></li><li><a href="#provider">Pricing</a></li></ul></div>
       <div><h5>Company</h5><ul><li><a href="#">About</a></li><li><a href="#">Careers</a></li><li><a href="#">Press</a></li></ul></div>
       <div><h5>Support</h5><ul><li><a href="#">Help Center</a></li><li><a href="#">Contact</a></li><li><a href="#">Disputes</a></li></ul></div>
     </div>
@@ -387,7 +389,7 @@ paintArt(document.getElementById('art-provider'),'provider',130,.14);
 
 /* ============ RENDER: CATEGORIES (first 6 of the taxonomy, bento-mapped) ============ */
 document.getElementById('catBento').innerHTML = CATEGORIES.slice(0,6).map(c=>`
-  <a class="cat-tile ${c.size}" href="browse.html?cat=${c.key}">
+  <a class="cat-tile ${c.size}" href="browse?cat=${c.key}">
     <div class="art"></div>
     <div class="arrow">${icon('arrowUpRight',{size:14,stroke:2.3})}</div>
     <div class="txt"><div class="n">${c.name}</div><div class="c">${c.count.toLocaleString()} listings</div></div>
@@ -407,10 +409,23 @@ function scrollPop(dir){document.getElementById('popScroll').scrollBy({left:dir*
 /* ============ VERIFY AVATARS ============ */
 document.getElementById('verifyAvatars').innerHTML = PROVIDERS.slice(0,5).map(p=>`<div class="p-avatar">${p.avatar}</div>`).join('');
 
-/* ============ SEARCH: recent / popular / locations ============ */
+/* ============ SEARCH: category / recent / popular / locations ============ */
+let selectedCat=null;
+document.getElementById('categorySearchChips').innerHTML = CATEGORIES.map(c=>`<div class="pchip" data-cat="${c.key}" onclick="pickCategory('${c.key}','${c.name.replace(/'/g,"\\'")}')">${icon(CATEGORY_ICON[c.key]||'grid',{size:13,stroke:2})}${c.name}</div>`).join('');
+function pickCategory(key,name){
+  selectedCat=key;
+  document.getElementById('valWhat').textContent=name;
+  document.querySelector('[data-panel="what"]').classList.add('filled');
+  document.querySelectorAll('#categorySearchChips .pchip').forEach(el=>el.classList.toggle('on',el.dataset.cat===key));
+  closePanels();
+}
 document.getElementById('recentSearches').innerHTML = RECENT_SEARCHES.map(r=>`<div class="pchip" onclick="pickWhat('${r}')">${icon('clock',{size:13,cls:'',stroke:2})}${r}</div>`).join('');
 document.getElementById('popularSearches').innerHTML = POPULAR_SEARCHES.map(r=>`<div class="pchip" onclick="pickWhat('${r}')">${r}</div>`).join('');
-function pickWhat(v){document.getElementById('valWhat').textContent=v;document.querySelector('[data-panel="what"]').classList.add('filled');closePanels();}
+function pickWhat(v){
+  selectedCat=null;
+  document.querySelectorAll('#categorySearchChips .pchip').forEach(el=>el.classList.remove('on'));
+  document.getElementById('valWhat').textContent=v;document.querySelector('[data-panel="what"]').classList.add('filled');closePanels();
+}
 
 function renderLocations(filter=''){
   const list=LOCATIONS.filter(l=>l[0].toLowerCase().includes(filter.toLowerCase()));
@@ -452,7 +467,13 @@ document.addEventListener('click',(e)=>{
   if(!e.target.closest('.search-pill')) closePanels();
 });
 document.getElementById('panel-where').addEventListener('click',e=>e.stopPropagation());
-document.getElementById('searchGoBtn').addEventListener('click',()=>{ window.location.href='browse.html'; });
+document.getElementById('searchGoBtn').addEventListener('click',()=>{
+  const params=new URLSearchParams();
+  const whatVal=document.getElementById('valWhat').textContent;
+  if(selectedCat) params.set('cat',selectedCat);
+  else if(whatVal && whatVal!=='Anything, anywhere') params.set('q',whatVal);
+  window.location.href = params.toString() ? 'browse?'+params.toString() : 'browse';
+});
 
 /* ============ NAV + reveal ============ */
 initMarketingNav();

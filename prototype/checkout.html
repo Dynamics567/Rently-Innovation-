@@ -70,7 +70,7 @@ body{padding-top:0;}
 
 <div class="co-bar">
   <div class="container co-bar-inner">
-    <a class="wordmark wordmark-sm" href="homepage.html"><img src="assets/images/logo.png" alt="Rently" /></a>
+    <a class="wordmark wordmark-sm" href="homepage"><img src="assets/images/logo.png" alt="Rently" /></a>
     <div class="stepper" id="stepper"></div>
     <div class="co-secure" id="coSecure"></div>
   </div>
@@ -140,7 +140,7 @@ body{padding-top:0;}
           <p class="sub" id="confirmSub"></p>
           <div class="confirm-ref"><span style="color:var(--ink-faint)">Reference</span><span id="confirmRef"></span></div>
           <div class="confirm-actions">
-            <a class="pill-btn blue" href="dashboard-renter.html">View my bookings</a>
+            <a class="pill-btn blue" href="dashboard-renter">View my bookings</a>
             <a class="pill-btn ghost" id="confirmMsgBtn">Message provider</a>
           </div>
         </div>
@@ -173,7 +173,7 @@ const total = rental+service+listing.deposit;
 const dateStr = `${dFrom.toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${dTo.toLocaleDateString('en-US',{month:'short',day:'numeric'})}`;
 
 document.getElementById('coSecure').innerHTML = icon('lock',{size:13})+'<span>Secure checkout</span>';
-document.getElementById('revEditLink').href = 'listing.html?id='+listing.id;
+document.getElementById('revEditLink').href = 'listing?id='+listing.id;
 
 /* ---- stepper ---- */
 const STEPS=[['review','Review'],['verify','Verify'],['pay','Pay'],['confirm','Confirm']];
@@ -255,7 +255,7 @@ document.getElementById('payBtn').addEventListener('click',()=>{
     ? `Your payment is held in escrow and ${provider.name} has been notified. You'll get the exact address and pickup details by email.`
     : `${provider.name} typically responds in ${provider.responseTime}. Your card won't be charged unless they approve — we'll email you the moment they respond.`;
   document.getElementById('confirmRef').textContent = 'RNT-'+Math.random().toString(36).slice(2,8).toUpperCase();
-  document.getElementById('confirmMsgBtn').href = 'dashboard-renter.html';
+  document.getElementById('confirmMsgBtn').href = 'dashboard-renter';
 });
 
 initReveal();

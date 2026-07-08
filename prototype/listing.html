@@ -104,24 +104,24 @@ body{padding-top:86px;}
 
 <nav class="nav solid" id="nav">
   <div class="container nav-inner">
-    <a class="wordmark" href="homepage.html"><img src="assets/images/logo.png" alt="Rently" /></a>
+    <a class="wordmark" href="homepage"><img src="assets/images/logo.png" alt="Rently" /></a>
     <div class="nav-links">
-      <a href="homepage.html#categories">Explore</a>
-      <a href="browse.html">Marketplace</a>
-      <a href="auth.html?role=provider">Become a Provider</a>
+      <a href="homepage#categories">Explore</a>
+      <a href="browse">Marketplace</a>
+      <a href="auth?role=provider">Become a Provider</a>
     </div>
     <div class="nav-cta">
-      <a class="become" href="auth.html?role=provider">List your first item</a>
-      <a class="pill-btn ghost" href="auth.html">Log in</a>
+      <a class="become" href="auth?role=provider">List your first item</a>
+      <a class="pill-btn ghost" href="auth">Log in</a>
     </div>
   </div>
 </nav>
 
 <div class="container">
   <div class="crumb">
-    <a href="homepage.html">Home</a>
+    <a href="homepage">Home</a>
     <span id="crumbSep1"></span>
-    <a href="browse.html" id="crumbCat">Category</a>
+    <a href="browse" id="crumbCat">Category</a>
     <span id="crumbSep2"></span>
     <span id="crumbTitle">Listing</span>
   </div>
@@ -222,8 +222,8 @@ body{padding-top:86px;}
   <div class="container">
     <div class="foot-top">
       <div><span class="wordmark wordmark-lg"><img src="assets/images/logo-dark.png" alt="Rently" /></span><p>Access made simple. Ownership made optional. A Dynamic Technology Ltd. product, built for Nigeria's rental economy.</p></div>
-      <div><h5>Explore</h5><ul><li><a href="browse.html">Categories</a></li><li><a href="homepage.html#intro">How it works</a></li><li><a href="#">Trust &amp; Safety</a></li></ul></div>
-      <div><h5>Providers</h5><ul><li><a href="auth.html?role=provider">Become a Provider</a></li><li><a href="dashboard-provider.html">Provider Dashboard</a></li></ul></div>
+      <div><h5>Explore</h5><ul><li><a href="browse">Categories</a></li><li><a href="homepage#intro">How it works</a></li><li><a href="#">Trust &amp; Safety</a></li></ul></div>
+      <div><h5>Providers</h5><ul><li><a href="auth?role=provider">Become a Provider</a></li><li><a href="dashboard-provider">Provider Dashboard</a></li></ul></div>
       <div><h5>Company</h5><ul><li><a href="#">About</a></li><li><a href="#">Careers</a></li></ul></div>
       <div><h5>Support</h5><ul><li><a href="#">Help Center</a></li><li><a href="#">Disputes</a></li></ul></div>
     </div>
@@ -246,7 +246,7 @@ const REVIEWS=[
 document.getElementById('crumbSep1').innerHTML=icon('chevronRight',{size:11});
 document.getElementById('crumbSep2').innerHTML=icon('chevronRight',{size:11});
 document.getElementById('crumbCat').textContent=listing.catName;
-document.getElementById('crumbCat').href='browse.html?cat='+listing.cat;
+document.getElementById('crumbCat').href='browse?cat='+listing.cat;
 document.getElementById('crumbTitle').textContent=listing.title;
 document.title=listing.title+' — Rently';
 
@@ -361,7 +361,7 @@ document.getElementById('bwToSeg').addEventListener('click',toggleBwCal);
 document.getElementById('bwCta').addEventListener('click',()=>{
   if(!bStart||!bEnd) return;
   const q=new URLSearchParams({id:listing.id, from:bStart.toISOString().slice(0,10), to:bEnd.toISOString().slice(0,10)});
-  window.location.href='checkout.html?'+q.toString();
+  window.location.href='checkout?'+q.toString();
 });
 
 initReveal();

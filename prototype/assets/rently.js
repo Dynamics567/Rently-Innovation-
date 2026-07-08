@@ -135,6 +135,7 @@ const CATEGORIES=[
   {key:'boats',name:'Marine & Watercraft',count:38,size:'c-small'},
   {key:'spaces',name:'Studios & Workspaces',count:210,size:'c-small'},
 ];
+const CATEGORY_ICON={event:'calendar',vehicle:'truck',realestate:'building',tools:'tool',av:'video',music:'music',clothing:'shirt',sports:'star',boats:'map',spaces:'grid'};
 
 const PROVIDERS=[
   {id:'ec',name:'EventCraft NG',avatar:'EC',verified:true,since:2022,responseTime:'< 2 hrs',rating:4.8,listings:34,bio:'Full-service event infrastructure — tents, drapery, staging and décor for weddings and corporate functions across Lagos.'},
@@ -197,7 +198,7 @@ const LOCATIONS=[['Lekki Phase 1','Lagos'],['Victoria Island','Lagos'],['Ikeja',
 
 /* ---------------- LISTING CARD RENDERER (shared) ---------------- */
 function rcard(l,feature=false,opts={}){
-  const href=opts.href!==undefined?opts.href:`listing.html?id=${l.id}`;
+  const href=opts.href!==undefined?opts.href:`listing?id=${l.id}`;
   return `<a class="rcard ${feature?'feature':''}" href="${href}">
     <div class="rcard-media">
       ${artDiv(l.cat,feature?90:100,.18)}
