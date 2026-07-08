@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Listing — Rently</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/rently.css" />
+<style>
+body{padding-top:86px;}
+.crumb{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-faint);margin-bottom:18px;}
+.crumb a:hover{color:var(--ink);}
+.crumb svg{width:11px;height:11px;}
+
+.l-head{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin-bottom:22px;flex-wrap:wrap;}
+.l-head h1{font-size:clamp(24px,3vw,32px);font-weight:400;max-width:640px;}
+.l-meta{display:flex;align-items:center;gap:14px;margin-top:10px;font-size:13.5px;color:var(--ink-soft);flex-wrap:wrap;}
+.l-meta .dot{width:3px;height:3px;border-radius:50%;background:var(--ink-mute);}
+.l-actions{display:flex;gap:10px;flex-shrink:0;}
+.icon-square{width:40px;height:40px;border-radius:12px;border:1px solid var(--line-strong);display:flex;align-items:center;justify-content:center;color:var(--ink-soft);transition:.2s;}
+.icon-square:hover{border-color:var(--ink);color:var(--ink);}
+
+.gallery{display:grid;grid-template-columns:1.4fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:8px;border-radius:20px;overflow:hidden;height:440px;margin-bottom:48px;position:relative;}
+.gallery .g-tile{position:relative;overflow:hidden;}
+.gallery .g-tile:first-child{grid-row:1/3;}
+.gallery .g-tile .art{position:absolute;inset:0;}
+.show-all-btn{position:absolute;bottom:20px;right:20px;background:#fff;border:1px solid var(--line-strong);border-radius:999px;padding:9px 16px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:7px;box-shadow:var(--sh-sm);}
+@media(max-width:900px){.gallery{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;height:320px;}.gallery .g-tile:nth-child(4),.gallery .g-tile:nth-child(5){display:none;}}
+@media(max-width:600px){.gallery{grid-template-columns:1fr;grid-template-rows:1fr;height:260px;}.gallery .g-tile:not(:first-child){display:none;}}
+
+.l-layout{display:grid;grid-template-columns:1fr 400px;gap:64px;align-items:start;padding-bottom:120px;}
+@media(max-width:980px){.l-layout{grid-template-columns:1fr;}}
+
+.l-section{padding:32px 0;border-bottom:1px solid var(--line);}
+.l-section:first-child{padding-top:0;}
+.l-section h3{font-size:19px;font-weight:500;margin-bottom:16px;}
+.l-section p{color:var(--ink-soft);font-size:14.5px;line-height:1.75;}
+.spec-list{display:grid;grid-template-columns:1fr 1fr;gap:14px 24px;}
+.spec-item{display:flex;align-items:flex-start;gap:10px;font-size:13.5px;color:var(--ink-soft);}
+.spec-item svg{color:var(--green);flex-shrink:0;margin-top:2px;}
+@media(max-width:600px){.spec-list{grid-template-columns:1fr;}}
+
+.provider-card{display:flex;gap:16px;align-items:center;}
+.provider-card .p-avatar{width:56px;height:56px;font-size:17px;border-radius:16px;flex-shrink:0;}
+.provider-card .name{font-size:16px;font-weight:600;display:flex;align-items:center;gap:6px;}
+.provider-card .sub{font-size:12.5px;color:var(--ink-faint);margin-top:3px;}
+.provider-stats{display:flex;gap:28px;margin:22px 0;}
+.provider-stats div b{display:block;font-family:var(--serif);font-size:21px;font-weight:500;}
+.provider-stats div span{font-size:11.5px;color:var(--ink-faint);}
+
+.rating-summary{display:flex;gap:40px;margin-bottom:28px;flex-wrap:wrap;}
+.rs-score{text-align:center;flex-shrink:0;}
+.rs-score .n{font-family:var(--serif);font-size:52px;font-weight:400;}
+.rs-score .stars{display:flex;gap:2px;justify-content:center;color:var(--amber);margin:6px 0;}
+.rs-score .stars svg{width:13px;height:13px;}
+.rs-score .of{font-size:12px;color:var(--ink-faint);}
+.rs-bars{flex:1;min-width:200px;display:flex;flex-direction:column;gap:7px;justify-content:center;}
+.rs-bar-row{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink-soft);}
+.rs-bar-row .track{flex:1;height:6px;border-radius:999px;background:var(--bg-alt);overflow:hidden;}
+.rs-bar-row .fill{height:100%;background:var(--amber);border-radius:999px;}
+.review{display:flex;gap:14px;padding:20px 0;border-top:1px solid var(--line);}
+.review:first-child{border-top:none;padding-top:0;}
+.review .p-avatar{width:40px;height:40px;flex-shrink:0;}
+.review .name{font-size:13.5px;font-weight:600;}
+.review .when{font-size:12px;color:var(--ink-faint);}
+.review .stars{display:flex;gap:2px;color:var(--amber);margin:6px 0;}
+.review .stars svg{width:12px;height:12px;}
+.review p{font-size:13.5px;}
+
+.map-tile{position:relative;height:220px;border-radius:16px;overflow:hidden;margin-top:16px;}
+.map-tile .art{position:absolute;inset:0;}
+.map-tile .pin-drop{position:absolute;top:50%;left:50%;transform:translate(-50%,-100%);color:#fff;}
+
+/* ---- booking widget: highest-stakes component ---- */
+.booking-widget{position:sticky;top:104px;border:1px solid var(--line-strong);border-radius:22px;padding:26px;box-shadow:var(--sh-md);background:var(--surface);}
+.bw-price{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:18px;}
+.bw-price .amt{font-family:var(--serif);font-size:28px;font-weight:500;}
+.bw-price .amt span{font-size:13px;font-weight:400;color:var(--ink-faint);}
+.bw-dates{border:1.5px solid var(--line-strong);border-radius:14px;overflow:hidden;position:relative;margin-bottom:14px;}
+.bw-dates .row{display:flex;}
+.bw-date-seg{flex:1;padding:11px 14px;cursor:pointer;transition:.2s;}
+.bw-date-seg:first-child{border-right:1px solid var(--line-strong);}
+.bw-date-seg:hover{background:var(--bg-alt);}
+.bw-date-seg label{display:block;font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:2px;}
+.bw-date-seg .val{font-size:13px;font-weight:600;}
+.bw-cal-panel{padding:18px;border-top:1px solid var(--line-strong);display:none;}
+.bw-cal-panel.open{display:block;}
+.bw-breakdown{display:flex;flex-direction:column;gap:10px;margin:18px 0;font-size:13.5px;}
+.bw-breakdown .row{display:flex;justify-content:space-between;color:var(--ink-soft);}
+.bw-breakdown .row.total{color:var(--ink);font-weight:700;font-size:15px;padding-top:12px;border-top:1px solid var(--line);}
+.bw-mode-badge{display:inline-flex;align-items:center;gap:6px;margin-bottom:16px;}
+.bw-trust{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--ink-faint);margin-top:16px;line-height:1.6;}
+.bw-trust svg{color:var(--green);flex-shrink:0;margin-top:2px;}
+
+.similar{padding:0 0 120px;}
+.similar-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;}
+@media(max-width:980px){.similar-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:600px){.similar-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<nav class="nav solid" id="nav">
+  <div class="container nav-inner">
+    <a class="wordmark" href="homepage.html">Rently</a>
+    <div class="nav-links">
+      <a href="homepage.html#categories">Explore</a>
+      <a href="browse.html">Marketplace</a>
+      <a href="auth.html?role=provider">Become a Provider</a>
+    </div>
+    <div class="nav-cta">
+      <a class="become" href="auth.html?role=provider">List your first item</a>
+      <a class="pill-btn ghost" href="auth.html">Log in</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="crumb">
+    <a href="homepage.html">Home</a>
+    <span id="crumbSep1"></span>
+    <a href="browse.html" id="crumbCat">Category</a>
+    <span id="crumbSep2"></span>
+    <span id="crumbTitle">Listing</span>
+  </div>
+
+  <div class="l-head">
+    <div>
+      <h1 id="lTitle">Listing title</h1>
+      <div class="l-meta">
+        <span class="rrating" id="lRating"></span>
+        <div class="dot"></div>
+        <span id="lReviews"></span>
+        <div class="dot"></div>
+        <span id="lLoc"></span>
+        <div class="dot"></div>
+        <span id="lVerified"></span>
+      </div>
+    </div>
+    <div class="l-actions">
+      <button class="icon-square" id="shareBtn" aria-label="Share listing"></button>
+      <button class="icon-square" id="favBtn" aria-label="Save listing"></button>
+    </div>
+  </div>
+
+  <div class="gallery" id="gallery"></div>
+
+  <div class="l-layout">
+    <div>
+      <div class="l-section">
+        <h3>About this listing</h3>
+        <p id="lDesc"></p>
+      </div>
+      <div class="l-section">
+        <h3>What's included</h3>
+        <div class="spec-list" id="specList"></div>
+      </div>
+      <div class="l-section">
+        <h3>Hosted by</h3>
+        <div class="provider-card">
+          <div class="p-avatar" id="provAvatar"></div>
+          <div>
+            <div class="name" id="provName"></div>
+            <div class="sub" id="provSub"></div>
+          </div>
+        </div>
+        <div class="provider-stats" id="provStats"></div>
+        <p id="provBio" style="margin-bottom:18px;"></p>
+        <button class="pill-btn ghost" id="contactProviderBtn"></button>
+      </div>
+      <div class="l-section">
+        <h3>Reviews</h3>
+        <div class="rating-summary">
+          <div class="rs-score">
+            <div class="n" id="rsScore"></div>
+            <div class="stars" id="rsStars"></div>
+            <div class="of" id="rsOf"></div>
+          </div>
+          <div class="rs-bars" id="rsBars"></div>
+        </div>
+        <div id="reviewList"></div>
+      </div>
+      <div class="l-section" style="border-bottom:none;">
+        <h3>Location</h3>
+        <p id="lLocFull"></p>
+        <div class="map-tile" id="mapTile"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="booking-widget" id="bookingWidget">
+        <div class="bw-mode-badge" id="bwModeBadge"></div>
+        <div class="bw-price"><div class="amt" id="bwPrice"></div><span class="rrating" id="bwRating"></span></div>
+        <div class="bw-dates">
+          <div class="row">
+            <div class="bw-date-seg" id="bwFromSeg"><label>Start date</label><div class="val" id="bwFromVal">Add date</div></div>
+            <div class="bw-date-seg" id="bwToSeg"><label>End date</label><div class="val" id="bwToVal">Add date</div></div>
+          </div>
+          <div class="bw-cal-panel" id="bwCalPanel"><div class="cal" id="bwCal"></div></div>
+        </div>
+        <div class="bw-breakdown" id="bwBreakdown"></div>
+        <button class="pill-btn blue block lg" id="bwCta">Add dates to continue</button>
+        <div class="bw-trust" id="bwTrust1"></div>
+        <div class="bw-trust" id="bwTrust2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="similar">
+  <div class="container">
+    <div class="sec-head reveal">
+      <div><div class="eyebrow">You might also like</div><h2>More in <em id="similarCatName">this category</em></h2></div>
+    </div>
+    <div class="similar-grid" id="similarGrid"></div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="container">
+    <div class="foot-top">
+      <div><span class="wordmark">Rently</span><p>Access made simple. Ownership made optional. A Dynamic Technology Ltd. product, built for Nigeria's rental economy.</p></div>
+      <div><h5>Explore</h5><ul><li><a href="browse.html">Categories</a></li><li><a href="homepage.html#intro">How it works</a></li><li><a href="#">Trust &amp; Safety</a></li></ul></div>
+      <div><h5>Providers</h5><ul><li><a href="auth.html?role=provider">Become a Provider</a></li><li><a href="dashboard-provider.html">Provider Dashboard</a></li></ul></div>
+      <div><h5>Company</h5><ul><li><a href="#">About</a></li><li><a href="#">Careers</a></li></ul></div>
+      <div><h5>Support</h5><ul><li><a href="#">Help Center</a></li><li><a href="#">Disputes</a></li></ul></div>
+    </div>
+    <div class="foot-bottom"><span>© 2026 Rently Innovation Hub, a Dynamic Technology Ltd. product.</span><span>Terms · Privacy · NDPR Compliance</span></div>
+  </div>
+</footer>
+
+<script src="assets/rently.js"></script>
+<script>
+const params=new URLSearchParams(window.location.search);
+const listing = LISTINGS.find(l=>l.id===params.get('id')) || LISTINGS[0];
+const provider = PROVIDERS.find(p=>p.id===listing.providerId);
+const REVIEWS=[
+  {name:'Ifeoma A.',avatar:'IA',rating:5,when:'2 weeks ago',text:'Exactly as described — communication was fast and setup was on time. Would book again without hesitation.'},
+  {name:'Tunde B.',avatar:'TB',rating:4,when:'1 month ago',text:'Great quality, one small delay on delivery but the provider kept me updated throughout.'},
+  {name:'Chioma O.',avatar:'CO',rating:5,when:'2 months ago',text:'Best experience I\'ve had renting in Lagos. Everything matched the listing photos and description.'},
+];
+
+/* ---- breadcrumb ---- */
+document.getElementById('crumbSep1').innerHTML=icon('chevronRight',{size:11});
+document.getElementById('crumbSep2').innerHTML=icon('chevronRight',{size:11});
+document.getElementById('crumbCat').textContent=listing.catName;
+document.getElementById('crumbCat').href='browse.html?cat='+listing.cat;
+document.getElementById('crumbTitle').textContent=listing.title;
+document.title=listing.title+' — Rently';
+
+/* ---- head ---- */
+document.getElementById('lTitle').textContent=listing.title;
+document.getElementById('lRating').innerHTML=starIcon(13)+listing.rating;
+document.getElementById('lReviews').textContent=listing.reviews+' reviews';
+document.getElementById('lLoc').innerHTML=icon('pin',{size:12})+listing.loc;
+document.getElementById('lVerified').innerHTML= listing.verified ? `<span style="color:var(--green-dark);display:flex;align-items:center;gap:4px;font-weight:600">${icon('check',{size:12,stroke:2.8})}Verified provider</span>` : '';
+document.getElementById('shareBtn').innerHTML=icon('share',{size:16});
+document.getElementById('favBtn').innerHTML=icon('heart',{size:16});
+document.getElementById('favBtn').addEventListener('click',()=>document.getElementById('favBtn').classList.toggle('on'));
+
+/* ---- gallery: 1 large + 4 small, varied icon placement to avoid a repeated-stamp look ---- */
+const gVariants=[[130,.22,-8],[140,.16,10],[110,.2,-14],[150,.14,4],[120,.18,16]];
+document.getElementById('gallery').innerHTML = gVariants.map((v,i)=>{
+  const [size,op]=v;
+  return `<div class="g-tile"><div class="art" style="${artStyle(listing.cat)}">${artHTML(listing.cat,size,op)}</div>${i===4?'<div class="show-all-btn">'+icon('grid',{size:13})+' Show all photos</div>':''}</div>`;
+}).join('');
+
+/* ---- description + specs ---- */
+document.getElementById('lDesc').textContent=listing.desc;
+document.getElementById('specList').innerHTML = listing.specs.map(s=>`<div class="spec-item">${icon('check',{size:15,stroke:2.4})}${s}</div>`).join('');
+
+/* ---- provider ---- */
+document.getElementById('provAvatar').textContent=provider.avatar;
+document.getElementById('provName').innerHTML = provider.name + (provider.verified?` <span style="color:var(--green-dark)">${icon('check',{size:14,stroke:3})}</span>`:'');
+document.getElementById('provSub').textContent = `Provider since ${provider.since} · Responds in ${provider.responseTime}`;
+document.getElementById('provStats').innerHTML = `
+  <div><b>${provider.rating}</b><span>Average rating</span></div>
+  <div><b>${provider.listings}</b><span>Active listings</span></div>
+  <div><b>${provider.responseTime}</b><span>Response time</span></div>`;
+document.getElementById('provBio').textContent = provider.bio;
+document.getElementById('contactProviderBtn').innerHTML = icon('message',{size:15})+' Message '+provider.name.split(' ')[0];
+
+/* ---- reviews ---- */
+document.getElementById('rsScore').textContent=listing.rating;
+document.getElementById('rsStars').innerHTML=starIcon(13).repeat(5);
+document.getElementById('rsOf').textContent=listing.reviews+' reviews';
+const dist=[[5,72],[4,20],[3,5],[2,2],[1,1]];
+document.getElementById('rsBars').innerHTML = dist.map(([s,pct])=>`<div class="rs-bar-row"><span>${s}</span>${starIcon(10)}<div class="track"><div class="fill" style="width:${pct}%"></div></div><span style="width:28px;text-align:right">${pct}%</span></div>`).join('');
+document.getElementById('reviewList').innerHTML = REVIEWS.map(r=>`
+  <div class="review">
+    <div class="p-avatar">${r.avatar}</div>
+    <div>
+      <div class="name">${r.name}</div>
+      <div class="when">${r.when}</div>
+      <div class="stars">${starIcon(12).repeat(r.rating)}</div>
+      <p>${r.text}</p>
+    </div>
+  </div>`).join('');
+
+/* ---- location ---- */
+document.getElementById('lLocFull').textContent = `${listing.loc} — exact address shared after booking is confirmed, for the safety of both parties.`;
+document.getElementById('mapTile').innerHTML = `<div class="art" style="${artStyle('spaces')}"></div><div class="pin-drop">${icon('pin',{size:30,fill:true})}</div>`;
+
+/* ---- similar listings ---- */
+document.getElementById('similarCatName').textContent = listing.catName;
+document.getElementById('similarGrid').innerHTML = LISTINGS.filter(l=>l.cat===listing.cat && l.id!==listing.id).concat(LISTINGS.filter(l=>l.id!==listing.id)).slice(0,4).map(l=>rcard(l)).join('');
+
+/* ================================================================
+   BOOKING WIDGET — price first, mode explicit, itemized + live,
+   CTA label describes what happens next.
+   ================================================================ */
+const SERVICE_FEE_RATE=0.06;
+let bStart=null, bEnd=null;
+document.getElementById('bwModeBadge').innerHTML = listing.mode==='instant'
+  ? `<span class="badge instant">${icon('check',{size:11,stroke:2.8})}Instant Book</span>`
+  : `<span class="badge request">${icon('clock',{size:11,stroke:2.5})}Request to Book</span>`;
+document.getElementById('bwPrice').innerHTML = `${money(listing.price)}<span> / ${listing.unit}</span>`;
+document.getElementById('bwRating').innerHTML = starIcon(13)+listing.rating;
+
+function nightsBetween(a,b){ return Math.max(1, Math.round((b-a)/86400000)); }
+function renderBreakdown(){
+  const cta=document.getElementById('bwCta');
+  if(!bStart||!bEnd){
+    document.getElementById('bwBreakdown').innerHTML = `<div class="row" style="color:var(--ink-faint)">Select dates to see the full price breakdown.</div>`;
+    cta.textContent='Add dates to continue'; cta.disabled=true;
+    return;
+  }
+  const n=nightsBetween(bStart,bEnd);
+  const rental=listing.price*n;
+  const service=Math.round(rental*SERVICE_FEE_RATE);
+  const total=rental+service+listing.deposit;
+  document.getElementById('bwBreakdown').innerHTML = `
+    <div class="row"><span>${money(listing.price)} × ${n} ${listing.unit}${n>1?'s':''}</span><span>${money(rental)}</span></div>
+    <div class="row"><span>Service fee</span><span>${money(service)}</span></div>
+    <div class="row"><span>Refundable deposit</span><span>${money(listing.deposit)}</span></div>
+    <div class="row total"><span>Total due today</span><span>${money(total)}</span></div>`;
+  cta.disabled=false;
+  cta.textContent = listing.mode==='instant' ? 'Book Instantly' : 'Request to Book';
+}
+renderBreakdown();
+
+document.getElementById('bwTrust1').innerHTML = icon('shield',{size:14})+`<span>Payment is held in escrow until your rental period begins.</span>`;
+document.getElementById('bwTrust2').innerHTML = icon('info',{size:14})+`<span>${listing.mode==='instant' ? 'Your card is charged immediately — this provider accepts bookings automatically.' : 'You won\'t be charged until '+provider.name+' approves your request.'}</span>`;
+
+const bwCal = createDateRangePicker(document.getElementById('bwCal'), (start,end)=>{
+  bStart=start; bEnd=end;
+  if(start) document.getElementById('bwFromVal').textContent = start.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  if(end) document.getElementById('bwToVal').textContent = end.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  renderBreakdown();
+});
+function toggleBwCal(){ document.getElementById('bwCalPanel').classList.toggle('open'); }
+document.getElementById('bwFromSeg').addEventListener('click',toggleBwCal);
+document.getElementById('bwToSeg').addEventListener('click',toggleBwCal);
+
+document.getElementById('bwCta').addEventListener('click',()=>{
+  if(!bStart||!bEnd) return;
+  const q=new URLSearchParams({id:listing.id, from:bStart.toISOString().slice(0,10), to:bEnd.toISOString().slice(0,10)});
+  window.location.href='checkout.html?'+q.toString();
+});
+
+initReveal();
+</script>
+</body>
+</html>

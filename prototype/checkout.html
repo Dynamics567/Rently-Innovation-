@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Checkout — Rently</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/rently.css" />
+<style>
+body{padding-top:0;}
+.co-bar{border-bottom:1px solid var(--line);padding:20px 0;position:sticky;top:0;background:rgba(250,248,244,.95);backdrop-filter:blur(10px);z-index:100;}
+.co-bar-inner{display:flex;align-items:center;justify-content:space-between;gap:24px;}
+.co-secure{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink-faint);flex-shrink:0;}
+.co-secure svg{color:var(--green);}
+@media(max-width:800px){.co-bar .stepper{display:none;}}
+
+.co-layout{display:grid;grid-template-columns:1fr 380px;gap:56px;padding:48px 0 120px;align-items:start;}
+@media(max-width:980px){.co-layout{grid-template-columns:1fr;}}
+
+.step-panel{display:none;}
+.step-panel.active{display:block;animation:fadeUp .4s var(--ease);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.step-panel h2{font-size:24px;font-weight:400;margin-bottom:8px;}
+.step-panel .sub{color:var(--ink-soft);font-size:14px;margin-bottom:28px;}
+
+.summary-strip{display:flex;gap:14px;align-items:center;padding:18px;border:1px solid var(--line);border-radius:16px;margin-bottom:28px;}
+.summary-strip .thumb{width:64px;height:64px;border-radius:12px;overflow:hidden;position:relative;flex-shrink:0;}
+.summary-strip .thumb .art{position:absolute;inset:0;}
+.summary-strip .t{font-size:14px;font-weight:600;}
+.summary-strip .s{font-size:12.5px;color:var(--ink-faint);margin-top:3px;}
+.summary-strip a{margin-left:auto;flex-shrink:0;}
+
+.form-2col{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;}
+@media(max-width:560px){.form-2col{grid-template-columns:1fr;}}
+
+.pay-methods{display:flex;flex-direction:column;gap:10px;margin-bottom:24px;}
+.pay-method{display:flex;align-items:center;gap:14px;padding:15px 16px;border:1.5px solid var(--line-strong);border-radius:14px;cursor:pointer;transition:.2s;}
+.pay-method:hover{border-color:var(--ink-faint);}
+.pay-method.sel{border-color:var(--blue);background:var(--blue-soft);}
+.pay-method .radio{width:19px;height:19px;border-radius:50%;border:1.5px solid var(--line-strong);flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.pay-method.sel .radio{border-color:var(--blue);}
+.pay-method.sel .radio::after{content:'';width:10px;height:10px;border-radius:50%;background:var(--blue);}
+.pay-method .pm-icon{width:34px;height:34px;border-radius:8px;background:var(--bg-alt);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--ink-soft);}
+.pay-method .pm-name{font-size:13.5px;font-weight:600;}
+.pay-method .pm-sub{font-size:11.5px;color:var(--ink-faint);}
+.card-fields{display:none;padding:18px;background:var(--bg-alt);border-radius:14px;margin-top:-4px;margin-bottom:24px;}
+.card-fields.open{display:block;}
+
+.order-summary{position:sticky;top:100px;border:1px solid var(--line-strong);border-radius:22px;padding:26px;box-shadow:var(--sh-sm);}
+.order-summary h4{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);margin-bottom:18px;}
+.os-listing{display:flex;gap:14px;margin-bottom:22px;padding-bottom:22px;border-bottom:1px solid var(--line);}
+.os-listing .thumb{width:64px;height:64px;border-radius:12px;overflow:hidden;position:relative;flex-shrink:0;}
+.os-listing .thumb .art{position:absolute;inset:0;}
+.os-listing .t{font-size:13.5px;font-weight:600;line-height:1.3;}
+.os-listing .s{font-size:12px;color:var(--ink-faint);margin-top:4px;}
+.os-row{display:flex;justify-content:space-between;font-size:13.5px;color:var(--ink-soft);margin-bottom:10px;}
+.os-row.total{color:var(--ink);font-weight:700;font-size:16px;padding-top:14px;margin-top:6px;border-top:1px solid var(--line);}
+
+.confirm-wrap{text-align:center;padding:40px 20px 10px;max-width:520px;margin:0 auto;}
+.confirm-icon{width:76px;height:76px;border-radius:50%;background:var(--green-soft);color:var(--green-dark);display:flex;align-items:center;justify-content:center;margin:0 auto 26px;}
+.confirm-wrap h2{font-size:26px;margin-bottom:10px;}
+.confirm-wrap .sub{margin-bottom:30px;}
+.confirm-ref{display:inline-flex;gap:10px;align-items:center;background:var(--bg-alt);border-radius:999px;padding:10px 20px;font-size:13px;font-weight:600;margin-bottom:34px;}
+.confirm-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+</style>
+</head>
+<body>
+
+<div class="co-bar">
+  <div class="container co-bar-inner">
+    <a class="wordmark" href="homepage.html" style="font-size:19px;">Rently</a>
+    <div class="stepper" id="stepper"></div>
+    <div class="co-secure" id="coSecure"></div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="co-layout">
+    <div>
+      <!-- STEP 1: REVIEW -->
+      <div class="step-panel active" id="panel-review">
+        <h2>Review your booking</h2>
+        <p class="sub">Confirm the details below before we verify your account and take payment.</p>
+        <div class="summary-strip">
+          <div class="thumb" id="revThumb"></div>
+          <div>
+            <div class="t" id="revTitle"></div>
+            <div class="s" id="revDates"></div>
+          </div>
+          <a class="text-link faint" id="revEditLink">Edit dates</a>
+        </div>
+
+        <div class="field"><label>Full name</label><input type="text" id="fName" value="Damilola Adeyemi" /></div>
+        <div class="form-2col">
+          <div class="field"><label>Email address</label><input type="email" id="fEmail" value="damilola.a@gmail.com" /></div>
+          <div class="field"><label>Phone number</label><input type="tel" id="fPhone" value="+234 803 123 4567" /></div>
+        </div>
+        <div class="field"><label>Note to provider <span style="color:var(--ink-faint);font-weight:400">(optional)</span></label><textarea placeholder="Anything the provider should know ahead of time?"></textarea></div>
+        <div class="check-row" style="margin-bottom:24px;">
+          <input type="checkbox" id="agreeTerms" checked />
+          <label for="agreeTerms">I agree to Rently's Terms of Service and the provider's cancellation policy.</label>
+        </div>
+        <button class="pill-btn blue lg block" id="toVerifyBtn">Continue to verification</button>
+      </div>
+
+      <!-- STEP 2: VERIFY -->
+      <div class="step-panel" id="panel-verify">
+        <h2>Verify your phone number</h2>
+        <p class="sub">We text a one-time code before a renter's first booking — this is what keeps disputes and no-shows rare on Rently.</p>
+        <div class="banner info" style="margin-bottom:28px;" id="verifyBanner"></div>
+        <label style="display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:10px;">Enter the 6-digit code sent to +234 803 123 4567</label>
+        <div class="otp-row" id="otpRow" style="margin-bottom:14px;"></div>
+        <a class="text-link faint" style="margin-bottom:28px;display:inline-flex;">Resend code</a>
+        <button class="pill-btn blue lg block" id="toPayBtn">Verify &amp; continue to payment</button>
+      </div>
+
+      <!-- STEP 3: PAY -->
+      <div class="step-panel" id="panel-pay">
+        <h2>Choose how to pay</h2>
+        <p class="sub">Every payment is held in escrow until your rental period begins.</p>
+        <div class="pay-methods" id="payMethods"></div>
+        <div class="card-fields" id="cardFields">
+          <div class="field"><label>Card number</label><input type="text" placeholder="4242 4242 4242 4242" /></div>
+          <div class="form-2col">
+            <div class="field"><label>Expiry</label><input type="text" placeholder="MM / YY" /></div>
+            <div class="field"><label>CVV</label><input type="text" placeholder="•••" /></div>
+          </div>
+        </div>
+        <div class="banner success" id="escrowBanner" style="margin-bottom:24px;"></div>
+        <button class="pill-btn blue lg block" id="payBtn">Pay</button>
+      </div>
+
+      <!-- STEP 4: CONFIRMATION -->
+      <div class="step-panel" id="panel-confirm">
+        <div class="confirm-wrap">
+          <div class="confirm-icon" id="confirmIcon"></div>
+          <h2 id="confirmTitle">Booking confirmed</h2>
+          <p class="sub" id="confirmSub"></p>
+          <div class="confirm-ref"><span style="color:var(--ink-faint)">Reference</span><span id="confirmRef"></span></div>
+          <div class="confirm-actions">
+            <a class="pill-btn blue" href="dashboard-renter.html">View my bookings</a>
+            <a class="pill-btn ghost" id="confirmMsgBtn">Message provider</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ORDER SUMMARY (persists across steps 1-3) -->
+    <div class="order-summary" id="orderSummary">
+      <h4>Order summary</h4>
+      <div class="os-listing">
+        <div class="thumb" id="osThumb"></div>
+        <div><div class="t" id="osTitle"></div><div class="s" id="osDates"></div></div>
+      </div>
+      <div id="osBreakdown"></div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/rently.js"></script>
+<script>
+const params=new URLSearchParams(window.location.search);
+const listing = LISTINGS.find(l=>l.id===params.get('id')) || LISTINGS[0];
+const provider = PROVIDERS.find(p=>p.id===listing.providerId);
+const dFrom = params.get('from') ? new Date(params.get('from')) : new Date(Date.now()+7*86400000);
+const dTo = params.get('to') ? new Date(params.get('to')) : new Date(Date.now()+9*86400000);
+const nights = Math.max(1, Math.round((dTo-dFrom)/86400000));
+const rental = listing.price*nights;
+const service = Math.round(rental*0.06);
+const total = rental+service+listing.deposit;
+const dateStr = `${dFrom.toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${dTo.toLocaleDateString('en-US',{month:'short',day:'numeric'})}`;
+
+document.getElementById('coSecure').innerHTML = icon('lock',{size:13})+'<span>Secure checkout</span>';
+document.getElementById('revEditLink').href = 'listing.html?id='+listing.id;
+
+/* ---- stepper ---- */
+const STEPS=[['review','Review'],['verify','Verify'],['pay','Pay'],['confirm','Confirm']];
+let stepIdx=0;
+function renderStepper(){
+  document.getElementById('stepper').innerHTML = STEPS.map(([key,lbl],i)=>{
+    const state = i<stepIdx?'done':(i===stepIdx?'active':'');
+    const circ = i<stepIdx ? icon('check',{size:12,stroke:3}) : (i+1);
+    const line = i<STEPS.length-1 ? `<div class="step-line ${i<stepIdx?'done':''}"></div>` : '';
+    return `<div class="step-item ${state}"><div class="circ">${circ}</div><div class="lbl">${lbl}</div></div>${line}`;
+  }).join('');
+}
+function goToStep(i){
+  stepIdx=i;
+  ['review','verify','pay','confirm'].forEach((k,idx2)=>{
+    document.getElementById('panel-'+k).classList.toggle('active', idx2===i);
+  });
+  renderStepper();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+renderStepper();
+
+/* ---- fill listing-dependent content ---- */
+function paintThumb(el){ el.innerHTML = artDiv(listing.cat, 130, .2); }
+['revThumb','osThumb'].forEach(id=>paintThumb(document.getElementById(id)));
+document.getElementById('revTitle').textContent=listing.title;
+document.getElementById('revDates').textContent=`${dateStr} · ${nights} ${listing.unit}${nights>1?'s':''} · ${provider.name}`;
+document.getElementById('osTitle').textContent=listing.title;
+document.getElementById('osDates').textContent=dateStr;
+document.getElementById('osBreakdown').innerHTML = `
+  <div class="os-row"><span>${money(listing.price)} × ${nights} ${listing.unit}${nights>1?'s':''}</span><span>${money(rental)}</span></div>
+  <div class="os-row"><span>Service fee</span><span>${money(service)}</span></div>
+  <div class="os-row"><span>Refundable deposit</span><span>${money(listing.deposit)}</span></div>
+  <div class="os-row total"><span>Total</span><span>${money(total)}</span></div>`;
+
+/* ---- STEP 1 -> 2 ---- */
+document.getElementById('toVerifyBtn').addEventListener('click',()=>goToStep(1));
+
+/* ---- STEP 2: verify ---- */
+document.getElementById('verifyBanner').innerHTML = icon('shield',{size:16})+`<div><div class="t">One-time verification, then you're set</div><div class="d">Rently verifies renters once, the same way it verifies every provider — it's what makes escrow and disputes actually work.</div></div>`;
+document.getElementById('otpRow').innerHTML = Array.from({length:6}).map((_,i)=>`<input type="text" maxlength="1" inputmode="numeric" />`).join('');
+const otpInputs=[...document.querySelectorAll('#otpRow input')];
+otpInputs.forEach((inp,i)=>{
+  inp.addEventListener('input',()=>{ if(inp.value && otpInputs[i+1]) otpInputs[i+1].focus(); });
+  inp.addEventListener('keydown',(e)=>{ if(e.key==='Backspace' && !inp.value && otpInputs[i-1]) otpInputs[i-1].focus(); });
+});
+otpInputs[0].value='4';otpInputs[1].value='2';otpInputs[2].value='9';otpInputs[3].value='1';otpInputs[4].value='7';otpInputs[5].value='6';
+document.getElementById('toPayBtn').addEventListener('click',()=>goToStep(2));
+
+/* ---- STEP 3: pay ---- */
+const PAY_METHODS=[
+  {key:'card',name:'Debit / Credit Card',sub:'Visa, Mastercard, Verve',icon:'card'},
+  {key:'transfer',name:'Bank Transfer',sub:'Instant confirmation via Paystack',icon:'wallet'},
+  {key:'ussd',name:'USSD',sub:'Pay from any phone, no app needed',icon:'phone'},
+];
+let selectedPay='card';
+function renderPayMethods(){
+  document.getElementById('payMethods').innerHTML = PAY_METHODS.map(m=>`
+    <div class="pay-method ${selectedPay===m.key?'sel':''}" data-key="${m.key}">
+      <div class="radio"></div>
+      <div class="pm-icon">${icon(m.icon,{size:16})}</div>
+      <div><div class="pm-name">${m.name}</div><div class="pm-sub">${m.sub}</div></div>
+    </div>`).join('');
+  document.querySelectorAll('.pay-method').forEach(el=>el.addEventListener('click',()=>{
+    selectedPay=el.dataset.key; renderPayMethods();
+    document.getElementById('cardFields').classList.toggle('open', selectedPay==='card');
+  }));
+  document.getElementById('cardFields').classList.toggle('open', selectedPay==='card');
+}
+renderPayMethods();
+document.getElementById('escrowBanner').innerHTML = icon('shield',{size:16})+`<div><div class="t">Your ${money(total)} is protected</div><div class="d">Funds are held in escrow and only released to ${provider.name} once your rental period begins. If something's wrong, you have recourse.</div></div>`;
+document.getElementById('payBtn').textContent = listing.mode==='instant' ? `Pay ${money(total)} securely` : `Request to Book · ${money(total)} held`;
+document.getElementById('payBtn').addEventListener('click',()=>{
+  goToStep(3);
+  const instant = listing.mode==='instant';
+  document.getElementById('confirmIcon').innerHTML = icon(instant?'check':'clock',{size:30,stroke:2.4});
+  document.getElementById('confirmTitle').textContent = instant ? 'Booking confirmed' : 'Request sent to '+provider.name;
+  document.getElementById('confirmSub').textContent = instant
+    ? `Your payment is held in escrow and ${provider.name} has been notified. You'll get the exact address and pickup details by email.`
+    : `${provider.name} typically responds in ${provider.responseTime}. Your card won't be charged unless they approve — we'll email you the moment they respond.`;
+  document.getElementById('confirmRef').textContent = 'RNT-'+Math.random().toString(36).slice(2,8).toUpperCase();
+  document.getElementById('confirmMsgBtn').href = 'dashboard-renter.html';
+});
+
+initReveal();
+</script>
+</body>
+</html>

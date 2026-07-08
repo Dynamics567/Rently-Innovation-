@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Log in or sign up — Rently</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/rently.css" />
+<style>
+body{min-height:100vh;}
+.auth-shell{display:grid;grid-template-columns:1fr 1fr;min-height:100vh;}
+@media(max-width:900px){.auth-shell{grid-template-columns:1fr;}}
+
+.auth-brand{position:relative;background:var(--dark);overflow:hidden;padding:48px;display:flex;flex-direction:column;justify-content:space-between;}
+.auth-brand .collage-mini{position:absolute;inset:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;opacity:.9;}
+.auth-brand .collage-mini .art{position:absolute;inset:0;}
+.auth-brand .collage-mini .tile{position:relative;overflow:hidden;}
+.auth-brand .collage-mini .tile::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(21,19,15,.55),rgba(21,19,15,.85));}
+.auth-brand .top{position:relative;z-index:2;}
+.auth-brand .wordmark{color:#fff;font-size:24px;}
+.auth-brand .quote{position:relative;z-index:2;max-width:420px;}
+.auth-brand .quote blockquote{font-family:var(--serif);color:#fff;font-size:clamp(20px,2.4vw,26px);line-height:1.5;margin-bottom:18px;}
+.auth-brand .quote .who{color:rgba(255,255,255,.6);font-size:13px;}
+@media(max-width:900px){.auth-brand{display:none;}}
+
+.auth-form-wrap{display:flex;align-items:center;justify-content:center;padding:60px 32px;}
+.auth-card{width:100%;max-width:420px;}
+.auth-card .back{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-faint);margin-bottom:32px;}
+.auth-card .back:hover{color:var(--ink);}
+.auth-card h1{font-size:26px;font-weight:400;margin-bottom:8px;}
+.auth-card .sub{color:var(--ink-soft);font-size:14px;margin-bottom:28px;}
+.role-toggle{display:flex;gap:10px;margin-bottom:26px;}
+.role-card{flex:1;border:1.5px solid var(--line-strong);border-radius:14px;padding:14px;cursor:pointer;transition:.2s;}
+.role-card.sel{border-color:var(--blue);background:var(--blue-soft);}
+.role-card .r-icon{width:30px;height:30px;border-radius:8px;background:var(--bg-alt);display:flex;align-items:center;justify-content:center;margin-bottom:10px;color:var(--ink-soft);}
+.role-card.sel .r-icon{background:#fff;color:var(--blue);}
+.role-card .r-name{font-size:13px;font-weight:700;}
+.role-card .r-sub{font-size:11px;color:var(--ink-faint);margin-top:2px;}
+.divider{display:flex;align-items:center;gap:14px;margin:22px 0;color:var(--ink-faint);font-size:12px;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--line-strong);}
+.social-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;border:1.5px solid var(--line-strong);border-radius:12px;padding:12px;font-size:13.5px;font-weight:600;margin-bottom:10px;transition:.2s;}
+.social-btn:hover{border-color:var(--ink);}
+.fine-print{font-size:12px;color:var(--ink-faint);text-align:center;margin-top:22px;line-height:1.7;}
+.fine-print a{color:var(--ink);font-weight:600;}
+.switch-mode{text-align:center;font-size:13.5px;margin-top:8px;}
+.switch-mode button{color:var(--blue);font-weight:600;}
+</style>
+</head>
+<body class="no-grain">
+
+<div class="auth-shell">
+  <div class="auth-brand">
+    <div class="collage-mini" id="brandCollage"></div>
+    <div class="top"><a class="wordmark" href="homepage.html">Rently</a></div>
+    <div class="quote">
+      <blockquote id="brandQuote">"I stopped chasing tent suppliers on WhatsApp groups. Now I compare providers, see real ratings, and my deposit's protected until setup day."</blockquote>
+      <div class="who" id="brandWho">Bola S. — Renter, Lagos</div>
+    </div>
+  </div>
+
+  <div class="auth-form-wrap">
+    <div class="auth-card">
+      <a class="back" href="homepage.html" id="backLink"></a>
+
+      <!-- SCREEN: auth form -->
+      <div id="screenForm">
+        <h1 id="formTitle">Welcome back</h1>
+        <p class="sub" id="formSub">Log in to manage your bookings, favorites and messages.</p>
+
+        <div class="seg-control" style="margin-bottom:26px;">
+          <button class="active" id="tabLogin">Log in</button>
+          <button id="tabSignup">Sign up</button>
+        </div>
+
+        <div id="roleBlock" style="display:none;">
+          <div class="role-toggle">
+            <div class="role-card sel" id="roleRenter">
+              <div class="r-icon" id="roleRenterIcon"></div>
+              <div class="r-name">I'm a Renter</div>
+              <div class="r-sub">Book items, spaces &amp; services</div>
+            </div>
+            <div class="role-card" id="roleProvider">
+              <div class="r-icon" id="roleProviderIcon"></div>
+              <div class="r-name">I'm a Provider</div>
+              <div class="r-sub">List and earn from your assets</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="nameField" class="field" style="display:none;"><label>Full name</label><input type="text" placeholder="Your full name" /></div>
+        <div class="field"><label>Email address</label><input type="email" placeholder="you@example.com" /></div>
+        <div class="field"><label>Password</label><input type="password" placeholder="••••••••" /></div>
+        <div id="providerNote" class="banner info" style="display:none;margin-bottom:20px;"></div>
+
+        <a class="text-link faint" id="forgotLink" style="margin-bottom:22px;display:inline-flex;">Forgot password?</a>
+        <button class="pill-btn blue lg block" id="submitAuthBtn">Log in</button>
+
+        <div class="divider">or continue with</div>
+        <button class="social-btn" id="googleBtn"></button>
+        <button class="social-btn" id="appleBtn"></button>
+
+        <p class="switch-mode" id="switchModeRow"></p>
+      </div>
+
+      <!-- SCREEN: OTP (signup only) -->
+      <div id="screenOtp" style="display:none;">
+        <h1>Verify your email</h1>
+        <p class="sub">Enter the 6-digit code we sent to your inbox to finish creating your account.</p>
+        <div class="otp-row" id="authOtpRow" style="margin-bottom:16px;"></div>
+        <a class="text-link faint" style="margin-bottom:26px;display:inline-flex;">Resend code</a>
+        <button class="pill-btn blue lg block" id="finishSignupBtn">Create account</button>
+      </div>
+
+      <p class="fine-print">By continuing you agree to Rently's <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>, including NDPR data handling.</p>
+    </div>
+  </div>
+</div>
+
+<script src="assets/rently.js"></script>
+<script>
+const params=new URLSearchParams(window.location.search);
+const initialProvider = params.get('role')==='provider';
+
+document.getElementById('backLink').innerHTML = icon('chevronLeft',{size:13})+' Back to Rently';
+document.getElementById('roleRenterIcon').innerHTML=icon('user',{size:16});
+document.getElementById('roleProviderIcon').innerHTML=icon('building',{size:16});
+document.getElementById('googleBtn').innerHTML='<span style="font-weight:800;color:#4285F4">G</span> Continue with Google';
+document.getElementById('appleBtn').innerHTML=icon('shield',{size:15})+' Continue with Apple';
+
+let mode='login'; // 'login' | 'signup'
+let role= initialProvider ? 'provider' : 'renter';
+
+function paintBrand(){
+  const keys = role==='provider' ? ['tools','event','realestate','music'] : ['realestate','event','vehicle','av'];
+  document.getElementById('brandCollage').innerHTML = keys.map(k=>`<div class="tile">${artDiv(k,140,.5)}</div>`).join('');
+  if(role==='provider'){
+    document.getElementById('brandQuote').textContent = '"My scaffolding used to sit idle between contracts. On Rently it\'s booked three weeks out, and I get paid on completion."';
+    document.getElementById('brandWho').textContent = 'BuildRight Equipment — Provider since 2021';
+  } else {
+    document.getElementById('brandQuote').textContent = '"I stopped chasing tent suppliers on WhatsApp groups. Now I compare providers, see real ratings, and my deposit\'s protected until setup day."';
+    document.getElementById('brandWho').textContent = 'Bola S. — Renter, Lagos';
+  }
+}
+
+function renderRoleSel(){
+  document.getElementById('roleRenter').classList.toggle('sel', role==='renter');
+  document.getElementById('roleProvider').classList.toggle('sel', role==='provider');
+  document.getElementById('providerNote').style.display = role==='provider' ? 'flex' : 'none';
+  if(role==='provider') document.getElementById('providerNote').innerHTML = icon('shield',{size:15})+`<div><div class="t">ID verification required</div><div class="d">Provider accounts are verified within 24 hours before your first listing can go live.</div></div>`;
+  paintBrand();
+}
+document.getElementById('roleRenter').addEventListener('click',()=>{role='renter';renderRoleSel();});
+document.getElementById('roleProvider').addEventListener('click',()=>{role='provider';renderRoleSel();});
+
+function renderMode(){
+  const isSignup = mode==='signup';
+  document.getElementById('tabLogin').classList.toggle('active',!isSignup);
+  document.getElementById('tabSignup').classList.toggle('active',isSignup);
+  document.getElementById('formTitle').textContent = isSignup ? 'Create your account' : 'Welcome back';
+  document.getElementById('formSub').textContent = isSignup ? 'Join Rently as a renter or list your first item as a provider.' : 'Log in to manage your bookings, favorites and messages.';
+  document.getElementById('roleBlock').style.display = isSignup ? 'block':'none';
+  document.getElementById('nameField').style.display = isSignup ? 'block':'none';
+  document.getElementById('forgotLink').style.display = isSignup ? 'none':'inline-flex';
+  document.getElementById('submitAuthBtn').textContent = isSignup ? 'Create account' : 'Log in';
+  document.getElementById('switchModeRow').innerHTML = isSignup
+    ? `Already have an account? <button id="swBtn">Log in</button>`
+    : `New to Rently? <button id="swBtn">Create an account</button>`;
+  document.getElementById('swBtn').addEventListener('click',()=>{mode = isSignup?'login':'signup'; renderMode();});
+  renderRoleSel();
+}
+document.getElementById('tabLogin').addEventListener('click',()=>{mode='login';renderMode();});
+document.getElementById('tabSignup').addEventListener('click',()=>{mode='signup';renderMode();});
+if(initialProvider){ mode='signup'; }
+renderMode();
+
+document.getElementById('submitAuthBtn').addEventListener('click',()=>{
+  if(mode==='signup'){
+    document.getElementById('screenForm').style.display='none';
+    document.getElementById('screenOtp').style.display='block';
+    document.getElementById('authOtpRow').innerHTML = Array.from({length:6}).map(()=>'<input type="text" maxlength="1" inputmode="numeric" />').join('');
+    const inputs=[...document.querySelectorAll('#authOtpRow input')];
+    inputs.forEach((inp,i)=>{ inp.addEventListener('input',()=>{ if(inp.value && inputs[i+1]) inputs[i+1].focus(); }); });
+    inputs[0].focus();
+  } else {
+    window.location.href = role==='provider' ? 'dashboard-provider.html' : 'dashboard-renter.html';
+  }
+});
+document.getElementById('finishSignupBtn').addEventListener('click',()=>{
+  window.location.href = role==='provider' ? 'dashboard-provider.html' : 'dashboard-renter.html';
+});
+</script>
+</body>
+</html>

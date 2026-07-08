@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My bookings — Rently</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/rently.css" />
+<style>
+body{padding-top:0;}
+.d-view{display:none;}
+.d-view.active{display:block;animation:fadeUp .35s var(--ease);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+.booking-row .badge{margin-left:10px;}
+.msg-row{display:flex;gap:14px;align-items:center;padding:16px;border-radius:14px;transition:.15s;cursor:pointer;}
+.msg-row:hover{background:var(--bg-alt);}
+.msg-row .p-avatar{width:44px;height:44px;font-size:14px;flex-shrink:0;}
+.msg-row .m-title{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;}
+.msg-row .m-prev{font-size:12.5px;color:var(--ink-faint);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:360px;}
+.msg-row .m-time{font-size:11.5px;color:var(--ink-faint);flex-shrink:0;margin-left:auto;}
+.unread-dot{width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0;}
+
+.settings-form{max-width:520px;}
+.settings-avatar-row{display:flex;align-items:center;gap:16px;margin-bottom:28px;}
+.settings-avatar-row .p-avatar{width:64px;height:64px;font-size:20px;border-radius:18px;}
+</style>
+</head>
+<body class="no-grain">
+
+<nav class="nav app-nav">
+  <div class="container nav-inner">
+    <a class="wordmark" href="homepage.html">Rently</a>
+    <div class="nav-links">
+      <a href="homepage.html#categories">Explore</a>
+      <a href="browse.html">Marketplace</a>
+    </div>
+    <button class="nav-icon-btn" id="searchNavBtn" aria-label="Search" style="margin-left:auto;"></button>
+    <button class="nav-icon-btn" id="bellBtn" aria-label="Notifications"><span class="dot"></span></button>
+    <div class="nav-avatar-menu">
+      <button class="nav-avatar" id="avatarBtn">DA</button>
+      <div class="avatar-dropdown" id="avatarDropdown">
+        <div class="who"><div class="n">Damilola Adeyemi</div><div class="e">damilola.a@gmail.com</div></div>
+        <a class="dd-item" href="dashboard-renter.html" id="ddBookings"></a>
+        <a class="dd-item" href="dashboard-provider.html" id="ddSwitch"></a>
+        <a class="dd-item danger" href="auth.html" id="ddLogout"></a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="app-shell">
+  <aside class="app-side">
+    <div class="side-group-lbl">Renter</div>
+    <a class="side-link active" data-view="bookings" id="linkBookings"></a>
+    <a class="side-link" data-view="favorites" id="linkFavorites"></a>
+    <a class="side-link" data-view="messages" id="linkMessages"></a>
+    <a class="side-link" data-view="settings" id="linkSettings"></a>
+    <div class="side-group-lbl">Switch role</div>
+    <a class="side-link" href="dashboard-provider.html" id="linkProviderSwitch"></a>
+  </aside>
+
+  <main class="app-main">
+    <!-- ============ BOOKINGS ============ -->
+    <div class="d-view active" id="view-bookings">
+      <div class="app-head">
+        <div><h1>My bookings</h1><p>Everything you've rented, requested, or completed on Rently.</p></div>
+        <a class="pill-btn blue" href="browse.html">Book something new</a>
+      </div>
+      <div class="tabs" id="bookingTabs"></div>
+      <div style="margin-top:24px;display:flex;flex-direction:column;gap:14px;" id="bookingList"></div>
+      <div class="empty-state" id="bookingsEmpty" style="display:none;">
+        <div class="ic" id="bookingsEmptyIcon"></div>
+        <h3>Nothing here yet</h3>
+        <p>Once you book something in this category, it'll show up here with its status and dates.</p>
+        <a class="pill-btn ghost" href="browse.html">Browse listings</a>
+      </div>
+    </div>
+
+    <!-- ============ FAVORITES ============ -->
+    <div class="d-view" id="view-favorites">
+      <div class="app-head"><div><h1>Favorites</h1><p>Listings you've saved to compare or book later.</p></div></div>
+      <div class="grid-3" id="favGrid"></div>
+    </div>
+
+    <!-- ============ MESSAGES ============ -->
+    <div class="d-view" id="view-messages">
+      <div class="app-head"><div><h1>Messages</h1><p>Conversations with providers about your bookings.</p></div></div>
+      <div id="msgList" style="display:flex;flex-direction:column;gap:4px;"></div>
+    </div>
+
+    <!-- ============ SETTINGS ============ -->
+    <div class="d-view" id="view-settings">
+      <div class="app-head"><div><h1>Account settings</h1><p>Update your profile and notification preferences.</p></div></div>
+      <div class="settings-form">
+        <div class="settings-avatar-row">
+          <div class="p-avatar">DA</div>
+          <button class="pill-btn ghost sm" id="uploadPhotoBtn"></button>
+        </div>
+        <div class="field"><label>Full name</label><input type="text" value="Damilola Adeyemi" /></div>
+        <div class="field"><label>Email address</label><input type="email" value="damilola.a@gmail.com" /></div>
+        <div class="field"><label>Phone number</label><input type="tel" value="+234 803 123 4567" /></div>
+        <div class="field success"><label>Identity verification</label>
+          <div class="banner success" id="idVerifiedBanner"></div>
+        </div>
+        <div class="field"><label>Notifications</label>
+          <div class="toggle-row" style="margin-bottom:14px;"><span>Booking updates by email</span><div class="switch on" data-key="email"></div></div>
+          <div class="toggle-row" style="margin-bottom:0;"><span>SMS reminders before rental start</span><div class="switch on" data-key="sms"></div></div>
+        </div>
+        <button class="pill-btn blue" style="margin-top:8px;">Save changes</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="assets/rently.js"></script>
+<script>
+/* ---- icons ---- */
+document.getElementById('searchNavBtn').innerHTML = icon('search',{size:17});
+document.getElementById('bellBtn').innerHTML = icon('bell',{size:17})+'<span class="dot"></span>';
+document.getElementById('ddBookings').innerHTML = icon('calendar',{size:15})+' My bookings';
+document.getElementById('ddSwitch').innerHTML = icon('building',{size:15})+' Switch to Provider';
+document.getElementById('ddLogout').innerHTML = icon('logout',{size:15})+' Log out';
+document.getElementById('linkBookings').innerHTML = icon('calendar',{size:17})+' Bookings';
+document.getElementById('linkFavorites').innerHTML = icon('heart',{size:17})+' Favorites';
+document.getElementById('linkMessages').innerHTML = icon('message',{size:17})+' Messages';
+document.getElementById('linkSettings').innerHTML = icon('settings',{size:17})+' Settings';
+document.getElementById('linkProviderSwitch').innerHTML = icon('building',{size:17})+' Provider dashboard';
+document.getElementById('bookingsEmptyIcon').innerHTML = icon('calendar',{size:22});
+document.getElementById('uploadPhotoBtn').innerHTML = icon('camera',{size:14})+' Change photo';
+document.getElementById('idVerifiedBanner').innerHTML = icon('check',{size:15,stroke:2.8})+`<div><div class="t">Identity verified</div><div class="d">Verified on Mar 2024 — no action needed.</div></div>`;
+
+initAvatarMenu();
+
+/* ---- sidebar view switching ---- */
+document.querySelectorAll('.side-link[data-view]').forEach(l=>l.addEventListener('click',(e)=>{
+  e.preventDefault();
+  document.querySelectorAll('.side-link[data-view]').forEach(o=>o.classList.remove('active'));
+  l.classList.add('active');
+  document.querySelectorAll('.d-view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+l.dataset.view).classList.add('active');
+}));
+
+/* ---- bookings ---- */
+const TABS=[['all','All'],['upcoming','Upcoming'],['pending','Pending'],['completed','Completed'],['cancelled','Cancelled']];
+let activeTab='all';
+function statusBadge(s){
+  const map={upcoming:'confirmed',pending:'pending',completed:'completed',cancelled:'cancelled'};
+  const cls=map[s]||'info';
+  const lbl=s.charAt(0).toUpperCase()+s.slice(1);
+  return `<span class="badge ${cls}">${lbl}</span>`;
+}
+function renderTabs(){
+  document.getElementById('bookingTabs').innerHTML = TABS.map(([k,l])=>`<div class="tab ${activeTab===k?'active':''}" data-t="${k}">${l}</div>`).join('');
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{activeTab=t.dataset.t;renderTabs();renderBookings();}));
+}
+function renderBookings(){
+  const list = BOOKINGS.filter(b=>activeTab==='all'||b.status===activeTab);
+  const wrap=document.getElementById('bookingList'), empty=document.getElementById('bookingsEmpty');
+  if(list.length===0){ wrap.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  wrap.innerHTML = list.map(b=>{
+    const l=LISTINGS.find(x=>x.id===b.listingId);
+    return `<a class="row-card booking-row" href="listing.html?id=${b.listingId}">
+      <div class="thumb">${artDiv(b.cat,120,.22)}</div>
+      <div class="main">
+        <div class="t">${b.title}${statusBadge(b.status)}</div>
+        <div class="s">${new Date(b.dateFrom).toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${new Date(b.dateTo).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${b.provider}</div>
+      </div>
+      <div class="side"><div class="rprice">${money(b.total)}</div></div>
+    </a>`;
+  }).join('');
+}
+renderTabs(); renderBookings();
+
+/* ---- favorites (simulate 3 saved listings) ---- */
+const FAV_IDS=['l2','l4','l11'];
+document.getElementById('favGrid').innerHTML = LISTINGS.filter(l=>FAV_IDS.includes(l.id)).map(l=>rcard(l)).join('');
+
+/* ---- messages (mock inbox) ---- */
+const CONVERSATIONS=[
+  {provider:'EventCraft NG',avatar:'EC',preview:'Great — we\'ll have the tent set up by 9am on the 9th.',time:'2h ago',unread:true},
+  {provider:'AeroLens Rentals',avatar:'AL',preview:'Thanks for the booking! Batteries are fully charged.',time:'1d ago',unread:false},
+  {provider:'BuildRight Equipment',avatar:'BR',preview:'Sorry for the short notice — refund has been processed.',time:'3d ago',unread:false},
+];
+document.getElementById('msgList').innerHTML = CONVERSATIONS.map(c=>`
+  <div class="msg-row">
+    <div class="p-avatar">${c.avatar}</div>
+    <div style="flex:1;min-width:0;">
+      <div class="m-title">${c.provider}${c.unread?'<span class=\"unread-dot\"></span>':''}</div>
+      <div class="m-prev">${c.preview}</div>
+    </div>
+    <div class="m-time">${c.time}</div>
+  </div>`).join('');
+
+/* ---- settings toggles ---- */
+document.querySelectorAll('#view-settings .switch').forEach(s=>s.addEventListener('click',()=>s.classList.toggle('on')));
+</script>
+</body>
+</html>

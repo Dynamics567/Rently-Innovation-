@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Provider dashboard — Rently</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/rently.css" />
+<style>
+body{padding-top:0;}
+.d-view{display:none;}
+.d-view.active{display:block;animation:fadeUp .35s var(--ease);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+.section-block{margin-bottom:44px;}
+.section-block .sb-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+.section-block .sb-head h3{font-size:16px;font-weight:600;font-family:var(--sans);}
+
+.request-row{display:flex;gap:14px;align-items:center;padding:16px;border:1px solid var(--line);border-radius:14px;margin-bottom:12px;}
+.request-row .p-avatar{width:38px;height:38px;font-size:12.5px;flex-shrink:0;}
+.request-row .r-main{flex:1;min-width:0;}
+.request-row .r-title{font-size:13.5px;font-weight:600;}
+.request-row .r-sub{font-size:12px;color:var(--ink-faint);margin-top:2px;}
+.request-row .r-actions{display:flex;gap:8px;flex-shrink:0;}
+.listing-thumb-cell{display:flex;align-items:center;gap:12px;}
+.listing-thumb-cell .thumb{width:40px;height:40px;border-radius:8px;overflow:hidden;position:relative;flex-shrink:0;}
+.listing-thumb-cell .thumb .art{position:absolute;inset:0;}
+.tbl-actions{display:flex;gap:6px;}
+.tbl-icon-btn{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--ink-faint);transition:.2s;}
+.tbl-icon-btn:hover{background:var(--bg-alt);color:var(--ink);}
+
+.settings-form{max-width:560px;}
+.payout-fields{border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:24px;}
+</style>
+</head>
+<body class="no-grain">
+
+<nav class="nav app-nav">
+  <div class="container nav-inner">
+    <a class="wordmark" href="homepage.html">Rently</a>
+    <div class="nav-links">
+      <a href="homepage.html#categories">Explore</a>
+      <a href="browse.html">Marketplace</a>
+    </div>
+    <button class="nav-icon-btn" id="bellBtn" aria-label="Notifications" style="margin-left:auto;"><span class="dot"></span></button>
+    <div class="nav-avatar-menu">
+      <button class="nav-avatar" id="avatarBtn" style="background:var(--green);">EC</button>
+      <div class="avatar-dropdown" id="avatarDropdown">
+        <div class="who"><div class="n">EventCraft NG</div><div class="e">Provider account</div></div>
+        <a class="dd-item" href="dashboard-renter.html" id="ddSwitch"></a>
+        <a class="dd-item" href="#" id="ddSettings"></a>
+        <a class="dd-item danger" href="auth.html" id="ddLogout"></a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="app-shell">
+  <aside class="app-side">
+    <div class="side-group-lbl">Provider</div>
+    <a class="side-link active" data-view="overview" id="linkOverview"></a>
+    <a class="side-link" data-view="listings" id="linkListings"></a>
+    <a class="side-link" data-view="requests" id="linkRequests"></a>
+    <a class="side-link" data-view="earnings" id="linkEarnings"></a>
+    <a class="side-link" data-view="settings" id="linkSettings"></a>
+    <div class="side-group-lbl">Switch role</div>
+    <a class="side-link" href="dashboard-renter.html" id="linkRenterSwitch"></a>
+  </aside>
+
+  <main class="app-main">
+    <!-- ============ OVERVIEW ============ -->
+    <div class="d-view active" id="view-overview">
+      <div class="app-head">
+        <div><h1>Good afternoon, EventCraft</h1><p>Here's how your listings are performing this month.</p></div>
+        <button class="pill-btn green" id="addListingBtn2"></button>
+      </div>
+
+      <div class="banner warning" id="actionBanner" style="margin-bottom:32px;"></div>
+
+      <div class="kpi-row" style="margin-bottom:44px;">
+        <div class="kpi"><div class="lbl">Total earnings</div><div class="val">₦412,500</div><div class="delta up" id="delta1"></div></div>
+        <div class="kpi"><div class="lbl">Active listings</div><div class="val">3</div><div class="delta up" id="delta2"></div></div>
+        <div class="kpi"><div class="lbl">Pending requests</div><div class="val">2</div><div class="delta" style="color:var(--amber-ink)" id="delta3"></div></div>
+        <div class="kpi"><div class="lbl">Average rating</div><div class="val">4.8</div><div class="delta up" id="delta4"></div></div>
+      </div>
+
+      <div class="section-block">
+        <div class="sb-head"><h3>Requests needing your response</h3><a class="text-link faint" data-view-link="requests">View all</a></div>
+        <div id="overviewRequests"></div>
+      </div>
+
+      <div class="section-block">
+        <div class="sb-head"><h3>Recent bookings</h3><a class="text-link faint" data-view-link="earnings">View earnings</a></div>
+        <div class="dtable-wrap">
+          <table class="dtable" id="overviewTable"></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ LISTINGS ============ -->
+    <div class="d-view" id="view-listings">
+      <div class="app-head">
+        <div><h1>Your listings</h1><p>Manage pricing, availability and visibility for everything you rent out.</p></div>
+        <button class="pill-btn green" id="addListingBtn"></button>
+      </div>
+      <div class="dtable-wrap">
+        <table class="dtable">
+          <thead><tr><th>Listing</th><th>Category</th><th>Price</th><th>Status</th><th>Views</th><th>Bookings</th><th></th></tr></thead>
+          <tbody id="listingsTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============ REQUESTS ============ -->
+    <div class="d-view" id="view-requests">
+      <div class="app-head"><div><h1>Booking requests</h1><p>Requests older than 24 hours hurt your response-time score — respond fast.</p></div></div>
+      <div id="requestsList"></div>
+    </div>
+
+    <!-- ============ EARNINGS ============ -->
+    <div class="d-view" id="view-earnings">
+      <div class="app-head"><div><h1>Earnings</h1><p>Payouts settle 7 days after a rental completes, direct to your linked bank account.</p></div></div>
+      <div class="kpi-row" style="margin-bottom:36px;">
+        <div class="kpi"><div class="lbl">Paid out to date</div><div class="val">₦342,500</div></div>
+        <div class="kpi"><div class="lbl">Pending payout</div><div class="val">₦22,000</div></div>
+        <div class="kpi"><div class="lbl">This month</div><div class="val">₦177,000</div></div>
+        <div class="kpi"><div class="lbl">Platform commission</div><div class="val">5%</div></div>
+      </div>
+      <div class="dtable-wrap">
+        <table class="dtable">
+          <thead><tr><th>Date</th><th>Listing</th><th>Renter</th><th>Amount</th><th>Commission</th><th>Status</th><th>Payout</th></tr></thead>
+          <tbody id="transactionsTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============ SETTINGS ============ -->
+    <div class="d-view" id="view-settings">
+      <div class="app-head"><div><h1>Provider settings</h1><p>Your public profile, verification status and payout details.</p></div></div>
+      <div class="settings-form">
+        <div class="banner success" id="verifiedBanner" style="margin-bottom:28px;"></div>
+        <div class="field"><label>Business name</label><input type="text" value="EventCraft NG" /></div>
+        <div class="field"><label>Bio</label><textarea>Full-service event infrastructure — tents, drapery, staging and décor for weddings and corporate functions across Lagos.</textarea></div>
+        <div class="field"><label>Typical response time</label>
+          <select><option>Under 1 hour</option><option selected>Under 2 hours</option><option>Under 6 hours</option><option>Under 24 hours</option></select>
+        </div>
+        <h4 style="font-size:14px;margin:28px 0 14px;">Payout account</h4>
+        <div class="payout-fields">
+          <div class="field" style="margin-bottom:14px;"><label>Bank</label><select><option>GTBank</option><option>Access Bank</option><option>Zenith Bank</option><option>Kuda</option></select></div>
+          <div class="field" style="margin-bottom:0;"><label>Account number</label><input type="text" value="0123456789" /></div>
+        </div>
+        <div class="field"><label>Notifications</label>
+          <div class="toggle-row" style="margin-bottom:14px;"><span>New booking requests</span><div class="switch on" data-key="req"></div></div>
+          <div class="toggle-row" style="margin-bottom:0;"><span>Payout confirmations</span><div class="switch on" data-key="payout"></div></div>
+        </div>
+        <button class="pill-btn green" style="margin-top:8px;">Save changes</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ============ ADD LISTING MODAL ============ -->
+<div class="overlay" id="addListingOverlay">
+  <div class="modal">
+    <button class="modal-close" id="closeAddListing"></button>
+    <h3 style="font-size:20px;margin-bottom:6px;">List a new item</h3>
+    <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:24px;">It'll go live after a quick review — usually within a few hours.</p>
+    <div class="field"><label>Title</label><input type="text" placeholder="e.g. Chiavari Chairs (Set of 100)" /></div>
+    <div class="field"><label>Category</label><select id="modalCatSelect"></select></div>
+    <div class="field"><label>Price per day (₦)</label><input type="number" placeholder="15000" /></div>
+    <div class="field"><label>Description</label><textarea placeholder="What's included, condition, delivery options..."></textarea></div>
+    <div class="field"><label>Photos</label>
+      <div style="border:1.5px dashed var(--line-strong);border-radius:14px;padding:26px;text-align:center;color:var(--ink-faint);font-size:13px;" id="uploadDrop"></div>
+    </div>
+    <button class="pill-btn green block lg" id="submitListingBtn">Submit for review</button>
+  </div>
+</div>
+
+<script src="assets/rently.js"></script>
+<script>
+document.getElementById('bellBtn').innerHTML = icon('bell',{size:17})+'<span class="dot"></span>';
+document.getElementById('ddSwitch').innerHTML = icon('user',{size:15})+' Switch to Renter';
+document.getElementById('ddSettings').innerHTML = icon('settings',{size:15})+' Settings';
+document.getElementById('ddLogout').innerHTML = icon('logout',{size:15})+' Log out';
+document.getElementById('linkOverview').innerHTML = icon('grid',{size:17})+' Overview';
+document.getElementById('linkListings').innerHTML = icon('list',{size:17})+' Listings';
+document.getElementById('linkRequests').innerHTML = icon('message',{size:17})+' Requests';
+document.getElementById('linkEarnings').innerHTML = icon('wallet',{size:17})+' Earnings';
+document.getElementById('linkSettings').innerHTML = icon('settings',{size:17})+' Settings';
+document.getElementById('linkRenterSwitch').innerHTML = icon('user',{size:17})+' Renter dashboard';
+document.getElementById('addListingBtn').innerHTML = icon('plus',{size:15})+' Add new listing';
+document.getElementById('addListingBtn2').innerHTML = icon('plus',{size:15})+' Add new listing';
+document.getElementById('closeAddListing').innerHTML = icon('close',{size:15});
+document.getElementById('uploadDrop').innerHTML = icon('upload',{size:20})+'<div style="margin-top:8px;">Drag photos here, or click to upload</div>';
+
+initAvatarMenu();
+
+/* ---- sidebar + inline view links ---- */
+function goView(v){
+  document.querySelectorAll('.side-link[data-view]').forEach(o=>o.classList.toggle('active',o.dataset.view===v));
+  document.querySelectorAll('.d-view').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.querySelectorAll('.side-link[data-view]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goView(l.dataset.view);}));
+document.querySelectorAll('[data-view-link]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goView(l.dataset.viewLink);}));
+
+/* ---- overview: action banner + requests + recent table ---- */
+const pendingCount = PROVIDER_REQUESTS.filter(r=>r.status==='pending').length;
+document.getElementById('actionBanner').innerHTML = icon('alert',{size:16})+`<div><div class="t">${pendingCount} request${pendingCount===1?'':'s'} waiting on you</div><div class="d">Providers who respond within 2 hours convert 3× more often — jump into Requests to approve or decline.</div></div>`;
+document.getElementById('delta1').innerHTML = icon('arrowUpRight',{size:11})+' 12% vs last month';
+document.getElementById('delta2').textContent='1 draft, 1 paused';
+document.getElementById('delta3').textContent='Respond within 24h';
+document.getElementById('delta4').innerHTML = icon('arrowUpRight',{size:11})+' from 34 reviews';
+
+function requestRow(r,compact=false){
+  return `<div class="request-row">
+    <div class="p-avatar">${r.renterAvatar}</div>
+    <div class="r-main">
+      <div class="r-title">${r.renter} <span style="color:var(--ink-faint);font-weight:400">wants to book</span> ${r.listing}</div>
+      <div class="r-sub">${new Date(r.dateFrom).toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${new Date(r.dateTo).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${money(r.total)}</div>
+    </div>
+    ${r.status==='pending' ? `<div class="r-actions"><button class="pill-btn ghost sm" data-decline="${r.id}">Decline</button><button class="pill-btn green sm" data-approve="${r.id}">Approve</button></div>` : `<span class="badge confirmed">${icon('check',{size:10,stroke:3})}Approved</span>`}
+  </div>`;
+}
+function renderRequests(){
+  document.getElementById('overviewRequests').innerHTML = PROVIDER_REQUESTS.filter(r=>r.status==='pending').slice(0,2).map(r=>requestRow(r)).join('') || `<p style="color:var(--ink-faint);font-size:13.5px;">No pending requests — nice work staying on top of things.</p>`;
+  document.getElementById('requestsList').innerHTML = PROVIDER_REQUESTS.map(r=>requestRow(r)).join('');
+  document.querySelectorAll('[data-approve]').forEach(b=>b.addEventListener('click',()=>{
+    const r=PROVIDER_REQUESTS.find(x=>x.id===b.dataset.approve); r.status='approved'; renderRequests();
+  }));
+  document.querySelectorAll('[data-decline]').forEach(b=>b.addEventListener('click',()=>{
+    const idx=PROVIDER_REQUESTS.findIndex(x=>x.id===b.dataset.decline); PROVIDER_REQUESTS.splice(idx,1); renderRequests();
+  }));
+}
+renderRequests();
+
+document.getElementById('overviewTable').innerHTML = `
+  <thead><tr><th>Date</th><th>Listing</th><th>Renter</th><th>Amount</th><th>Status</th></tr></thead>
+  <tbody>${TRANSACTIONS.slice(0,3).map(t=>`<tr><td>${new Date(t.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td><td>${t.listing}</td><td>${t.renter}</td><td class="num">${money(t.amount)}</td><td><span class="badge ${t.status==='paid'?'completed':'pending'}">${t.status==='paid'?'Paid':'Pending'}</span></td></tr>`).join('')}</tbody>`;
+
+/* ---- listings table ---- */
+function statusBadgeListing(s){
+  const map={live:'confirmed',paused:'pending',draft:'info'};
+  return `<span class="badge ${map[s]}">${s.charAt(0).toUpperCase()+s.slice(1)}</span>`;
+}
+document.getElementById('listingsTbody').innerHTML = PROVIDER_LISTINGS.map(l=>`
+  <tr>
+    <td><div class="listing-thumb-cell"><div class="thumb">${artDiv(l.cat,120,.22)}</div><span>${l.title}</span></div></td>
+    <td>${(CATEGORIES.find(c=>c.key===l.cat)||{}).name||l.cat}</td>
+    <td class="num">${money(l.price)}/day</td>
+    <td>${statusBadgeListing(l.status)}</td>
+    <td class="num">${l.views}</td>
+    <td class="num">${l.bookings}</td>
+    <td><div class="tbl-actions"><button class="tbl-icon-btn" aria-label="Edit">${icon('edit',{size:15})}</button><button class="tbl-icon-btn" aria-label="More">${icon('more',{size:15})}</button></div></td>
+  </tr>`).join('');
+
+/* ---- earnings table ---- */
+document.getElementById('transactionsTbody').innerHTML = TRANSACTIONS.map(t=>`
+  <tr>
+    <td>${new Date(t.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td>
+    <td>${t.listing}</td>
+    <td>${t.renter}</td>
+    <td class="num">${money(t.amount)}</td>
+    <td class="num">${money(t.commission)}</td>
+    <td><span class="badge ${t.status==='paid'?'completed':'pending'}">${t.status==='paid'?'Paid':'Pending'}</span></td>
+    <td>${new Date(t.payout).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td>
+  </tr>`).join('');
+
+/* ---- settings ---- */
+document.getElementById('verifiedBanner').innerHTML = icon('shield',{size:16})+`<div><div class="t">Business verified</div><div class="d">CAC registration confirmed — your listings carry the Verified badge renters trust.</div></div>`;
+document.querySelectorAll('#view-settings .switch').forEach(s=>s.addEventListener('click',()=>s.classList.toggle('on')));
+
+/* ---- add listing modal ---- */
+document.getElementById('modalCatSelect').innerHTML = CATEGORIES.map(c=>`<option value="${c.key}">${c.name}</option>`).join('');
+function openModal(){ document.getElementById('addListingOverlay').classList.add('open'); }
+function closeModal(){ document.getElementById('addListingOverlay').classList.remove('open'); }
+document.getElementById('addListingBtn').addEventListener('click',openModal);
+document.getElementById('addListingBtn2').addEventListener('click',openModal);
+document.getElementById('closeAddListing').addEventListener('click',closeModal);
+document.getElementById('addListingOverlay').addEventListener('click',(e)=>{ if(e.target.id==='addListingOverlay') closeModal(); });
+document.getElementById('submitListingBtn').addEventListener('click',()=>{ closeModal(); goView('listings'); });
+</script>
+</body>
+</html>
