@@ -92,7 +92,13 @@ body{padding-top:0;}
       <a href="homepage#categories">Explore</a>
       <a href="browse">Marketplace</a>
     </div>
-    <button class="nav-icon-btn" id="bellBtn" aria-label="Notifications" style="margin-left:auto;"><span class="dot"></span></button>
+    <div class="notif-wrap" style="margin-left:auto;">
+      <button class="nav-icon-btn" id="bellBtn" aria-label="Notifications"><span class="dot"></span></button>
+      <div class="notif-dropdown" id="notifDropdown">
+        <div class="notif-head"><h5>Notifications</h5><button id="markAllReadBtn">Mark all read</button></div>
+        <div id="notifList"></div>
+      </div>
+    </div>
     <div class="nav-avatar-menu">
       <button class="nav-avatar" id="avatarBtn">DA</button>
       <div class="avatar-dropdown" id="avatarDropdown">
@@ -265,6 +271,7 @@ document.getElementById('ddBookings').innerHTML = icon('calendar',{size:15})+' M
 document.getElementById('ddSwitch').innerHTML = icon('building',{size:15})+' Switch to Provider';
 document.getElementById('ddLogout').innerHTML = icon('logout',{size:15})+' Log out';
 initAvatarMenu();
+initNotifDropdown();
 document.getElementById('backLink').innerHTML = icon('chevronLeft',{size:12})+' Back to my bookings';
 
 /* ---- header ---- */

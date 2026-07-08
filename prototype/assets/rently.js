@@ -331,6 +331,38 @@ function initAvatarMenu(btnId='avatarBtn',ddId='avatarDropdown'){
   document.addEventListener('click',(e)=>{ if(!e.target.closest(`#${ddId}`) && !e.target.closest(`#${btnId}`)) dd.classList.remove('open'); });
 }
 
+/* ---------------- NOTIFICATION CENTER (bell dropdown, app nav) ---------------- */
+const NOTIFICATIONS=[
+  {icon:'check',type:'success',title:'Booking accepted',body:'EventCraft NG approved your request for Premium Event Tent & Décor Package.',time:'2h ago',unread:true},
+  {icon:'wallet',type:'info',title:'Payment received',body:'Your payment of ₦79,500 was captured and held in escrow.',time:'2h ago',unread:true},
+  {icon:'check',type:'success',title:'Item ready for pickup',body:'Your 10KVA Soundproof Generator is ready — show your QR code at pickup.',time:'1d ago',unread:true},
+  {icon:'clock',type:'warning',title:'Pickup reminder',body:'Pickup for your Furnished 2-Bed Shortlet Apartment is tomorrow at 10:00 AM.',time:'1d ago',unread:false},
+  {icon:'check',type:'success',title:'Rental started',body:'Handover confirmed for 10KVA Soundproof Generator — enjoy!',time:'2d ago',unread:false},
+  {icon:'clock',type:'warning',title:'Return reminder',body:'Your Canopy, Chairs & Tables Package is due back in 24 hours.',time:'3d ago',unread:false},
+  {icon:'alert',type:'danger',title:'Late return warning',body:'Heavy-Duty Scaffolding Set was due back yesterday — a late fee may apply.',time:'4d ago',unread:false},
+  {icon:'wallet',type:'success',title:'Deposit released',body:'Your ₦50,000 deposit for DJI Mavic 3 Pro Drone Kit has been refunded.',time:'1w ago',unread:false},
+  {icon:'star',type:'info',title:'Review request',body:'How was your experience with Canon Pro Rentals? Leave a review.',time:'1w ago',unread:false},
+];
+function renderNotifDropdown(){
+  const list=document.getElementById('notifList');
+  if(!list) return;
+  list.innerHTML = NOTIFICATIONS.length ? NOTIFICATIONS.map(n=>`
+    <div class="notif-item ${n.unread?'unread':''}">
+      <div class="ic ${n.type}">${icon(n.icon,{size:15})}</div>
+      <div><div class="t">${n.title}</div><div class="b">${n.body}</div><div class="tm">${n.time}</div></div>
+    </div>`).join('') : `<div class="notif-empty">You're all caught up.</div>`;
+  const bellDot=document.querySelector('#bellBtn .dot');
+  if(bellDot) bellDot.style.display = NOTIFICATIONS.some(n=>n.unread) ? 'block' : 'none';
+}
+function initNotifDropdown(){
+  const btn=document.getElementById('bellBtn'), dd=document.getElementById('notifDropdown');
+  if(!btn||!dd) return;
+  renderNotifDropdown();
+  btn.addEventListener('click',(e)=>{e.stopPropagation();dd.classList.toggle('open');});
+  document.getElementById('markAllReadBtn')?.addEventListener('click',()=>{ NOTIFICATIONS.forEach(n=>n.unread=false); renderNotifDropdown(); });
+  document.addEventListener('click',(e)=>{ if(!e.target.closest('#notifDropdown') && !e.target.closest('#bellBtn')) dd.classList.remove('open'); });
+}
+
 /* ---------------- DATE RANGE PICKER (factory) ----------------
    Renders into `calEl`; calls onChange(start,end) whenever a full
    range is picked. Reused by the homepage hero search and the

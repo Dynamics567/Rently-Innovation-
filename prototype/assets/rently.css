@@ -396,6 +396,38 @@ h1 em,h2 em,h3 em{font-style:italic;font-weight:500;}
 }
 
 /* ================================================================
+   TOGGLE SWITCH — settings rows (browse filters, dashboard prefs)
+   ================================================================ */
+.toggle-row{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;color:var(--ink-soft);margin-bottom:14px;}
+.toggle-row:last-child{margin-bottom:0;}
+.switch{position:relative;width:38px;height:22px;border-radius:999px;background:var(--line-strong);flex-shrink:0;cursor:pointer;transition:.2s;}
+.switch::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.25s var(--ease);box-shadow:var(--sh-xs);}
+.switch.on{background:var(--blue);}
+.switch.on::after{transform:translateX(16px);}
+
+/* ================================================================
+   NOTIFICATION CENTER — dropdown from the bell icon in every app nav
+   ================================================================ */
+.notif-wrap{position:relative;}
+.notif-dropdown{position:absolute;top:calc(100% + 12px);right:-10px;background:#fff;border-radius:16px;box-shadow:var(--sh-lg);width:340px;max-height:440px;overflow-y:auto;opacity:0;pointer-events:none;transform:translateY(-6px);transition:.25s var(--ease);z-index:250;}
+.notif-dropdown.open{opacity:1;pointer-events:auto;transform:translateY(0);}
+.notif-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;}
+.notif-head h5{font-size:13px;font-weight:700;}
+.notif-head button{font-size:12px;font-weight:600;color:var(--blue);}
+.notif-item{display:flex;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);position:relative;}
+.notif-item:last-child{border-bottom:none;}
+.notif-item .ic{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.notif-item .ic.success{background:var(--green-soft);color:var(--green-dark);}
+.notif-item .ic.info{background:var(--blue-soft);color:var(--blue-dark);}
+.notif-item .ic.warning{background:var(--amber-soft);color:var(--amber-ink);}
+.notif-item .ic.danger{background:var(--red-soft);color:var(--red);}
+.notif-item .t{font-size:13px;font-weight:600;margin-bottom:2px;}
+.notif-item .b{font-size:12px;color:var(--ink-soft);line-height:1.5;}
+.notif-item .tm{font-size:11px;color:var(--ink-faint);margin-top:4px;}
+.notif-item.unread::after{content:'';position:absolute;top:18px;right:14px;width:7px;height:7px;border-radius:50%;background:var(--blue);}
+.notif-empty{padding:40px 20px;text-align:center;color:var(--ink-faint);font-size:13px;}
+
+/* ================================================================
    STAGE TIMELINE — the 12-step booking lifecycle, vertical, with
    timestamps. Shared by booking.html and dashboard summary cards.
    ================================================================ */

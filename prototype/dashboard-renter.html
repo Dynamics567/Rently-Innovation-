@@ -38,7 +38,13 @@ body{padding-top:0;}
       <a href="browse">Marketplace</a>
     </div>
     <button class="nav-icon-btn" id="searchNavBtn" aria-label="Search" style="margin-left:auto;"></button>
-    <button class="nav-icon-btn" id="bellBtn" aria-label="Notifications"><span class="dot"></span></button>
+    <div class="notif-wrap">
+      <button class="nav-icon-btn" id="bellBtn" aria-label="Notifications"><span class="dot"></span></button>
+      <div class="notif-dropdown" id="notifDropdown">
+        <div class="notif-head"><h5>Notifications</h5><button id="markAllReadBtn">Mark all read</button></div>
+        <div id="notifList"></div>
+      </div>
+    </div>
     <div class="nav-avatar-menu">
       <button class="nav-avatar" id="avatarBtn">DA</button>
       <div class="avatar-dropdown" id="avatarDropdown">
@@ -113,9 +119,11 @@ body{padding-top:0;}
         <div class="field success"><label>Identity verification</label>
           <div class="banner success" id="idVerifiedBanner"></div>
         </div>
-        <div class="field"><label>Notifications</label>
-          <div class="toggle-row" style="margin-bottom:14px;"><span>Booking updates by email</span><div class="switch on" data-key="email"></div></div>
-          <div class="toggle-row" style="margin-bottom:0;"><span>SMS reminders before rental start</span><div class="switch on" data-key="sms"></div></div>
+        <div class="field"><label>Notification channels</label>
+          <div class="toggle-row"><span>In-app notifications</span><div class="switch on" data-key="inapp"></div></div>
+          <div class="toggle-row"><span>Email</span><div class="switch on" data-key="email"></div></div>
+          <div class="toggle-row"><span>SMS reminders before rental start</span><div class="switch on" data-key="sms"></div></div>
+          <div class="toggle-row" style="margin-bottom:0;"><span>WhatsApp</span><div class="switch" data-key="whatsapp"></div></div>
         </div>
         <button class="pill-btn blue" style="margin-top:8px;">Save changes</button>
       </div>
@@ -146,6 +154,7 @@ document.getElementById('uploadPhotoBtn').innerHTML = icon('camera',{size:14})+'
 document.getElementById('idVerifiedBanner').innerHTML = icon('check',{size:15,stroke:2.8})+`<div><div class="t">Identity verified</div><div class="d">Verified on Mar 2024 — no action needed.</div></div>`;
 
 initAvatarMenu();
+initNotifDropdown();
 
 /* ---- sidebar view switching ---- */
 document.querySelectorAll('.side-link[data-view]').forEach(l=>l.addEventListener('click',(e)=>{
