@@ -94,7 +94,7 @@ const SIL = {
 /* Real photography, sourced free-license from Unsplash, one representative
    shot per category — living under assets/images/. Categories without a
    sourced photo fall back to the duotone mark so nothing ever renders blank. */
-const PHOTOS = new Set(['event','vehicle','realestate','tools','av','music','sports','boats','spaces','provider','hero']);
+const PHOTOS = new Set(['event','vehicle','realestate','tools','av','music','clothing','sports','boats','spaces','provider','hero']);
 function hasPhoto(key){ return PHOTOS.has(key); }
 function photoTag(key,{position='50% 50%',zoom=1}={}){
   return `<img src="assets/images/${key}.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:${position};transform:scale(${zoom});">`;

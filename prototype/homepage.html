@@ -16,9 +16,12 @@
    ============================================================ */
 .hero{position:relative;min-height:100vh;overflow:hidden;background:var(--dark);}
 .hero-media{position:absolute;inset:0;}
-.hero-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:heroZoom 26s ease-in-out infinite alternate;}
-@keyframes heroZoom{from{transform:scale(1);}to{transform:scale(1.06);}}
-@media (prefers-reduced-motion:reduce){.hero-media img{animation:none;}}
+/* Slider: every slide is stacked full-bleed; only .active is visible,
+   crossfading into the next one. One photo at a time — never a grid. */
+.hero-slide{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.6s ease;}
+.hero-slide.active{opacity:1;animation:heroZoom 6.5s ease-in-out forwards;}
+@keyframes heroZoom{from{transform:scale(1);}to{transform:scale(1.045);}}
+@media (prefers-reduced-motion:reduce){.hero-slide{transition:none;animation:none;}}
 /* Darker left (behind the copy column) and top (behind the fixed nav),
    lighter toward the right so the photograph still reads as itself. */
 .hero-scrim{
@@ -170,7 +173,18 @@
 
 <!-- ============ HERO ============ -->
 <section class="hero">
-  <div class="hero-media"><img src="assets/images/event.jpg" alt="" fetchpriority="high" /></div>
+  <div class="hero-media" id="heroMedia">
+    <img class="hero-slide active" src="assets/images/event.jpg" alt="" fetchpriority="high" />
+    <img class="hero-slide" src="assets/images/vehicle.jpg" alt="" />
+    <img class="hero-slide" src="assets/images/realestate.jpg" alt="" />
+    <img class="hero-slide" src="assets/images/tools.jpg" alt="" />
+    <img class="hero-slide" src="assets/images/av.jpg" alt="" />
+    <img class="hero-slide" src="assets/images/music.jpg" alt="" />
+    <img class="hero-slide" src="assets/images/clothing.jpg" alt="" />
+    <img class="hero-slide" src="assets/images/sports.jpg" alt="" />
+    <img class="hero-slide" src="assets/images/boats.jpg" alt="" />
+    <img class="hero-slide" src="assets/images/spaces.jpg" alt="" />
+  </div>
   <div class="hero-scrim"></div>
 
   <div class="hero-content">
@@ -371,6 +385,20 @@ document.getElementById('arr2').innerHTML = icon('arrowRight',{size:13});
 document.getElementById('arr3').innerHTML = icon('arrowRight',{size:14});
 document.querySelectorAll('.c-arrow')[0].innerHTML = icon('chevronLeft',{size:15,stroke:2.2});
 document.querySelectorAll('.c-arrow')[1].innerHTML = icon('chevronRight',{size:15,stroke:2.2});
+
+/* ============ HERO SLIDER — one photo at a time, never a grid ============ */
+(function(){
+  const slides=[...document.querySelectorAll('.hero-slide')];
+  if(slides.length<2) return;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduceMotion) return;
+  let idx=0;
+  setInterval(()=>{
+    slides[idx].classList.remove('active');
+    idx=(idx+1)%slides.length;
+    slides[idx].classList.add('active');
+  },6500);
+})();
 
 /* ============ PROVIDER-SPLIT ART (unrelated to the hero) ============ */
 paintArt(document.getElementById('art-provider'),'provider',130,.14);
