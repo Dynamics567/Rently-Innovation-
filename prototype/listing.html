@@ -90,7 +90,10 @@ body{padding-top:86px;}
 .bw-breakdown{display:flex;flex-direction:column;gap:10px;margin:18px 0;font-size:13.5px;}
 .bw-breakdown .row{display:flex;justify-content:space-between;color:var(--ink-soft);}
 .bw-breakdown .row.total{color:var(--ink);font-weight:700;font-size:15px;padding-top:12px;border-top:1px solid var(--line);}
-.bw-mode-badge{display:inline-flex;align-items:center;gap:6px;margin-bottom:16px;}
+.bw-mode-badge{display:inline-flex;align-items:center;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+.bw-logistics{display:flex;flex-direction:column;gap:8px;margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--line);}
+.bw-logistics .row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft);}
+.bw-logistics svg{color:var(--ink-faint);flex-shrink:0;}
 .bw-trust{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--ink-faint);margin-top:16px;line-height:1.6;}
 .bw-trust svg{color:var(--green);flex-shrink:0;margin-top:2px;}
 
@@ -193,6 +196,7 @@ body{padding-top:86px;}
       <div class="booking-widget" id="bookingWidget">
         <div class="bw-mode-badge" id="bwModeBadge"></div>
         <div class="bw-price"><div class="amt" id="bwPrice"></div><span class="rrating" id="bwRating"></span></div>
+        <div class="bw-logistics" id="bwLogistics"></div>
         <div class="bw-dates">
           <div class="row">
             <div class="bw-date-seg" id="bwFromSeg"><label>Start date</label><div class="val" id="bwFromVal">Add date</div></div>
@@ -317,11 +321,15 @@ document.getElementById('similarGrid').innerHTML = LISTINGS.filter(l=>l.cat===li
    ================================================================ */
 const SERVICE_FEE_RATE=0.06;
 let bStart=null, bEnd=null;
-document.getElementById('bwModeBadge').innerHTML = listing.mode==='instant'
+document.getElementById('bwModeBadge').innerHTML = (listing.mode==='instant'
   ? `<span class="badge instant">${icon('check',{size:11,stroke:2.8})}Instant Book</span>`
-  : `<span class="badge request">${icon('clock',{size:11,stroke:2.5})}Request to Book</span>`;
+  : `<span class="badge request">${icon('clock',{size:11,stroke:2.5})}Request to Book</span>`)
+  + (listing.availability==='limited' ? `<span class="badge request">${icon('alert',{size:11,stroke:2.8})}Few dates left</span>` : '');
 document.getElementById('bwPrice').innerHTML = `${money(listing.price)}<span> / ${listing.unit}</span>`;
 document.getElementById('bwRating').innerHTML = starIcon(13)+listing.rating;
+document.getElementById('bwLogistics').innerHTML = `
+  <div class="row">${icon(listing.delivery?'truck':'pin',{size:14})}<span>${listing.delivery?'Delivery available to your address':'Self-pickup only, address shared after booking'}</span></div>
+  <div class="row">${icon('map',{size:14})}<span>${listing.loc}</span></div>`;
 
 function nightsBetween(a,b){ return Math.max(1, Math.round((b-a)/86400000)); }
 function renderBreakdown(){

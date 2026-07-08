@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Track your booking — Rently</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/rently.css" />
+<style>
+body{padding-top:0;}
+.bk-head{border-bottom:1px solid var(--line);padding:28px 0;}
+.bk-head-row{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;}
+.bk-back{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-faint);margin-bottom:16px;}
+.bk-back:hover{color:var(--ink);}
+.bk-item{display:flex;gap:16px;align-items:center;}
+.bk-item .thumb{width:64px;height:64px;border-radius:14px;overflow:hidden;position:relative;flex-shrink:0;}
+.bk-item .thumb .art{position:absolute;inset:0;}
+.bk-item h1{font-size:21px;font-weight:500;margin-bottom:4px;}
+.bk-item .sub{font-size:13px;color:var(--ink-soft);}
+.bk-ref{font-size:12px;color:var(--ink-faint);font-variant-numeric:tabular-nums;margin-top:4px;}
+.bk-status-col{text-align:right;flex-shrink:0;}
+
+.demo-bar{margin-top:20px;border:1.5px dashed var(--line-strong);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--bg-alt);}
+.demo-bar .lbl{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-faint);}
+.demo-bar select{border:1.5px solid var(--line-strong);border-radius:999px;padding:7px 30px 7px 14px;font-size:12.5px;font-weight:600;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235C574F' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center/13px;appearance:none;cursor:pointer;}
+
+.bk-layout{display:grid;grid-template-columns:360px 1fr;gap:56px;padding:44px 0 120px;align-items:start;}
+@media(max-width:980px){.bk-layout{grid-template-columns:1fr;gap:36px;}}
+
+.tl-card{border:1px solid var(--line);border-radius:18px;padding:26px;position:sticky;top:24px;}
+.tl-card h3{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);margin-bottom:22px;}
+@media(max-width:980px){.tl-card{position:static;}}
+
+.cancel-banner{display:flex;gap:14px;padding:22px;border-radius:16px;background:var(--red-soft);color:var(--red);align-items:flex-start;}
+.cancel-banner svg{flex-shrink:0;margin-top:2px;}
+.cancel-banner .t{font-weight:700;font-size:15px;margin-bottom:6px;}
+.cancel-banner .d{font-size:13.5px;line-height:1.7;}
+
+.stage-panel{display:none;}
+.stage-panel.show{display:block;animation:fadeUp .35s var(--ease);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.panel-card{border:1px solid var(--line);border-radius:18px;padding:28px;margin-bottom:20px;}
+.panel-card h3{font-size:17px;font-weight:500;margin-bottom:6px;}
+.panel-card .lede{font-size:13.5px;color:var(--ink-soft);margin-bottom:22px;line-height:1.65;}
+.check-item{display:flex;align-items:center;gap:10px;font-size:13.5px;padding:12px 0;border-bottom:1px solid var(--line);}
+.check-item:last-child{border-bottom:none;}
+.check-item .ic{width:22px;height:22px;border-radius:50%;background:var(--green-soft);color:var(--green-dark);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+.qr-wrap{display:flex;gap:20px;align-items:center;padding:20px;background:var(--bg-alt);border-radius:16px;margin-bottom:20px;flex-wrap:wrap;}
+.qr-box{width:104px;height:104px;border-radius:10px;overflow:hidden;flex-shrink:0;background:#fff;padding:8px;border:1px solid var(--line-strong);}
+.qr-grid{display:grid;width:100%;height:100%;}
+.qr-grid div{background:var(--ink);}
+.qr-wrap .txt .t{font-size:13.5px;font-weight:600;margin-bottom:4px;}
+.qr-wrap .txt .d{font-size:12.5px;color:var(--ink-soft);line-height:1.6;max-width:320px;}
+
+.timer-card{display:flex;justify-content:space-between;align-items:center;padding:22px 26px;border-radius:16px;background:var(--dark);color:#fff;margin-bottom:20px;flex-wrap:wrap;gap:16px;}
+.timer-card .lbl{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.55);margin-bottom:6px;}
+.timer-card .val{font-family:var(--serif);font-size:28px;}
+.timer-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
+.gps-banner{display:flex;gap:10px;align-items:flex-start;padding:14px 16px;border-radius:12px;background:var(--blue-soft);color:var(--blue-dark);font-size:12.5px;line-height:1.6;margin-bottom:20px;}
+.gps-banner svg{flex-shrink:0;margin-top:1px;}
+
+.photo-compare{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+.photo-compare .grp h5{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);margin-bottom:10px;}
+.photo-compare .thumbs{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.photo-compare .thumb{aspect-ratio:1/1;border-radius:10px;overflow:hidden;position:relative;}
+.photo-compare .thumb .art{position:absolute;inset:0;}
+@media(max-width:560px){.photo-compare{grid-template-columns:1fr;}}
+
+.deposit-banner{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-radius:14px;background:var(--green-soft);margin-bottom:20px;flex-wrap:wrap;gap:12px;}
+.deposit-banner .t{font-size:13.5px;font-weight:700;color:var(--green-dark);}
+.deposit-banner .d{font-size:12px;color:var(--green-dark);opacity:.85;}
+.deposit-banner .amt{font-family:var(--serif);font-size:22px;color:var(--green-dark);}
+
+.receipt-row{display:flex;justify-content:space-between;font-size:13.5px;color:var(--ink-soft);padding:8px 0;}
+.receipt-row.total{color:var(--ink);font-weight:700;font-size:15px;padding-top:14px;margin-top:6px;border-top:1px solid var(--line);}
+
+.review-stars{display:flex;gap:6px;margin-bottom:16px;}
+.review-stars button{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ink-mute);transition:.15s;}
+.review-stars button:hover,.review-stars button.on{color:var(--amber);}
+.review-stars svg{width:22px;height:22px;}
+</style>
+</head>
+<body>
+
+<nav class="nav app-nav">
+  <div class="container nav-inner">
+    <a class="wordmark" href="homepage"><img src="assets/images/logo.png" alt="Rently" /></a>
+    <div class="nav-links">
+      <a href="homepage#categories">Explore</a>
+      <a href="browse">Marketplace</a>
+    </div>
+    <button class="nav-icon-btn" id="bellBtn" aria-label="Notifications" style="margin-left:auto;"><span class="dot"></span></button>
+    <div class="nav-avatar-menu">
+      <button class="nav-avatar" id="avatarBtn">DA</button>
+      <div class="avatar-dropdown" id="avatarDropdown">
+        <div class="who"><div class="n">Damilola Adeyemi</div><div class="e">damilola.a@gmail.com</div></div>
+        <a class="dd-item" href="dashboard-renter" id="ddBookings"></a>
+        <a class="dd-item" href="dashboard-provider" id="ddSwitch"></a>
+        <a class="dd-item danger" href="auth" id="ddLogout"></a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="bk-head">
+  <div class="container">
+    <a class="bk-back" href="dashboard-renter" id="backLink"></a>
+    <div class="bk-head-row">
+      <div class="bk-item">
+        <div class="thumb" id="bkThumb"></div>
+        <div>
+          <h1 id="bkTitle">Booking</h1>
+          <div class="sub" id="bkSub"></div>
+          <div class="bk-ref" id="bkRef"></div>
+        </div>
+      </div>
+      <div class="bk-status-col">
+        <span class="badge" id="bkStatusBadge" style="font-size:13px;padding:8px 16px;"></span>
+      </div>
+    </div>
+
+    <div class="demo-bar">
+      <span class="lbl">Prototype preview</span>
+      <select id="stageSelect"></select>
+      <span style="font-size:12px;color:var(--ink-faint)">— jump to any point in this booking's lifecycle to see how the page adapts</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div id="cancelledView" style="display:none;padding:44px 0;">
+    <div class="cancel-banner">
+      <span id="cancelIcon"></span>
+      <div>
+        <div class="t">This booking was cancelled</div>
+        <div class="d" id="cancelDesc"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bk-layout" id="normalView">
+    <div class="tl-card">
+      <h3>Booking timeline</h3>
+      <div id="timelineWrap"></div>
+    </div>
+
+    <div>
+      <!-- ===== GROUP A: requested / accepted / payment / reserved ===== -->
+      <div class="stage-panel" data-group="admin">
+        <div class="panel-card">
+          <h3 id="adminTitle">Your booking is being processed</h3>
+          <p class="lede" id="adminLede"></p>
+          <div class="check-item"><span class="ic" id="chkRequest"></span><span>Booking request sent to provider</span></div>
+          <div class="check-item"><span class="ic" id="chkAccept"></span><span>Provider approval</span></div>
+          <div class="check-item"><span class="ic" id="chkPay"></span><span>Payment captured &amp; held in escrow</span></div>
+          <div class="check-item"><span class="ic" id="chkReserve"></span><span>Item reserved on provider's calendar</span></div>
+        </div>
+        <div class="panel-card">
+          <h3 style="font-size:14px;">Order summary</h3>
+          <div class="receipt-row"><span id="oSumLabel"></span><span id="oSumAmt"></span></div>
+          <div class="receipt-row"><span>Service fee</span><span id="oSumFee"></span></div>
+          <div class="receipt-row"><span>Refundable deposit</span><span id="oSumDeposit"></span></div>
+          <div class="receipt-row total"><span>Total</span><span id="oSumTotal"></span></div>
+        </div>
+      </div>
+
+      <!-- ===== GROUP B: ready for pickup ===== -->
+      <div class="stage-panel" data-group="ready">
+        <div class="panel-card">
+          <h3>Ready for pickup</h3>
+          <p class="lede">The provider has confirmed your item is prepared. Here's everything you need for handover.</p>
+          <div class="qr-wrap">
+            <div class="qr-box" id="qrPickup"></div>
+            <div class="txt"><div class="t">Show this code at pickup</div><div class="d">The provider scans this to confirm your identity and start the handover checklist — no need to print it, your phone screen works fine.</div></div>
+          </div>
+          <div class="check-item"><span class="ic" id="chkAgreement"></span><span>Rental agreement signed digitally</span></div>
+          <div class="check-item"><span class="ic" id="chkDeposit"></span><span>Security deposit confirmed</span></div>
+          <div class="check-item"><span class="ic" id="chkPickupWhere"></span><span id="pickupWhere">Pickup address shared</span></div>
+        </div>
+      </div>
+
+      <!-- ===== GROUP C: picked up / active ===== -->
+      <div class="stage-panel" data-group="active">
+        <div class="timer-card">
+          <div><div class="lbl">Time remaining on this rental</div><div class="val" id="timerVal">—</div></div>
+          <span class="badge instant" id="activeBadge"></span>
+        </div>
+        <div class="gps-banner" id="gpsBanner" style="display:none;"></div>
+        <div class="timer-actions">
+          <button class="pill-btn ghost sm" id="extendBtn"></button>
+          <button class="pill-btn ghost sm" id="messageBtn"></button>
+          <button class="pill-btn ghost sm" id="issueBtn"></button>
+        </div>
+        <div class="panel-card">
+          <h3 style="font-size:14px;">Condition at pickup</h3>
+          <p class="lede">Photos and checklist recorded during handover — kept on file in case of a dispute.</p>
+          <div class="photo-compare" style="grid-template-columns:repeat(4,1fr);" id="pickupPhotos"></div>
+        </div>
+      </div>
+
+      <!-- ===== GROUP D: return scheduled ===== -->
+      <div class="stage-panel" data-group="returnsched">
+        <div class="panel-card">
+          <h3>Return scheduled</h3>
+          <p class="lede" id="returnLede"></p>
+          <div class="qr-wrap">
+            <div class="qr-box" id="qrReturn"></div>
+            <div class="txt"><div class="t">Show this code when you return the item</div><div class="d">The provider scans it to pull up your original condition report for comparison.</div></div>
+          </div>
+          <button class="pill-btn ghost sm" id="rescheduleBtn"></button>
+        </div>
+      </div>
+
+      <!-- ===== GROUP E: returned / inspected ===== -->
+      <div class="stage-panel" data-group="inspection">
+        <div class="panel-card">
+          <h3>Inspection</h3>
+          <p class="lede">The provider compares the item's condition now against the photos taken at pickup.</p>
+          <div class="photo-compare">
+            <div class="grp"><h5>At pickup</h5><div class="thumbs" id="cmpBefore"></div></div>
+            <div class="grp"><h5>At return</h5><div class="thumbs" id="cmpAfter"></div></div>
+          </div>
+          <div class="check-item"><span class="ic" id="chkNoDamage"></span><span>No damage found — matches pickup condition</span></div>
+          <div class="check-item"><span class="ic" id="chkAccessories"></span><span>All accessories &amp; parts accounted for</span></div>
+          <div class="check-item"><span class="ic" id="chkOnTime"></span><span id="chkOnTimeLbl">Returned on time</span></div>
+        </div>
+      </div>
+
+      <!-- ===== GROUP F: deposit released / completed ===== -->
+      <div class="stage-panel" data-group="done">
+        <div class="deposit-banner">
+          <div><div class="t">Deposit released</div><div class="d" id="depositDesc"></div></div>
+          <div class="amt" id="depositAmt"></div>
+        </div>
+        <div class="panel-card">
+          <h3 style="font-size:14px;">Receipt</h3>
+          <div class="receipt-row"><span id="rSumLabel"></span><span id="rSumAmt"></span></div>
+          <div class="receipt-row"><span>Service fee</span><span id="rSumFee"></span></div>
+          <div class="receipt-row total"><span>Total paid</span><span id="rSumTotal"></span></div>
+          <button class="pill-btn ghost sm" style="margin-top:18px;" id="invoiceBtn"></button>
+        </div>
+        <div class="panel-card">
+          <h3 style="font-size:14px;" id="reviewTitle">Rate your experience</h3>
+          <div class="review-stars" id="reviewStars"></div>
+          <textarea placeholder="What went well? Anything the provider could improve?" style="width:100%;border:1.5px solid var(--line-strong);border-radius:12px;padding:12px 14px;font-size:13.5px;min-height:80px;margin-bottom:14px;font-family:inherit;"></textarea>
+          <button class="pill-btn blue sm" id="submitReviewBtn">Submit review</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/rently.js"></script>
+<script>
+const params=new URLSearchParams(window.location.search);
+const booking = BOOKINGS.find(b=>b.id===params.get('id')) || BOOKINGS.find(b=>b.status==='active') || BOOKINGS[0];
+const listing = LISTINGS.find(l=>l.id===booking.listingId);
+const provider = PROVIDERS.find(p=>p.id===listing.providerId);
+
+document.getElementById('bellBtn').innerHTML = icon('bell',{size:17})+'<span class="dot"></span>';
+document.getElementById('ddBookings').innerHTML = icon('calendar',{size:15})+' My bookings';
+document.getElementById('ddSwitch').innerHTML = icon('building',{size:15})+' Switch to Provider';
+document.getElementById('ddLogout').innerHTML = icon('logout',{size:15})+' Log out';
+initAvatarMenu();
+document.getElementById('backLink').innerHTML = icon('chevronLeft',{size:12})+' Back to my bookings';
+
+/* ---- header ---- */
+document.getElementById('bkThumb').innerHTML = artDiv(listing.cat,120,.2);
+document.getElementById('bkTitle').textContent = listing.title;
+const dFrom=new Date(booking.dateFrom+'T10:00:00'), dTo=new Date(booking.dateTo+'T17:00:00');
+const fmt=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+document.getElementById('bkSub').textContent = `${fmt(dFrom)} – ${fmt(dTo)} · ${provider.name}`;
+document.getElementById('bkRef').textContent = 'Reference RNT-'+booking.id.toUpperCase().padEnd(6,'X')+'-2026';
+
+/* ---- stage select (demo control) ---- */
+const STATUS_BADGE = {
+  requested:['pending','Awaiting provider'], accepted:['pending','Accepted'], payment:['pending','Payment complete'],
+  reserved:['confirmed','Reserved'], ready:['confirmed','Ready for pickup'], pickedup:['confirmed','Picked up'],
+  active:['confirmed','Active'], returnsched:['pending','Return scheduled'], returned:['pending','Returned'],
+  inspected:['pending','Inspection done'], depositreleased:['completed','Deposit released'], completed:['completed','Completed'],
+};
+
+function pseudoQR(seed,cells=9){
+  let h=0; for(let i=0;i<seed.length;i++) h=(h*31+seed.charCodeAt(i))>>>0;
+  let html=`<div class="qr-grid" style="grid-template-columns:repeat(${cells},1fr);grid-template-rows:repeat(${cells},1fr);">`;
+  for(let i=0;i<cells*cells;i++){
+    h=(h*1103515245+12345)>>>0;
+    const on = (h>>>16)%100 < 46;
+    // keep the three finder-pattern corners solid, like a real QR code
+    const r=Math.floor(i/cells), c=i%cells;
+    const inCorner=(r<3&&c<3)||(r<3&&c>=cells-3)||(r>=cells-3&&c<3);
+    html+=`<div style="background:${inCorner||on?'var(--ink)':'transparent'}"></div>`;
+  }
+  html+='</div>';
+  return html;
+}
+
+const VALID_STAGES = STAGES.map(s=>s.key);
+const sel=document.getElementById('stageSelect');
+sel.innerHTML = STAGES.map(s=>`<option value="${s.key}">${s.label}</option>`).join('');
+let currentStage = VALID_STAGES.includes(booking.stage) ? booking.stage : 'requested';
+if(booking.status==='cancelled'){
+  document.getElementById('cancelledView').style.display='block';
+  document.getElementById('normalView').style.display='none';
+  document.querySelector('.demo-bar').style.display='none';
+  document.getElementById('cancelIcon').innerHTML = icon('close',{size:20});
+  document.getElementById('cancelDesc').textContent = `This request for ${listing.title} was cancelled before pickup. Your ${money(booking.deposit)} deposit was fully refunded — no charge was made.`;
+  document.getElementById('bkStatusBadge').className='badge cancelled';
+  document.getElementById('bkStatusBadge').textContent='Cancelled';
+} else {
+  sel.value = currentStage;
+  sel.addEventListener('change',()=>{ currentStage=sel.value; render(); });
+  render();
+}
+
+function render(){
+  const idx=stageIdx(currentStage);
+  document.getElementById('timelineWrap').innerHTML = renderStageTimeline(booking,currentStage);
+  const [badgeCls,badgeLbl]=STATUS_BADGE[currentStage];
+  document.getElementById('bkStatusBadge').className='badge '+badgeCls;
+  document.getElementById('bkStatusBadge').textContent=badgeLbl;
+
+  const groups={
+    admin: ['requested','accepted','payment','reserved'],
+    ready: ['ready'],
+    active: ['pickedup','active'],
+    returnsched: ['returnsched'],
+    inspection: ['returned','inspected'],
+    done: ['depositreleased','completed'],
+  };
+  document.querySelectorAll('.stage-panel').forEach(p=>{
+    p.classList.toggle('show', groups[p.dataset.group].includes(currentStage));
+  });
+
+  // ---- Group A: admin ----
+  if(groups.admin.includes(currentStage)){
+    const adminIdx=groups.admin.indexOf(currentStage);
+    document.getElementById('adminTitle').textContent = ['Your request was sent','The provider is reviewing your dates','Payment captured — item on hold','Your item is reserved'][adminIdx];
+    document.getElementById('adminLede').textContent = currentStage==='requested'
+      ? `${provider.name} typically responds in ${provider.responseTime}. You won't be charged unless they approve.`
+      : `Everything is on track for your rental starting ${fmt(dFrom)}. We'll notify you the moment it's ready for pickup.`;
+    ['chkRequest','chkAccept','chkPay','chkReserve'].forEach((id,i)=>{
+      document.getElementById(id).innerHTML = i<=adminIdx ? icon('check',{size:13,stroke:3}) : icon('clock',{size:12});
+      document.getElementById(id).style.background = i<=adminIdx ? '' : 'var(--bg-alt)';
+      document.getElementById(id).style.color = i<=adminIdx ? '' : 'var(--ink-faint)';
+    });
+    const nights=Math.max(1,Math.round((dTo-dFrom)/86400000));
+    const rentalA=listing.price*nights, feeA=Math.round(rentalA*0.06);
+    document.getElementById('oSumLabel').textContent = `${money(listing.price)} × ${nights} ${listing.unit}${nights>1?'s':''}`;
+    document.getElementById('oSumAmt').textContent = money(rentalA);
+    document.getElementById('oSumFee').textContent = money(feeA);
+    document.getElementById('oSumDeposit').textContent = money(booking.deposit);
+    document.getElementById('oSumTotal').textContent = money(rentalA+feeA+booking.deposit);
+  }
+
+  // ---- Group B: ready ----
+  if(currentStage==='ready'){
+    document.getElementById('qrPickup').innerHTML = pseudoQR(booking.id+'-pickup',8);
+    document.getElementById('pickupWhere').textContent = listing.delivery ? 'Delivery address confirmed' : 'Pickup address shared: '+listing.loc;
+    ['chkAgreement','chkDeposit','chkPickupWhere'].forEach(id=>document.getElementById(id).innerHTML=icon('check',{size:13,stroke:3}));
+  }
+
+  // ---- Group C: active ----
+  if(groups.active.includes(currentStage)){
+    const now=new Date();
+    const msLeft=dTo-now;
+    const daysLeft=Math.floor(msLeft/86400000), hoursLeft=Math.floor((msLeft%86400000)/3600000);
+    document.getElementById('timerVal').textContent = msLeft>0 ? `${Math.max(daysLeft,0)}d ${Math.max(hoursLeft,0)}h remaining` : 'Return overdue';
+    document.getElementById('activeBadge').innerHTML = icon('check',{size:11,stroke:3})+'Rental active';
+    document.getElementById('extendBtn').innerHTML = icon('clock',{size:14})+' Request extension';
+    document.getElementById('messageBtn').innerHTML = icon('message',{size:14})+' Message '+provider.name.split(' ')[0];
+    document.getElementById('issueBtn').innerHTML = icon('alert',{size:14})+' Report an issue';
+    const gps=document.getElementById('gpsBanner');
+    if(listing.cat==='vehicle'){
+      gps.style.display='flex';
+      gps.innerHTML = icon('map',{size:15})+`<span><b>Live GPS tracking is on</b> for this vehicle — both you and ${provider.name} can see its location for the duration of the rental.</span>`;
+    } else { gps.style.display='none'; }
+    document.getElementById('pickupPhotos').innerHTML = [0,1,2,3].map(i=>`<div class="thumb">${artDiv(listing.cat,110,.18)}</div>`).join('');
+  }
+
+  // ---- Group D: return scheduled ----
+  if(currentStage==='returnsched'){
+    document.getElementById('qrReturn').innerHTML = pseudoQR(booking.id+'-return',8);
+    document.getElementById('returnLede').textContent = `Drop-off arranged for ${fmt(dTo)} at ${provider.name}'s address. Running late? Reschedule below before your window closes.`;
+    document.getElementById('rescheduleBtn').innerHTML = icon('calendar',{size:14})+' Reschedule return';
+  }
+
+  // ---- Group E: inspection ----
+  if(groups.inspection.includes(currentStage)){
+    document.getElementById('cmpBefore').innerHTML = [0,1].map(()=>`<div class="thumb">${artDiv(listing.cat,110,.18)}</div>`).join('');
+    document.getElementById('cmpAfter').innerHTML = [0,1].map(()=>`<div class="thumb">${artDiv(listing.cat,110,.18)}</div>`).join('');
+    const inspected = currentStage==='inspected';
+    ['chkNoDamage','chkAccessories','chkOnTime'].forEach(id=>{
+      const el=document.getElementById(id);
+      el.innerHTML = inspected ? icon('check',{size:13,stroke:3}) : icon('clock',{size:12});
+      el.style.background = inspected ? '' : 'var(--bg-alt)';
+      el.style.color = inspected ? '' : 'var(--ink-faint)';
+    });
+    document.getElementById('chkOnTimeLbl').textContent = new Date() > dTo ? 'Returned — 0 days late' : 'Returned on time';
+  }
+
+  // ---- Group F: done ----
+  if(groups.done.includes(currentStage)){
+    const released = currentStage==='depositreleased' || currentStage==='completed';
+    document.getElementById('depositDesc').textContent = released
+      ? `Refunded to your original payment method on ${fmt(new Date(dTo.getTime()+0.9*86400000))}.`
+      : 'Will be refunded once the provider confirms no damage was found.';
+    document.getElementById('depositAmt').textContent = money(booking.deposit);
+    const nights=Math.max(1,Math.round((dTo-dFrom)/86400000));
+    const rental=listing.price*nights, fee=Math.round(rental*0.06);
+    document.getElementById('rSumLabel').textContent = `${money(listing.price)} × ${nights} ${listing.unit}${nights>1?'s':''}`;
+    document.getElementById('rSumAmt').textContent = money(rental);
+    document.getElementById('rSumFee').textContent = money(fee);
+    document.getElementById('rSumTotal').textContent = money(rental+fee);
+    document.getElementById('invoiceBtn').innerHTML = icon('download',{size:14})+' Download invoice (PDF)';
+    document.getElementById('reviewTitle').textContent = `Rate your experience with ${provider.name}`;
+  }
+}
+
+document.getElementById('reviewStars').innerHTML = [1,2,3,4,5].map(n=>`<button data-n="${n}">${icon('star',{size:22,fill:true})}</button>`).join('');
+document.querySelectorAll('#reviewStars button').forEach(btn=>btn.addEventListener('click',()=>{
+  const n=+btn.dataset.n;
+  document.querySelectorAll('#reviewStars button').forEach(b=>b.classList.toggle('on', +b.dataset.n<=n));
+}));
+document.getElementById('submitReviewBtn').addEventListener('click',()=>{
+  document.getElementById('submitReviewBtn').textContent='Thanks for your review!';
+  document.getElementById('submitReviewBtn').disabled=true;
+});
+</script>
+</body>
+</html>

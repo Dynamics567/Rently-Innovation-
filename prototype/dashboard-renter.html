@@ -156,13 +156,18 @@ document.querySelectorAll('.side-link[data-view]').forEach(l=>l.addEventListener
 }));
 
 /* ---- bookings ---- */
-const TABS=[['all','All'],['upcoming','Upcoming'],['pending','Pending'],['completed','Completed'],['cancelled','Cancelled']];
+const TABS=[['all','All'],['active','Active'],['upcoming','Upcoming'],['pending','Pending'],['completed','Completed'],['cancelled','Cancelled']];
 let activeTab='all';
 function statusBadge(s){
-  const map={upcoming:'confirmed',pending:'pending',completed:'completed',cancelled:'cancelled'};
+  const map={upcoming:'confirmed',active:'confirmed',pending:'pending',completed:'completed',cancelled:'cancelled'};
   const cls=map[s]||'info';
   const lbl=s.charAt(0).toUpperCase()+s.slice(1);
   return `<span class="badge ${cls}">${lbl}</span>`;
+}
+function depositBadge(b){
+  const map={held:['pending','Deposit held'],released:['completed','Deposit released'],refunded:['completed','Deposit refunded']};
+  const [cls,lbl]=map[b.depositStatus]||['info',''];
+  return lbl?`<span class="badge ${cls}">${lbl}</span>`:'';
 }
 function renderTabs(){
   document.getElementById('bookingTabs').innerHTML = TABS.map(([k,l])=>`<div class="tab ${activeTab===k?'active':''}" data-t="${k}">${l}</div>`).join('');
@@ -175,10 +180,10 @@ function renderBookings(){
   empty.style.display='none';
   wrap.innerHTML = list.map(b=>{
     const l=LISTINGS.find(x=>x.id===b.listingId);
-    return `<a class="row-card booking-row" href="listing?id=${b.listingId}">
+    return `<a class="row-card booking-row" href="booking?id=${b.id}">
       <div class="thumb">${artDiv(b.cat,120,.22)}</div>
       <div class="main">
-        <div class="t">${b.title}${statusBadge(b.status)}</div>
+        <div class="t">${b.title}${statusBadge(b.status)}${b.status!=='cancelled'?depositBadge(b):''}</div>
         <div class="s">${new Date(b.dateFrom).toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${new Date(b.dateTo).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${b.provider}</div>
       </div>
       <div class="side"><div class="rprice">${money(b.total)}</div></div>

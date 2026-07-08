@@ -396,6 +396,26 @@ h1 em,h2 em,h3 em{font-style:italic;font-weight:500;}
 }
 
 /* ================================================================
+   STAGE TIMELINE — the 12-step booking lifecycle, vertical, with
+   timestamps. Shared by booking.html and dashboard summary cards.
+   ================================================================ */
+.tl-item{display:flex;gap:16px;}
+.tl-marker{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
+.tl-circ{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--line-strong);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--ink-faint);background:var(--surface);flex-shrink:0;z-index:1;transition:.3s;}
+.tl-line{width:1.5px;flex:1;background:var(--line-strong);min-height:22px;transition:.3s;}
+.tl-item.done .tl-circ{background:var(--ink);border-color:var(--ink);color:#fff;}
+.tl-item.active .tl-circ{border-color:var(--blue);color:var(--blue);box-shadow:0 0 0 4px var(--blue-soft);}
+.tl-line.done{background:var(--ink);}
+.tl-body{padding-bottom:24px;min-width:0;}
+.tl-item:last-child .tl-body{padding-bottom:0;}
+.tl-label{font-size:14px;font-weight:600;margin-bottom:3px;}
+.tl-item.upcoming .tl-label{color:var(--ink-faint);}
+.tl-time{font-size:11.5px;color:var(--ink-faint);margin-bottom:6px;font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:.02em;}
+.tl-time.muted{opacity:.5;}
+.tl-desc{font-size:12.5px;color:var(--ink-soft);line-height:1.6;max-width:320px;}
+.tl-item.upcoming .tl-desc{color:var(--ink-mute);}
+
+/* ================================================================
    RESPONSIVE GRID HELPERS shared by browse/listing/dashboard pages
    ================================================================ */
 .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;}

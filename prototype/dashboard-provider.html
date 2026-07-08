@@ -61,6 +61,7 @@ body{padding-top:0;}
   <a class="side-link active" data-view="overview" id="mLinkOverview"></a>
   <a class="side-link" data-view="listings" id="mLinkListings"></a>
   <a class="side-link" data-view="requests" id="mLinkRequests"></a>
+  <a class="side-link" data-view="active" id="mLinkActive"></a>
   <a class="side-link" data-view="earnings" id="mLinkEarnings"></a>
   <a class="side-link" data-view="settings" id="mLinkSettings"></a>
   <a class="side-link" href="dashboard-renter" id="mLinkRenterSwitch"></a>
@@ -72,6 +73,7 @@ body{padding-top:0;}
     <a class="side-link active" data-view="overview" id="linkOverview"></a>
     <a class="side-link" data-view="listings" id="linkListings"></a>
     <a class="side-link" data-view="requests" id="linkRequests"></a>
+    <a class="side-link" data-view="active" id="linkActive"></a>
     <a class="side-link" data-view="earnings" id="linkEarnings"></a>
     <a class="side-link" data-view="settings" id="linkSettings"></a>
     <div class="side-group-lbl">Switch role</div>
@@ -126,6 +128,17 @@ body{padding-top:0;}
     <div class="d-view" id="view-requests">
       <div class="app-head"><div><h1>Booking requests</h1><p>Requests older than 24 hours hurt your response-time score — respond fast.</p></div></div>
       <div id="requestsList"></div>
+    </div>
+
+    <!-- ============ ACTIVE RENTALS ============ -->
+    <div class="d-view" id="view-active">
+      <div class="app-head"><div><h1>Active rentals</h1><p>What's out, who has it, and what needs to happen next.</p></div></div>
+      <div id="activeRentalsList" style="display:flex;flex-direction:column;gap:12px;"></div>
+      <div class="empty-state" id="activeRentalsEmpty" style="display:none;">
+        <div class="ic" id="activeRentalsEmptyIcon"></div>
+        <h3>Nothing out right now</h3>
+        <p>Rentals will show up here from the moment you accept a request until the deposit is released.</p>
+      </div>
     </div>
 
     <!-- ============ EARNINGS ============ -->
@@ -196,12 +209,14 @@ document.getElementById('ddLogout').innerHTML = icon('logout',{size:15})+' Log o
 document.getElementById('linkOverview').innerHTML = icon('grid',{size:17})+' Overview';
 document.getElementById('linkListings').innerHTML = icon('list',{size:17})+' Listings';
 document.getElementById('linkRequests').innerHTML = icon('message',{size:17})+' Requests';
+document.getElementById('linkActive').innerHTML = icon('clock',{size:17})+' Active Rentals';
 document.getElementById('linkEarnings').innerHTML = icon('wallet',{size:17})+' Earnings';
 document.getElementById('linkSettings').innerHTML = icon('settings',{size:17})+' Settings';
 document.getElementById('linkRenterSwitch').innerHTML = icon('user',{size:17})+' Renter dashboard';
 document.getElementById('mLinkOverview').innerHTML = icon('grid',{size:16})+' Overview';
 document.getElementById('mLinkListings').innerHTML = icon('list',{size:16})+' Listings';
 document.getElementById('mLinkRequests').innerHTML = icon('message',{size:16})+' Requests';
+document.getElementById('mLinkActive').innerHTML = icon('clock',{size:16})+' Active';
 document.getElementById('mLinkEarnings').innerHTML = icon('wallet',{size:16})+' Earnings';
 document.getElementById('mLinkSettings').innerHTML = icon('settings',{size:16})+' Settings';
 document.getElementById('mLinkRenterSwitch').innerHTML = icon('user',{size:16})+' Renter';
@@ -251,6 +266,51 @@ function renderRequests(){
   }));
 }
 renderRequests();
+
+/* ---- active rentals: schedule pickup/return, inspect, release deposit ---- */
+const STAGE_ACTION = {
+  ready:{label:'Ready for pickup',cls:'confirmed',action:'Confirm handover',next:'active'},
+  active:{label:'Out with renter',cls:'confirmed',action:'Schedule return',next:'returnsched'},
+  returnsched:{label:'Return due',cls:'pending',action:'Mark as returned',next:'returned'},
+  returned:{label:'Awaiting inspection',cls:'pending',action:'Release deposit',next:null},
+};
+function activeRentalRow(r){
+  const s=STAGE_ACTION[r.stage];
+  const due = r.stage==='returnsched'||r.stage==='returned'
+    ? `Due back ${new Date(r.dateTo).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`
+    : `${new Date(r.dateFrom).toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${new Date(r.dateTo).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`;
+  return `<div class="request-row">
+    <div class="p-avatar">${r.renterAvatar}</div>
+    <div class="r-main">
+      <div class="r-title">${r.title} <span style="color:var(--ink-faint);font-weight:400">— ${r.renter}</span></div>
+      <div class="r-sub">${due} · Deposit ${money(r.deposit)} held</div>
+    </div>
+    <span class="badge ${s.cls}" style="margin-right:8px;">${s.label}</span>
+    <div class="r-actions">
+      ${r.stage==='returned' ? `<button class="pill-btn ghost sm" data-photos="${r.id}">${icon('camera',{size:13})} Inspection photos</button>` : ''}
+      <button class="pill-btn green sm" data-advance="${r.id}">${s.action}</button>
+    </div>
+  </div>`;
+}
+function renderActiveRentals(){
+  const list=document.getElementById('activeRentalsList'), empty=document.getElementById('activeRentalsEmpty');
+  if(PROVIDER_ACTIVE_RENTALS.length===0){ list.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  list.innerHTML = PROVIDER_ACTIVE_RENTALS.map(r=>activeRentalRow(r)).join('');
+  document.querySelectorAll('[data-advance]').forEach(b=>b.addEventListener('click',()=>{
+    const r=PROVIDER_ACTIVE_RENTALS.find(x=>x.id===b.dataset.advance);
+    const next=STAGE_ACTION[r.stage].next;
+    if(next){ r.stage=next; renderActiveRentals(); }
+    else { const idx=PROVIDER_ACTIVE_RENTALS.findIndex(x=>x.id===r.id); PROVIDER_ACTIVE_RENTALS.splice(idx,1); renderActiveRentals(); }
+  }));
+  document.querySelectorAll('[data-photos]').forEach(b=>b.addEventListener('click',(e)=>{
+    e.stopPropagation();
+    b.innerHTML = icon('check',{size:13,stroke:3})+' Photos uploaded';
+    b.disabled=true;
+  }));
+}
+document.getElementById('activeRentalsEmptyIcon').innerHTML = icon('calendar',{size:22});
+renderActiveRentals();
 
 document.getElementById('overviewTable').innerHTML = `
   <thead><tr><th>Date</th><th>Listing</th><th>Renter</th><th>Amount</th><th>Status</th></tr></thead>
