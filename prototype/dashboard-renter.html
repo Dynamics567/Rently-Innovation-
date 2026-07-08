@@ -51,6 +51,14 @@ body{padding-top:0;}
   </div>
 </nav>
 
+<div class="mobile-tabbar">
+  <a class="side-link active" data-view="bookings" id="mLinkBookings"></a>
+  <a class="side-link" data-view="favorites" id="mLinkFavorites"></a>
+  <a class="side-link" data-view="messages" id="mLinkMessages"></a>
+  <a class="side-link" data-view="settings" id="mLinkSettings"></a>
+  <a class="side-link" href="dashboard-provider.html" id="mLinkProviderSwitch"></a>
+</div>
+
 <div class="app-shell">
   <aside class="app-side">
     <div class="side-group-lbl">Renter</div>
@@ -128,6 +136,11 @@ document.getElementById('linkFavorites').innerHTML = icon('heart',{size:17})+' F
 document.getElementById('linkMessages').innerHTML = icon('message',{size:17})+' Messages';
 document.getElementById('linkSettings').innerHTML = icon('settings',{size:17})+' Settings';
 document.getElementById('linkProviderSwitch').innerHTML = icon('building',{size:17})+' Provider dashboard';
+document.getElementById('mLinkBookings').innerHTML = icon('calendar',{size:16})+' Bookings';
+document.getElementById('mLinkFavorites').innerHTML = icon('heart',{size:16})+' Favorites';
+document.getElementById('mLinkMessages').innerHTML = icon('message',{size:16})+' Messages';
+document.getElementById('mLinkSettings').innerHTML = icon('settings',{size:16})+' Settings';
+document.getElementById('mLinkProviderSwitch').innerHTML = icon('building',{size:16})+' Provider';
 document.getElementById('bookingsEmptyIcon').innerHTML = icon('calendar',{size:22});
 document.getElementById('uploadPhotoBtn').innerHTML = icon('camera',{size:14})+' Change photo';
 document.getElementById('idVerifiedBanner').innerHTML = icon('check',{size:15,stroke:2.8})+`<div><div class="t">Identity verified</div><div class="d">Verified on Mar 2024 — no action needed.</div></div>`;
@@ -137,8 +150,7 @@ initAvatarMenu();
 /* ---- sidebar view switching ---- */
 document.querySelectorAll('.side-link[data-view]').forEach(l=>l.addEventListener('click',(e)=>{
   e.preventDefault();
-  document.querySelectorAll('.side-link[data-view]').forEach(o=>o.classList.remove('active'));
-  l.classList.add('active');
+  document.querySelectorAll('.side-link[data-view]').forEach(o=>o.classList.toggle('active',o.dataset.view===l.dataset.view));
   document.querySelectorAll('.d-view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+l.dataset.view).classList.add('active');
 }));

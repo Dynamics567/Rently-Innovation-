@@ -101,7 +101,7 @@ function photoTag(key,{position='50% 50%',zoom=1}={}){
 }
 function artStyle(key){
   const c=DUOTONE[key]||DUOTONE.hero;
-  return `background:linear-gradient(155deg,${c[0]} 0%,${c[1]} 100%);position:relative;`;
+  return `background:linear-gradient(155deg,${c[0]} 0%,${c[1]} 100%);`;
 }
 function artHTML(key,iconSize=90,opacity=.2){
   if(hasPhoto(key)) return photoTag(key);

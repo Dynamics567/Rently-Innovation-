@@ -22,6 +22,13 @@ body{padding-top:150px;}
 .cat-chip:hover{border-color:var(--ink);color:var(--ink);}
 .cat-chip.on{background:var(--ink);border-color:var(--ink);color:#fff;}
 .b-toolbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+/* cat-chip-row's own overflow-x:auto lets it shrink to near-zero instead of
+   wrapping naturally, which was truncating the category chips against the
+   toolbar-right controls — force each onto its own row on narrow screens. */
+@media(max-width:700px){
+  .cat-chip-row{flex:1 1 100%;}
+  .b-toolbar-right{flex:1 1 100%;justify-content:space-between;}
+}
 .tbtn{display:flex;align-items:center;gap:7px;padding:9px 15px;border-radius:999px;border:1.5px solid var(--line-strong);font-size:13px;font-weight:600;color:var(--ink-soft);transition:.2s;}
 .tbtn:hover{border-color:var(--ink);color:var(--ink);}
 .tbtn.on{background:var(--bg-alt);color:var(--ink);border-color:var(--ink);}
@@ -59,6 +66,7 @@ select.sort-select{border:1.5px solid var(--line-strong);border-radius:999px;pad
 .load-more{display:flex;justify-content:center;margin-top:44px;}
 
 @media(max-width:900px){body{padding-top:180px;}}
+@media(max-width:640px){body{padding-top:280px;}}
 </style>
 </head>
 <body class="no-grain">

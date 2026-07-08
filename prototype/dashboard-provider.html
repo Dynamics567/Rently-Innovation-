@@ -57,6 +57,15 @@ body{padding-top:0;}
   </div>
 </nav>
 
+<div class="mobile-tabbar">
+  <a class="side-link active" data-view="overview" id="mLinkOverview"></a>
+  <a class="side-link" data-view="listings" id="mLinkListings"></a>
+  <a class="side-link" data-view="requests" id="mLinkRequests"></a>
+  <a class="side-link" data-view="earnings" id="mLinkEarnings"></a>
+  <a class="side-link" data-view="settings" id="mLinkSettings"></a>
+  <a class="side-link" href="dashboard-renter.html" id="mLinkRenterSwitch"></a>
+</div>
+
 <div class="app-shell">
   <aside class="app-side">
     <div class="side-group-lbl">Provider</div>
@@ -190,6 +199,12 @@ document.getElementById('linkRequests').innerHTML = icon('message',{size:17})+' 
 document.getElementById('linkEarnings').innerHTML = icon('wallet',{size:17})+' Earnings';
 document.getElementById('linkSettings').innerHTML = icon('settings',{size:17})+' Settings';
 document.getElementById('linkRenterSwitch').innerHTML = icon('user',{size:17})+' Renter dashboard';
+document.getElementById('mLinkOverview').innerHTML = icon('grid',{size:16})+' Overview';
+document.getElementById('mLinkListings').innerHTML = icon('list',{size:16})+' Listings';
+document.getElementById('mLinkRequests').innerHTML = icon('message',{size:16})+' Requests';
+document.getElementById('mLinkEarnings').innerHTML = icon('wallet',{size:16})+' Earnings';
+document.getElementById('mLinkSettings').innerHTML = icon('settings',{size:16})+' Settings';
+document.getElementById('mLinkRenterSwitch').innerHTML = icon('user',{size:16})+' Renter';
 document.getElementById('addListingBtn').innerHTML = icon('plus',{size:15})+' Add new listing';
 document.getElementById('addListingBtn2').innerHTML = icon('plus',{size:15})+' Add new listing';
 document.getElementById('closeAddListing').innerHTML = icon('close',{size:15});

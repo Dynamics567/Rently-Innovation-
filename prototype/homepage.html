@@ -24,6 +24,14 @@
 .t2{grid-row:1;grid-column:2;}
 .t3{grid-row:1;grid-column:3;}
 .t4{grid-row:2;grid-column:2/4;}
+/* Below ~700px the collage tiles get too narrow for their bottom labels not
+   to collide with the hero copy sitting on top of them — hide the labels and
+   darken the scrim instead of risking overlap. */
+@media(max-width:700px){
+  .tile .label{display:none;}
+  .tile::after{background:linear-gradient(180deg,rgba(0,0,0,.4) 0%,rgba(0,0,0,.8) 100%);}
+  .opener::before{content:'';position:absolute;inset:0;z-index:3;background:linear-gradient(180deg,rgba(10,9,7,.55) 0%,rgba(10,9,7,.35) 45%,rgba(10,9,7,.85) 100%);}
+}
 
 .opener-copy{position:relative;z-index:5;padding:150px 0 240px;pointer-events:none;}
 .opener-copy .inner{max-width:640px;margin-left:64px;pointer-events:auto;}
