@@ -12,9 +12,9 @@
   --line:rgba(27,24,21,.09); --line-strong:rgba(27,24,21,.16); --line-heavy:rgba(27,24,21,.26);
   --dark:#15130F; --dark-alt:#1D1A15; --dark-ink:#EDE8DE; --dark-soft:#B4ADA0; --dark-line:rgba(255,255,255,.12);
 
-  /* ---- Accent: semantic split, spend vs. earn vs. status ---- */
-  --blue:#2563EB; --blue-dark:#1D4FD1; --blue-soft:#EEF3FF;          /* renter / primary actions */
-  --green:#0F9F72; --green-dark:#0C7F5B; --green-soft:#E9F8F1;      /* provider / earn / verified */
+  /* ---- Accent: matches the Rently logo's blue->teal gradient ---- */
+  --blue:#155EEF; --blue-dark:#0B3FC4; --blue-soft:#EEF3FF;          /* renter / primary actions */
+  --green:#00A896; --green-dark:#00786C; --green-soft:#E4F8F5;      /* provider / earn / verified */
   --amber:#C6820B; --amber-ink:#8A5C08; --amber-soft:#FBF1DD;       /* ratings / pending / request-to-book */
   --red:#C4392B; --red-soft:#FBECE9;                                /* errors / disputes / destructive */
 
@@ -76,8 +76,14 @@ h1 em,h2 em,h3 em{font-style:italic;font-weight:500;}
 .nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:26px 0;transition:.45s var(--ease);}
 .nav.solid,.nav.app-nav{padding:16px 0;background:rgba(250,248,244,.9);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);}
 .nav-inner{display:flex;align-items:center;gap:40px;}
-.wordmark{font-family:var(--serif);font-style:italic;font-weight:500;font-size:23px;letter-spacing:-.01em;color:var(--ink);flex-shrink:0;}
-.nav.on-dark .wordmark,.nav.on-dark .nav-links a{color:#fff;}
+.wordmark{display:inline-flex;align-items:center;flex-shrink:0;}
+.wordmark img{height:28px;width:auto;display:block;}
+.wordmark.wordmark-sm img{height:21px;}
+.wordmark.wordmark-lg img{height:42px;}
+.wordmark .logo-ondark{display:none;}
+.nav.on-dark .wordmark .logo-light{display:none;}
+.nav.on-dark .wordmark .logo-ondark{display:block;}
+.nav.on-dark .nav-links a{color:#fff;}
 .nav-links{display:flex;gap:32px;font-size:14px;font-weight:500;color:var(--ink-soft);}
 .nav-links a{position:relative;padding:4px 0;}
 .nav-links a::after{content:'';position:absolute;left:0;bottom:0;width:0;height:1px;background:currentColor;transition:width .35s var(--ease);}

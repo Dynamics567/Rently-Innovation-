@@ -91,11 +91,20 @@ const SIL = {
   sports:'<circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18M6 6l12 12M18 6L6 18"/>',
   hero: ICONS.image,
 };
+/* Real photography, sourced free-license from Unsplash, one representative
+   shot per category — living under assets/images/. Categories without a
+   sourced photo fall back to the duotone mark so nothing ever renders blank. */
+const PHOTOS = new Set(['event','vehicle','realestate','tools','av','music','sports','boats','spaces','provider','hero']);
+function hasPhoto(key){ return PHOTOS.has(key); }
+function photoTag(key,{position='50% 50%',zoom=1}={}){
+  return `<img src="assets/images/${key}.jpg" alt="" loading="lazy" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:${position};transform:scale(${zoom});">`;
+}
 function artStyle(key){
   const c=DUOTONE[key]||DUOTONE.hero;
   return `background:linear-gradient(155deg,${c[0]} 0%,${c[1]} 100%);position:relative;`;
 }
 function artHTML(key,iconSize=90,opacity=.2){
+  if(hasPhoto(key)) return photoTag(key);
   const path=SIL[key]||SIL.hero;
   return `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"
     style="position:absolute;width:${iconSize}%;height:${iconSize}%;top:50%;left:58%;transform:translate(-50%,-50%) rotate(-8deg);opacity:${opacity}">${path}</svg>`;

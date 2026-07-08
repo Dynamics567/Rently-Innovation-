@@ -104,7 +104,7 @@ body{padding-top:86px;}
 
 <nav class="nav solid" id="nav">
   <div class="container nav-inner">
-    <a class="wordmark" href="homepage.html">Rently</a>
+    <a class="wordmark" href="homepage.html"><img src="assets/images/logo.png" alt="Rently" /></a>
     <div class="nav-links">
       <a href="homepage.html#categories">Explore</a>
       <a href="browse.html">Marketplace</a>
@@ -221,7 +221,7 @@ body{padding-top:86px;}
 <footer class="foot">
   <div class="container">
     <div class="foot-top">
-      <div><span class="wordmark">Rently</span><p>Access made simple. Ownership made optional. A Dynamic Technology Ltd. product, built for Nigeria's rental economy.</p></div>
+      <div><span class="wordmark wordmark-lg"><img src="assets/images/logo-dark.png" alt="Rently" /></span><p>Access made simple. Ownership made optional. A Dynamic Technology Ltd. product, built for Nigeria's rental economy.</p></div>
       <div><h5>Explore</h5><ul><li><a href="browse.html">Categories</a></li><li><a href="homepage.html#intro">How it works</a></li><li><a href="#">Trust &amp; Safety</a></li></ul></div>
       <div><h5>Providers</h5><ul><li><a href="auth.html?role=provider">Become a Provider</a></li><li><a href="dashboard-provider.html">Provider Dashboard</a></li></ul></div>
       <div><h5>Company</h5><ul><li><a href="#">About</a></li><li><a href="#">Careers</a></li></ul></div>
@@ -260,11 +260,15 @@ document.getElementById('shareBtn').innerHTML=icon('share',{size:16});
 document.getElementById('favBtn').innerHTML=icon('heart',{size:16});
 document.getElementById('favBtn').addEventListener('click',()=>document.getElementById('favBtn').classList.toggle('on'));
 
-/* ---- gallery: 1 large + 4 small, varied icon placement to avoid a repeated-stamp look ---- */
-const gVariants=[[130,.22,-8],[140,.16,10],[110,.2,-14],[150,.14,4],[120,.18,16]];
-document.getElementById('gallery').innerHTML = gVariants.map((v,i)=>{
-  const [size,op]=v;
-  return `<div class="g-tile"><div class="art" style="${artStyle(listing.cat)}">${artHTML(listing.cat,size,op)}</div>${i===4?'<div class="show-all-btn">'+icon('grid',{size:13})+' Show all photos</div>':''}</div>`;
+/* ---- gallery: 1 large + 4 small. Only one real photo is sourced per
+   category, so the small tiles reuse it as varied detail crops (different
+   crop position + zoom) rather than repeating one flat image five times. */
+const gCrops=[{position:'50% 45%',zoom:1},{position:'15% 25%',zoom:1.25},{position:'80% 65%',zoom:1.15},{position:'35% 85%',zoom:1.1},{position:'85% 15%',zoom:1.3}];
+document.getElementById('gallery').innerHTML = gCrops.map((v,i)=>{
+  const tile = hasPhoto(listing.cat)
+    ? `<div class="art" style="${artStyle(listing.cat)}">${photoTag(listing.cat,v)}</div>`
+    : `<div class="art" style="${artStyle(listing.cat)}">${artHTML(listing.cat,120+i*8,.18+i*.02)}</div>`;
+  return `<div class="g-tile">${tile}${i===4?'<div class="show-all-btn">'+icon('grid',{size:13})+' Show all photos</div>':''}</div>`;
 }).join('');
 
 /* ---- description + specs ---- */
@@ -301,7 +305,7 @@ document.getElementById('reviewList').innerHTML = REVIEWS.map(r=>`
 
 /* ---- location ---- */
 document.getElementById('lLocFull').textContent = `${listing.loc} — exact address shared after booking is confirmed, for the safety of both parties.`;
-document.getElementById('mapTile').innerHTML = `<div class="art" style="${artStyle('spaces')}"></div><div class="pin-drop">${icon('pin',{size:30,fill:true})}</div>`;
+document.getElementById('mapTile').innerHTML = `<div class="art" style="${artStyle('spaces')}">${artHTML('spaces',110,.22)}</div><div class="pin-drop">${icon('pin',{size:30,fill:true})}</div>`;
 
 /* ---- similar listings ---- */
 document.getElementById('similarCatName').textContent = listing.catName;
