@@ -94,6 +94,20 @@ h1 em,h2 em,h3 em{font-style:italic;font-weight:500;}
 @media(max-width:560px){.nav-cta .become{display:none;}}
 @media(max-width:360px){.wordmark img{height:23px;}.pill-btn.ghost{padding:9px 14px;font-size:12.5px;}}
 
+/* Compact search shortcut that fades into the nav once the hero search
+   pill scrolls out of view — hidden by default, shown only via .show
+   (this base rule was missing entirely, which is why it used to render
+   permanently visible at full opacity, cluttering every nav state). */
+.nav-search-mini{
+  display:flex;align-items:center;gap:10px;margin-left:auto;background:#fff;border:1px solid var(--line-strong);
+  border-radius:999px;padding:8px 8px 8px 18px;font-size:13px;color:var(--ink-soft);font-weight:500;
+  box-shadow:0 1px 2px rgba(20,18,14,.04);opacity:0;pointer-events:none;transform:translateY(-6px);
+  transition:.4s var(--ease);
+}
+.nav-search-mini.show{opacity:1;pointer-events:auto;transform:translateY(0);}
+.nav-search-mini .dot{width:1px;height:14px;background:var(--line-strong);}
+.nav-search-mini .go{width:30px;height:30px;border-radius:50%;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;}
+
 .nav-cta{display:flex;align-items:center;gap:22px;margin-left:auto;font-size:14px;font-weight:500;flex-shrink:0;}
 .nav-cta .become{color:var(--ink-soft);white-space:nowrap;}
 .nav-cta .become:hover{color:var(--ink);}

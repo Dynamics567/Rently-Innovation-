@@ -18,19 +18,33 @@
 .tile{position:relative;overflow:hidden;}
 .tile .art{position:absolute;inset:-8%;transition:transform 1.4s var(--ease);}
 .tile:hover .art{transform:scale(1.06);}
-.tile::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 40%,rgba(0,0,0,.55) 100%);}
-.tile .label{position:absolute;left:22px;bottom:20px;z-index:2;color:#fff;font-size:12.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;opacity:.9;}
+/* Per-tile scrim: real photography needs real, permanent darkening — not
+   just a bottom fade — or it fights with the nav and labels sitting on it. */
+.tile::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.28) 0%,rgba(0,0,0,.12) 30%,rgba(0,0,0,.2) 60%,rgba(0,0,0,.62) 100%);}
+.tile .label{position:absolute;left:22px;bottom:20px;z-index:2;color:#fff;font-size:12.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;opacity:.9;text-shadow:0 1px 4px rgba(0,0,0,.5);}
 .t1{grid-row:1/3;grid-column:1;}
 .t2{grid-row:1;grid-column:2;}
 .t3{grid-row:1;grid-column:3;}
 .t4{grid-row:2;grid-column:2/4;}
+/* Whole-hero scrim on top of the per-tile ones: darker left (behind the copy
+   column) and top (behind the fixed nav), lighter over on the right-hand
+   tiles so the photography still reads through there. Permanent, not just
+   mobile — the nav needs guaranteed contrast at every viewport. */
+.opener::before{
+  content:'';position:absolute;inset:0;z-index:3;pointer-events:none;
+  background:
+    linear-gradient(180deg,rgba(8,7,5,.6) 0%,rgba(8,7,5,.05) 16%,rgba(8,7,5,.08) 55%,rgba(8,7,5,.7) 100%),
+    linear-gradient(100deg,rgba(8,7,5,.6) 0%,rgba(8,7,5,.4) 30%,rgba(8,7,5,0) 58%);
+}
 /* Below ~700px the collage tiles get too narrow for their bottom labels not
-   to collide with the hero copy sitting on top of them — hide the labels and
-   darken the scrim instead of risking overlap. */
+   to collide with the hero copy sitting on top of them. */
 @media(max-width:700px){
   .tile .label{display:none;}
-  .tile::after{background:linear-gradient(180deg,rgba(0,0,0,.4) 0%,rgba(0,0,0,.8) 100%);}
-  .opener::before{content:'';position:absolute;inset:0;z-index:3;background:linear-gradient(180deg,rgba(10,9,7,.55) 0%,rgba(10,9,7,.35) 45%,rgba(10,9,7,.85) 100%);}
+  .opener::before{
+    background:
+      linear-gradient(180deg,rgba(8,7,5,.65) 0%,rgba(8,7,5,.3) 30%,rgba(8,7,5,.35) 55%,rgba(8,7,5,.85) 100%),
+      linear-gradient(100deg,rgba(8,7,5,.5) 0%,rgba(8,7,5,0) 70%);
+  }
 }
 
 .opener-copy{position:relative;z-index:5;padding:150px 0 240px;pointer-events:none;}
