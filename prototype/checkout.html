@@ -197,7 +197,7 @@ function goToStep(i){
 renderStepper();
 
 /* ---- fill listing-dependent content ---- */
-function paintThumb(el){ el.innerHTML = artDiv(listing.cat, 130, .2); }
+function paintThumb(el){ el.innerHTML = artDiv(listing.img||listing.cat, 130, .2); }
 ['revThumb','osThumb'].forEach(id=>paintThumb(document.getElementById(id)));
 document.getElementById('revTitle').textContent=listing.title;
 document.getElementById('revDates').textContent=`${dateStr} · ${nights} ${listing.unit}${nights>1?'s':''} · ${provider.name}`;

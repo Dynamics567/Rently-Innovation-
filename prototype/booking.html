@@ -275,7 +275,7 @@ initNotifDropdown();
 document.getElementById('backLink').innerHTML = icon('chevronLeft',{size:12})+' Back to my bookings';
 
 /* ---- header ---- */
-document.getElementById('bkThumb').innerHTML = artDiv(listing.cat,120,.2);
+document.getElementById('bkThumb').innerHTML = artDiv(listing.img||listing.cat,120,.2);
 document.getElementById('bkTitle').textContent = listing.title;
 const dFrom=new Date(booking.dateFrom+'T10:00:00'), dTo=new Date(booking.dateTo+'T17:00:00');
 const fmt=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
@@ -385,7 +385,7 @@ function render(){
       gps.style.display='flex';
       gps.innerHTML = icon('map',{size:15})+`<span><b>Live GPS tracking is on</b> for this vehicle — both you and ${provider.name} can see its location for the duration of the rental.</span>`;
     } else { gps.style.display='none'; }
-    document.getElementById('pickupPhotos').innerHTML = [0,1,2,3].map(i=>`<div class="thumb">${artDiv(listing.cat,110,.18)}</div>`).join('');
+    document.getElementById('pickupPhotos').innerHTML = [0,1,2,3].map(i=>`<div class="thumb">${artDiv(listing.img||listing.cat,110,.18)}</div>`).join('');
   }
 
   // ---- Group D: return scheduled ----
@@ -397,8 +397,8 @@ function render(){
 
   // ---- Group E: inspection ----
   if(groups.inspection.includes(currentStage)){
-    document.getElementById('cmpBefore').innerHTML = [0,1].map(()=>`<div class="thumb">${artDiv(listing.cat,110,.18)}</div>`).join('');
-    document.getElementById('cmpAfter').innerHTML = [0,1].map(()=>`<div class="thumb">${artDiv(listing.cat,110,.18)}</div>`).join('');
+    document.getElementById('cmpBefore').innerHTML = [0,1].map(()=>`<div class="thumb">${artDiv(listing.img||listing.cat,110,.18)}</div>`).join('');
+    document.getElementById('cmpAfter').innerHTML = [0,1].map(()=>`<div class="thumb">${artDiv(listing.img||listing.cat,110,.18)}</div>`).join('');
     const inspected = currentStage==='inspected';
     ['chkNoDamage','chkAccessories','chkOnTime'].forEach(id=>{
       const el=document.getElementById(id);

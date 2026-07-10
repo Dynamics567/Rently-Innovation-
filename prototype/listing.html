@@ -268,10 +268,11 @@ document.getElementById('favBtn').addEventListener('click',()=>document.getEleme
    category, so the small tiles reuse it as varied detail crops (different
    crop position + zoom) rather than repeating one flat image five times. */
 const gCrops=[{position:'50% 45%',zoom:1},{position:'15% 25%',zoom:1.25},{position:'80% 65%',zoom:1.15},{position:'35% 85%',zoom:1.1},{position:'85% 15%',zoom:1.3}];
+const galleryKey = listing.img||listing.cat;
 document.getElementById('gallery').innerHTML = gCrops.map((v,i)=>{
-  const tile = hasPhoto(listing.cat)
-    ? `<div class="art" style="${artStyle(listing.cat)}">${photoTag(listing.cat,v)}</div>`
-    : `<div class="art" style="${artStyle(listing.cat)}">${artHTML(listing.cat,120+i*8,.18+i*.02)}</div>`;
+  const tile = hasPhoto(galleryKey)
+    ? `<div class="art" style="${artStyle(galleryKey)}">${photoTag(galleryKey,v)}</div>`
+    : `<div class="art" style="${artStyle(galleryKey)}">${artHTML(galleryKey,120+i*8,.18+i*.02)}</div>`;
   return `<div class="g-tile">${tile}${i===4?'<div class="show-all-btn">'+icon('grid',{size:13})+' Show all photos</div>':''}</div>`;
 }).join('');
 

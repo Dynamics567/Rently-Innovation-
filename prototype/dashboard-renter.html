@@ -190,7 +190,7 @@ function renderBookings(){
   wrap.innerHTML = list.map(b=>{
     const l=LISTINGS.find(x=>x.id===b.listingId);
     return `<a class="row-card booking-row" href="booking?id=${b.id}">
-      <div class="thumb">${artDiv(b.cat,120,.22)}</div>
+      <div class="thumb">${artDiv((l&&l.img)||b.cat,120,.22)}</div>
       <div class="main">
         <div class="t">${b.title}${statusBadge(b.status)}${b.status!=='cancelled'?depositBadge(b):''}</div>
         <div class="s">${new Date(b.dateFrom).toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${new Date(b.dateTo).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${b.provider}</div>
