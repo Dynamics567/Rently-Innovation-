@@ -43,7 +43,9 @@ export class TokenService {
     const rawRefreshToken = randomBytes(48).toString('hex');
     const tokenHash = this.hash(rawRefreshToken);
     const expiresAt = new Date();
-    expiresAt.setSeconds(expiresAt.getSeconds() + this.parseExpiry(this.authConfig.refreshExpiresIn));
+    expiresAt.setSeconds(
+      expiresAt.getSeconds() + this.parseExpiry(this.authConfig.refreshExpiresIn),
+    );
 
     await this.refreshTokenRepo.save(
       this.refreshTokenRepo.create({ userId: user.id, tokenHash, expiresAt }),

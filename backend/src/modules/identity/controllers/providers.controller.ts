@@ -13,7 +13,10 @@ export class ProvidersController {
 
   @Post('profile')
   @ApiBearerAuth()
-  async createProfile(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateProviderProfileDto) {
+  async createProfile(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateProviderProfileDto,
+  ) {
     return this.providerService.createProfile(user.id, dto);
   }
 
@@ -29,6 +32,8 @@ export class ProvidersController {
     // Public provider profile (name, rating, verified badge, listing count)
     // — intentionally left as a stub here. It's served by the Catalog
     // module once listings exist to aggregate against, not by Identity.
-    return { message: 'See CatalogModule — public provider profile aggregates listing + review data.' };
+    return {
+      message: 'See CatalogModule — public provider profile aggregates listing + review data.',
+    };
   }
 }

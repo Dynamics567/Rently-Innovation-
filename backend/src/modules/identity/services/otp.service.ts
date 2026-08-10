@@ -28,17 +28,26 @@ export class OtpService {
   async requestOtp(phone: string): Promise<void> {
     const code = randomInt(100000, 999999).toString();
     this.store.set(phone, { code, expiresAt: Date.now() + OTP_TTL_SECONDS * 1000, attempts: 0 });
-    await this.smsSender.send(phone, `Your Rently verification code is ${code}. It expires in 5 minutes.`);
+    await this.smsSender.send(
+      phone,
+      `Your Rently verification code is ${code}. It expires in 5 minutes.`,
+    );
   }
 
   verifyOtp(phone: string, code: string): boolean {
     const record = this.store.get(phone);
     if (!record) {
-      throw DomainException.unprocessable(ErrorCode.OTP_INVALID_OR_EXPIRED, 'No OTP was requested for this number.');
+      throw DomainException.unprocessable(
+        ErrorCode.OTP_INVALID_OR_EXPIRED,
+        'No OTP was requested for this number.',
+      );
     }
     if (Date.now() > record.expiresAt) {
       this.store.delete(phone);
-      throw DomainException.unprocessable(ErrorCode.OTP_INVALID_OR_EXPIRED, 'This code has expired.');
+      throw DomainException.unprocessable(
+        ErrorCode.OTP_INVALID_OR_EXPIRED,
+        'This code has expired.',
+      );
     }
     if (record.attempts >= MAX_ATTEMPTS) {
       this.store.delete(phone);

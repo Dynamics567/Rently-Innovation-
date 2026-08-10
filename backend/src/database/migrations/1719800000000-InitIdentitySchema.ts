@@ -13,7 +13,9 @@ export class InitIdentitySchema1719800000000 implements MigrationInterface {
     await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "pgcrypto"`); // gen_random_uuid()
     await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "citext"`); // case-insensitive email
     await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "btree_gist"`); // booking EXCLUDE constraints (see BookingModule migration)
-    await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "postgis"`); // listing geo search (see CatalogModule migration)
+    // NOTE: no postgis extension — not available on Railway's managed Postgres.
+    // CatalogModule stores listing location as plain lat/lng numeric columns instead
+    // of geography(Point,4326); see docs/DATABASE_SCHEMA.md deviation note.
 
     await queryRunner.query(`
       CREATE TYPE "user_role_enum" AS ENUM ('renter','provider','provider_staff','admin','super_admin');

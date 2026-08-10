@@ -5,9 +5,11 @@ import * as Joi from 'joi';
  * rather than surfacing as a runtime 500 the first time the code path is hit.
  */
 export const validationSchema = Joi.object({
-  NODE_ENV: Joi.string().valid('development', 'test', 'staging', 'production').default('development'),
+  NODE_ENV: Joi.string()
+    .valid('development', 'test', 'staging', 'production')
+    .default('development'),
   PORT: Joi.number().default(3000),
-  API_PREFIX: Joi.string().default('api/v1'),
+  API_PREFIX: Joi.string().default('api'),
   CORS_ORIGINS: Joi.string().allow('').default(''),
 
   DB_HOST: Joi.string().required(),
@@ -27,4 +29,10 @@ export const validationSchema = Joi.object({
 
   THROTTLE_TTL: Joi.number().default(60),
   THROTTLE_LIMIT: Joi.number().default(100),
+
+  STORAGE_ENDPOINT: Joi.string().required(),
+  STORAGE_BUCKET: Joi.string().required(),
+  STORAGE_ACCESS_KEY: Joi.string().required(),
+  STORAGE_SECRET_KEY: Joi.string().required(),
+  STORAGE_REGION: Joi.string().default('auto'),
 });

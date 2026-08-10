@@ -40,7 +40,10 @@ export class ProviderProfileService {
   async getByUserId(userId: string): Promise<ProviderProfile> {
     const profile = await this.providerRepository.findByUserId(userId);
     if (!profile) {
-      throw DomainException.notFound(ErrorCode.RESOURCE_NOT_FOUND, 'No provider profile exists for this user.');
+      throw DomainException.notFound(
+        ErrorCode.RESOURCE_NOT_FOUND,
+        'No provider profile exists for this user.',
+      );
     }
     return profile;
   }
@@ -63,7 +66,11 @@ export class ProviderProfileService {
     return this.providerRepository.save(profile);
   }
 
-  async rejectVerification(providerId: string, _adminId: string, reason: string): Promise<ProviderProfile> {
+  async rejectVerification(
+    providerId: string,
+    _adminId: string,
+    reason: string,
+  ): Promise<ProviderProfile> {
     const profile = await this.providerRepository.findByIdOrFail(providerId, 'Provider profile');
     profile.verificationStatus = ProviderVerificationStatus.REJECTED;
     profile.verificationNotes = reason;

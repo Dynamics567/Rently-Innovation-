@@ -14,9 +14,17 @@ import { RolesGuard } from '@common/guards/roles.guard';
 import { PoliciesGuard } from '@common/guards/policies.guard';
 import { LoggingInterceptor } from '@common/interceptors/logging.interceptor';
 import { TransformInterceptor } from '@common/interceptors/transform.interceptor';
+import { IdempotencyInterceptor } from '@common/interceptors/idempotency.interceptor';
+import {
+  IDEMPOTENCY_STORE,
+  InMemoryIdempotencyStore,
+} from '@common/interceptors/idempotency-store.interface';
 import { RequestIdMiddleware } from '@common/middleware/request-id.middleware';
 
 import { IdentityModule } from '@modules/identity/identity.module';
+import { CatalogModule } from '@modules/catalog/catalog.module';
+import { BookingModule } from '@modules/booking/booking.module';
+import { HealthModule } from './health/health.module';
 
 /**
  * Guard/filter/interceptor ORDER matters and is easy to get subtly wrong:
@@ -46,8 +54,11 @@ import { IdentityModule } from '@modules/identity/identity.module';
       ],
     }),
     DatabaseModule,
+    HealthModule,
     IdentityModule,
-    // CatalogModule, BookingModule, PaymentsModule, ... registered here as each is built.
+    CatalogModule,
+    BookingModule,
+    // PaymentsModule, SearchModule, MessagingModule, TrustSafetyModule, AdminModule — registered here as each is built.
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
@@ -57,6 +68,11 @@ import { IdentityModule } from '@modules/identity/identity.module';
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
     { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
+    // Registered globally but a no-op unless a route is @Idempotent() — see
+    // docs/API_DESIGN.md. Swap InMemoryIdempotencyStore for a Redis-backed
+    // one before running more than one API instance (its own doc comment).
+    { provide: IDEMPOTENCY_STORE, useClass: InMemoryIdempotencyStore },
+    { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
   ],
 })
 export class AppModule implements NestModule {

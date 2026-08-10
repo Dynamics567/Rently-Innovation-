@@ -17,7 +17,10 @@ async function bootstrap() {
   // Non-null: validation.schema.ts guarantees these at startup (fail-fast, not here).
   const appConfig = configService.get<AppConfig>('app')!;
 
-  app.enableCors({ origin: appConfig.corsOrigins.length ? appConfig.corsOrigins : true, credentials: true });
+  app.enableCors({
+    origin: appConfig.corsOrigins.length ? appConfig.corsOrigins : true,
+    credentials: true,
+  });
   app.setGlobalPrefix(appConfig.apiPrefix);
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 

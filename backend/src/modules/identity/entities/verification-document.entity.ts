@@ -1,12 +1,17 @@
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { BaseEntity } from '@common/base/base.entity';
-import { VerificationDocumentStatus, VerificationDocumentType } from '../enums/verification-status.enum';
+import {
+  VerificationDocumentStatus,
+  VerificationDocumentType,
+} from '../enums/verification-status.enum';
 import { ProviderProfile } from './provider-profile.entity';
 
 @Entity('verification_documents')
 export class VerificationDocument extends BaseEntity {
-  @ManyToOne(() => ProviderProfile, (provider) => provider.verificationDocuments, { onDelete: 'CASCADE' })
+  @ManyToOne(() => ProviderProfile, (provider) => provider.verificationDocuments, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'provider_id' })
   provider: ProviderProfile;
 
@@ -25,7 +30,11 @@ export class VerificationDocument extends BaseEntity {
   @Column({ name: 'storage_key', type: 'text' })
   storageKey: string;
 
-  @Column({ type: 'enum', enum: VerificationDocumentStatus, default: VerificationDocumentStatus.PENDING })
+  @Column({
+    type: 'enum',
+    enum: VerificationDocumentStatus,
+    default: VerificationDocumentStatus.PENDING,
+  })
   status: VerificationDocumentStatus;
 
   @Column({ name: 'reviewed_by', type: 'uuid', nullable: true })

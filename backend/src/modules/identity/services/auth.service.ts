@@ -22,7 +22,10 @@ export class AuthService {
   ) {}
 
   async signup(dto: SignupDto): Promise<{ user: User; tokens: TokenPair }> {
-    const existing = await this.userRepository.findByEmailOrPhone({ email: dto.email, phone: dto.phone });
+    const existing = await this.userRepository.findByEmailOrPhone({
+      email: dto.email,
+      phone: dto.phone,
+    });
     if (existing) {
       throw DomainException.conflict(
         ErrorCode.EMAIL_ALREADY_REGISTERED,
@@ -49,7 +52,10 @@ export class AuthService {
   }
 
   async login(dto: LoginDto): Promise<{ user: User; tokens: TokenPair }> {
-    const user = await this.userRepository.findByEmailOrPhone({ email: dto.email, phone: dto.phone });
+    const user = await this.userRepository.findByEmailOrPhone({
+      email: dto.email,
+      phone: dto.phone,
+    });
     // Constant-shape response whether the account exists or the password is
     // wrong — never reveal which one failed, that's a user-enumeration leak.
     const passwordMatches = user?.passwordHash
@@ -57,7 +63,10 @@ export class AuthService {
       : await bcrypt.compare(dto.password, '$2b$12$invalidsaltinvalidsaltinvalidsal.');
 
     if (!user || !passwordMatches) {
-      throw DomainException.unauthorized(ErrorCode.INVALID_CREDENTIALS, 'Incorrect email/phone or password.');
+      throw DomainException.unauthorized(
+        ErrorCode.INVALID_CREDENTIALS,
+        'Incorrect email/phone or password.',
+      );
     }
 
     if (user.status !== UserAccountStatus.ACTIVE) {

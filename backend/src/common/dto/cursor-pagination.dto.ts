@@ -8,7 +8,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
  * concurrent writes, which every browse/search endpoint in this system is.
  */
 export class CursorPaginationDto {
-  @ApiPropertyOptional({ description: 'Opaque cursor from a previous response\'s meta.nextCursor' })
+  @ApiPropertyOptional({ description: "Opaque cursor from a previous response's meta.nextCursor" })
   @IsOptional()
   @IsString()
   cursor?: string;

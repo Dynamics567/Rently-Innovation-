@@ -18,7 +18,10 @@ describe('AuthService', () => {
   // Loosely typed as `jest.Mock`-bearing records, deliberately — these are
   // hand-rolled test doubles, not required to satisfy the full collaborator
   // interface, only the methods AuthService actually calls.
-  let userRepository: Record<'findByEmailOrPhone' | 'create' | 'save' | 'findByIdOrFail', jest.Mock>;
+  let userRepository: Record<
+    'findByEmailOrPhone' | 'create' | 'save' | 'findByIdOrFail',
+    jest.Mock
+  >;
   let tokenService: Record<'issueTokenPair', jest.Mock>;
   let otpService: Record<'requestOtp', jest.Mock>;
 
@@ -46,7 +49,11 @@ describe('AuthService', () => {
       userRepository.findByEmailOrPhone.mockResolvedValue({ id: 'existing-user' } as any);
 
       await expect(
-        authService.signup({ email: 'taken@example.com', password: 'password123', fullName: 'Test User' } as any),
+        authService.signup({
+          email: 'taken@example.com',
+          password: 'password123',
+          fullName: 'Test User',
+        } as any),
       ).rejects.toMatchObject({ code: 'EMAIL_ALREADY_REGISTERED' });
 
       expect(userRepository.save).not.toHaveBeenCalled();
@@ -55,7 +62,11 @@ describe('AuthService', () => {
     it('creates a Renter by default when no roles are specified', async () => {
       userRepository.findByEmailOrPhone.mockResolvedValue(null);
 
-      await authService.signup({ email: 'new@example.com', password: 'password123', fullName: 'Test User' } as any);
+      await authService.signup({
+        email: 'new@example.com',
+        password: 'password123',
+        fullName: 'Test User',
+      } as any);
 
       expect(userRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({ roles: [UserRole.RENTER] }),
@@ -103,7 +114,10 @@ describe('AuthService', () => {
       const user = { id: 'user-1', passwordHash, status: UserAccountStatus.ACTIVE };
       userRepository.findByEmailOrPhone.mockResolvedValue(user as any);
 
-      const result = await authService.login({ email: 'user@example.com', password: 'correct-password' } as any);
+      const result = await authService.login({
+        email: 'user@example.com',
+        password: 'correct-password',
+      } as any);
 
       expect(tokenService.issueTokenPair).toHaveBeenCalledWith(user);
       expect(result.tokens).toEqual({ accessToken: 'access', refreshToken: 'refresh' });

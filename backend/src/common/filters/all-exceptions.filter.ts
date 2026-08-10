@@ -42,7 +42,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
         exception instanceof Error ? exception.stack : undefined,
       );
     } else {
-      this.logger.warn(`${request.method} ${request.url} -> ${status} [${body.code}] ${body.message}`);
+      this.logger.warn(
+        `${request.method} ${request.url} -> ${status} [${body.code}] ${body.message}`,
+      );
     }
 
     response.status(status).json({ error: body });
@@ -67,7 +69,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
             : ((response as any)?.message ?? exception.message);
       return {
         status,
-        body: { code: status === 400 ? ErrorCode.VALIDATION_FAILED : ErrorCode.INTERNAL_ERROR, message },
+        body: {
+          code: status === 400 ? ErrorCode.VALIDATION_FAILED : ErrorCode.INTERNAL_ERROR,
+          message,
+        },
       };
     }
 
