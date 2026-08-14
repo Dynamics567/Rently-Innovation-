@@ -88,10 +88,11 @@ body{min-height:100vh;}
           </div>
         </div>
 
-        <div id="nameField" class="field" style="display:none;"><label>Full name</label><input type="text" placeholder="Your full name" /></div>
-        <div class="field"><label>Email address</label><input type="email" placeholder="you@example.com" /></div>
-        <div class="field"><label>Password</label><input type="password" placeholder="••••••••" /></div>
+        <div id="nameField" class="field" style="display:none;"><label>Full name</label><input type="text" id="fullNameInput" placeholder="Your full name" /></div>
+        <div class="field"><label>Email address</label><input type="email" id="emailInput" placeholder="you@example.com" /></div>
+        <div class="field"><label>Password</label><input type="password" id="passwordInput" placeholder="••••••••" /></div>
         <div id="providerNote" class="banner info" style="display:none;margin-bottom:20px;"></div>
+        <div id="authError" class="banner danger" style="display:none;margin-bottom:20px;"></div>
 
         <a class="text-link faint" id="forgotLink" style="margin-bottom:22px;display:inline-flex;">Forgot password?</a>
         <button class="pill-btn blue lg block" id="submitAuthBtn">Log in</button>
@@ -103,24 +104,22 @@ body{min-height:100vh;}
         <p class="switch-mode" id="switchModeRow"></p>
       </div>
 
-      <!-- SCREEN: OTP (signup only) -->
-      <div id="screenOtp" style="display:none;">
-        <h1>Verify your email</h1>
-        <p class="sub">Enter the 6-digit code we sent to your inbox to finish creating your account.</p>
-        <div class="otp-row" id="authOtpRow" style="margin-bottom:16px;"></div>
-        <a class="text-link faint" style="margin-bottom:26px;display:inline-flex;">Resend code</a>
-        <button class="pill-btn blue lg block" id="finishSignupBtn">Create account</button>
-      </div>
-
       <p class="fine-print">By continuing you agree to Rently's <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>, including NDPR data handling.</p>
     </div>
   </div>
 </div>
 
 <script src="assets/rently.js"></script>
+<script src="assets/api.js"></script>
 <script>
 const params=new URLSearchParams(window.location.search);
 const initialProvider = params.get('role')==='provider';
+
+// Already signed in — send straight to the right dashboard.
+(function(){
+  const session=getSession();
+  if(session) window.location.href = session.user.roles.includes('provider') ? 'dashboard-provider' : 'dashboard-renter';
+})();
 
 document.getElementById('backLink').innerHTML = icon('chevronLeft',{size:13})+' Back to Rently';
 document.getElementById('roleRenterIcon').innerHTML=icon('user',{size:16});
@@ -174,20 +173,47 @@ document.getElementById('tabSignup').addEventListener('click',()=>{mode='signup'
 if(initialProvider){ mode='signup'; }
 renderMode();
 
-document.getElementById('submitAuthBtn').addEventListener('click',()=>{
-  if(mode==='signup'){
-    document.getElementById('screenForm').style.display='none';
-    document.getElementById('screenOtp').style.display='block';
-    document.getElementById('authOtpRow').innerHTML = Array.from({length:6}).map(()=>'<input type="text" maxlength="1" inputmode="numeric" />').join('');
-    const inputs=[...document.querySelectorAll('#authOtpRow input')];
-    inputs.forEach((inp,i)=>{ inp.addEventListener('input',()=>{ if(inp.value && inputs[i+1]) inputs[i+1].focus(); }); });
-    inputs[0].focus();
-  } else {
-    window.location.href = role==='provider' ? 'dashboard-provider' : 'dashboard-renter';
+function showAuthError(msg){
+  const el=document.getElementById('authError');
+  el.innerHTML = icon('alert',{size:15})+`<div>${msg}</div>`;
+  el.style.display='flex';
+}
+function clearAuthError(){ document.getElementById('authError').style.display='none'; }
+
+document.getElementById('submitAuthBtn').addEventListener('click', async ()=>{
+  clearAuthError();
+  const email=document.getElementById('emailInput').value.trim();
+  const password=document.getElementById('passwordInput').value;
+  const fullName=document.getElementById('fullNameInput').value.trim();
+
+  if(!email || !password){ showAuthError('Please enter your email and password.'); return; }
+  if(mode==='signup' && !fullName){ showAuthError('Please enter your full name.'); return; }
+
+  const btn=document.getElementById('submitAuthBtn');
+  btn.disabled=true;
+  const originalLabel=btn.textContent;
+  btn.textContent = mode==='signup' ? 'Creating account…' : 'Logging in…';
+
+  try{
+    if(mode==='signup'){
+      const {data} = await apiFetch('/auth/signup',{method:'POST',auth:false,body:{
+        email, password, fullName, roles:[role],
+      }});
+      if(role==='provider'){
+        await apiFetch('/providers/profile',{method:'POST',body:{}}).catch(()=>{});
+      }
+      setSession(data.user, data);
+      window.location.href = role==='provider' ? 'dashboard-provider' : 'dashboard-renter';
+    } else {
+      const {data} = await apiFetch('/auth/login',{method:'POST',auth:false,body:{email,password}});
+      setSession(data.user, data);
+      window.location.href = data.user.roles.includes('provider') ? 'dashboard-provider' : 'dashboard-renter';
+    }
+  }catch(err){
+    showAuthError(apiErrorMessage(err));
+    btn.disabled=false;
+    btn.textContent=originalLabel;
   }
-});
-document.getElementById('finishSignupBtn').addEventListener('click',()=>{
-  window.location.href = role==='provider' ? 'dashboard-provider' : 'dashboard-renter';
 });
 </script>
 </body>

@@ -48,6 +48,35 @@ export class ProviderProfileService {
     return profile;
   }
 
+  /**
+   * Public profile surface — listing cards/detail pages show this for
+   * "who's renting this out." Individual providers (no businessName) fall
+   * back to the linked user's full name; never exposes anything else about
+   * the user (passwordHash is @Exclude()d on the entity regardless, but this
+   * also never returns the user object itself, just the derived name).
+   */
+  async getPublicProfile(id: string): Promise<{
+    id: string;
+    name: string;
+    avgRating: number;
+    avgResponseTimeMinutes: number;
+    totalCompletedBookings: number;
+    verificationStatus: ProviderVerificationStatus;
+  }> {
+    const profile = await this.providerRepository.findByIdWithUser(id);
+    if (!profile) {
+      throw DomainException.notFound(ErrorCode.RESOURCE_NOT_FOUND, 'Provider was not found.');
+    }
+    return {
+      id: profile.id,
+      name: profile.businessName ?? profile.user.fullName,
+      avgRating: profile.avgRating,
+      avgResponseTimeMinutes: profile.avgResponseTimeMinutes,
+      totalCompletedBookings: profile.totalCompletedBookings,
+      verificationStatus: profile.verificationStatus,
+    };
+  }
+
   async getVerificationQueue(): Promise<ProviderProfile[]> {
     return this.providerRepository.findPendingVerification();
   }

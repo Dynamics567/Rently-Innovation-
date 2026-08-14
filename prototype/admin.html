@@ -77,26 +77,21 @@ body{padding-top:0;}
       </div>
 
       <div class="section-block">
-        <div class="sb-head"><h3>Recent bookings across the platform</h3><a class="text-link faint" data-view-link="bookings">View all</a></div>
-        <div class="dtable-wrap">
-          <table class="dtable" id="overviewBookingsTable"></table>
-        </div>
+        <div class="sb-head"><h3>Recent bookings across the platform</h3></div>
+        <div class="banner info"><div><div class="t">Not available yet</div><div class="d">A platform-wide bookings view needs the Admin module, which hasn't been built yet.</div></div></div>
       </div>
     </div>
 
     <!-- ============ BOOKINGS ============ -->
     <div class="d-view" id="view-bookings">
       <div class="app-head"><div><h1>All bookings</h1><p>Every booking on Rently, across every provider and category.</p></div></div>
-      <div class="tabs-filter" id="bookingsFilter"></div>
-      <div class="dtable-wrap">
-        <table class="dtable" id="allBookingsTable"></table>
-      </div>
+      <div class="banner info"><div><div class="t">Not available yet</div><div class="d">A platform-wide bookings view needs the Admin module, which hasn't been built yet — only the provider-verification queue is wired up so far.</div></div></div>
     </div>
 
     <!-- ============ DISPUTES ============ -->
     <div class="d-view" id="view-disputes">
       <div class="app-head"><div><h1>Disputes</h1><p>Damage claims, late-return disagreements and payment issues flagged by either side.</p></div></div>
-      <div id="disputesList"></div>
+      <div class="banner info"><div><div class="t">Not available yet</div><div class="d">Dispute handling needs the Trust &amp; Safety module, which hasn't been built yet.</div></div></div>
     </div>
 
     <!-- ============ VERIFICATION ============ -->
@@ -108,6 +103,10 @@ body{padding-top:0;}
 </div>
 
 <script src="assets/rently.js"></script>
+<script src="assets/api.js"></script>
+<script>
+const session = requireSession('admin');
+</script>
 <script>
 document.querySelector('.admin-badge').innerHTML = icon('shield',{size:11,stroke:3})+' Admin';
 document.getElementById('linkOverview').innerHTML = icon('grid',{size:17})+' Overview';
@@ -129,94 +128,52 @@ function goView(v){
 document.querySelectorAll('.side-link[data-view]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goView(l.dataset.view);}));
 document.querySelectorAll('[data-view-link]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goView(l.dataset.viewLink);}));
 
-/* ---- overview stats ---- */
-document.getElementById('statBookings').textContent = ADMIN_STATS.totalBookings.toLocaleString();
-document.getElementById('statGmv').textContent = '₦'+(ADMIN_STATS.gmvMonth/1000000).toFixed(1)+'M';
-document.getElementById('statActive').textContent = ADMIN_STATS.activeRentals;
-document.getElementById('statDisputes').textContent = ADMIN_STATS.openDisputes;
-document.getElementById('statVerif').textContent = ADMIN_STATS.pendingVerifications;
-document.getElementById('statRating').textContent = ADMIN_STATS.avgRating;
-document.getElementById('attentionBanner').innerHTML = icon('alert',{size:16})+`<div><div class="t">${ADMIN_STATS.openDisputes} open dispute${ADMIN_STATS.openDisputes===1?'':'s'} and ${ADMIN_STATS.pendingVerifications} provider${ADMIN_STATS.pendingVerifications===1?'':'s'} waiting on verification</div><div class="d">Disputes older than 48 hours and verifications older than 24 hours risk breaching Rently's response-time SLA.</div></div>`;
+/* ---- overview stats — only pending-verification count is real; the rest need the
+   Admin/Trust & Safety modules, which haven't been built yet ---- */
+document.getElementById('statBookings').textContent = '—';
+document.getElementById('statGmv').textContent = '—';
+document.getElementById('statActive').textContent = '—';
+document.getElementById('statDisputes').textContent = '—';
+document.getElementById('statRating').textContent = '—';
 
-/* ---- status badge helper ---- */
-function bkStatusBadge(s){
-  const map={requested:['pending','Requested'],reserved:['confirmed','Reserved'],active:['confirmed','Active'],returnsched:['pending','Return due'],completed:['completed','Completed'],cancelled:['cancelled','Cancelled']};
-  const [cls,lbl]=map[s]||['info',s];
-  return `<span class="badge ${cls}">${lbl}</span>`;
+/* ---- verification queue (real) ---- */
+function typeOf(v){ return v.businessRegistrationNo ? 'Business' : 'Individual'; }
+function docsOf(v){ return (v.verificationDocuments||[]).length ? v.verificationDocuments.map(d=>d.docType).join(', ') : 'No documents submitted yet'; }
+async function renderVerification(){
+  try{
+    const {data} = await apiFetch('/admin/providers/verification-queue');
+    document.getElementById('statVerif').textContent = data.length;
+    document.getElementById('attentionBanner').innerHTML = icon('alert',{size:16})+`<div><div class="t">${data.length} provider${data.length===1?'':'s'} waiting on verification</div><div class="d">Verifications older than 24 hours risk breaching Rently's response-time SLA.</div></div>`;
+    document.getElementById('verificationList').innerHTML = data.length===0
+      ? `<p style="color:var(--ink-faint);font-size:13.5px;">No providers waiting on verification.</p>`
+      : data.map(v=>`
+      <div class="queue-row">
+        <div class="q-main">
+          <div class="q-title">${v.businessName||(v.user?v.user.fullName:'Provider')} <span class="badge info" style="margin-left:6px;">${typeOf(v)}</span></div>
+          <div class="q-sub">Submitted ${new Date(v.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${docsOf(v)}</div>
+        </div>
+        <div class="q-actions">
+          <button class="pill-btn ghost sm" data-reject="${v.id}">Reject</button>
+          <button class="pill-btn green sm" data-approve="${v.id}">Approve</button>
+        </div>
+      </div>`).join('');
+    document.querySelectorAll('[data-approve]').forEach(b=>b.addEventListener('click', async ()=>{
+      b.disabled=true;
+      try{ await apiFetch(`/admin/providers/${b.dataset.approve}/verify`,{method:'POST'}); await renderVerification(); }
+      catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
+    }));
+    document.querySelectorAll('[data-reject]').forEach(b=>b.addEventListener('click', async ()=>{
+      const reason = prompt('Reason for rejecting this provider (visible to them):');
+      if(!reason || reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); return; }
+      b.disabled=true;
+      try{ await apiFetch(`/admin/providers/${b.dataset.reject}/reject`,{method:'POST',body:{reason:reason.trim()}}); await renderVerification(); }
+      catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
+    }));
+  }catch(e){
+    document.getElementById('verificationList').innerHTML = `<p style="color:var(--ink-faint)">${apiErrorMessage(e)}</p>`;
+  }
 }
-function bookingTableRows(list){
-  return list.map(b=>`<tr><td style="font-variant-numeric:tabular-nums;">${b.ref}</td><td>${b.listing}</td><td>${b.renter}</td><td>${b.provider}</td><td class="num">${money(b.amount)}</td><td>${bkStatusBadge(b.status)}</td></tr>`).join('');
-}
-document.getElementById('overviewBookingsTable').innerHTML = `<thead><tr><th>Reference</th><th>Listing</th><th>Renter</th><th>Provider</th><th>Amount</th><th>Status</th></tr></thead><tbody>${bookingTableRows(ADMIN_RECENT_BOOKINGS.slice(0,4))}</tbody>`;
-
-/* ---- all bookings + status filter ---- */
-let bookingsFilterState='all';
-const BK_FILTERS=[['all','All'],['requested','Requested'],['active','Active'],['returnsched','Return due'],['completed','Completed']];
-document.getElementById('bookingsFilter').innerHTML = BK_FILTERS.map(([k,l])=>`<button data-f="${k}" class="${bookingsFilterState===k?'on':''}">${l}</button>`).join('');
-function renderAllBookings(){
-  const list = ADMIN_RECENT_BOOKINGS.filter(b=>bookingsFilterState==='all'||b.status===bookingsFilterState);
-  document.getElementById('allBookingsTable').innerHTML = `<thead><tr><th>Reference</th><th>Listing</th><th>Renter</th><th>Provider</th><th>Amount</th><th>Status</th></tr></thead><tbody>${bookingTableRows(list)}</tbody>`;
-}
-document.getElementById('bookingsFilter').addEventListener('click',e=>{
-  const b=e.target.closest('button'); if(!b) return;
-  bookingsFilterState=b.dataset.f;
-  document.querySelectorAll('#bookingsFilter button').forEach(o=>o.classList.toggle('on',o.dataset.f===bookingsFilterState));
-  renderAllBookings();
-});
-renderAllBookings();
-
-/* ---- disputes ---- */
-function disputeStatusBadge(s){
-  const map={open:'cancelled',investigating:'pending',resolved:'completed'};
-  return `<span class="badge ${map[s]}">${s.charAt(0).toUpperCase()+s.slice(1)}</span>`;
-}
-function renderDisputes(){
-  document.getElementById('disputesList').innerHTML = DISPUTES.map(d=>`
-    <div class="queue-row">
-      <div class="q-main">
-        <div class="q-title">${d.listing} ${disputeStatusBadge(d.status)}</div>
-        <div class="q-sub">${d.bookingRef} · ${d.renter} vs. ${d.provider} · opened ${new Date(d.opened).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
-        <div class="q-sub" style="margin-top:6px;color:var(--ink-soft);">${d.issue}</div>
-      </div>
-      <div class="q-actions">
-        ${d.status!=='resolved' ? `<button class="pill-btn ghost sm" data-resolve="${d.id}">Mark resolved</button>` : ''}
-      </div>
-    </div>`).join('');
-  document.querySelectorAll('[data-resolve]').forEach(b=>b.addEventListener('click',()=>{
-    const d=DISPUTES.find(x=>x.id===b.dataset.resolve); d.status='resolved';
-    ADMIN_STATS.openDisputes=DISPUTES.filter(x=>x.status!=='resolved').length;
-    document.getElementById('statDisputes').textContent=ADMIN_STATS.openDisputes;
-    renderDisputes();
-  }));
-}
-renderDisputes();
-
-/* ---- verification queue ---- */
-function renderVerification(){
-  const empty = VERIFICATION_QUEUE.length===0;
-  document.getElementById('verificationList').innerHTML = empty
-    ? `<p style="color:var(--ink-faint);font-size:13.5px;">No providers waiting on verification.</p>`
-    : VERIFICATION_QUEUE.map(v=>`
-    <div class="queue-row">
-      <div class="q-main">
-        <div class="q-title">${v.name} <span class="badge info" style="margin-left:6px;">${v.type}</span></div>
-        <div class="q-sub">Submitted ${new Date(v.submitted).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${v.docs}</div>
-      </div>
-      <div class="q-actions">
-        <button class="pill-btn ghost sm" data-reject="${v.id}">Reject</button>
-        <button class="pill-btn green sm" data-approve="${v.id}">Approve</button>
-      </div>
-    </div>`).join('');
-  document.querySelectorAll('[data-approve],[data-reject]').forEach(b=>b.addEventListener('click',()=>{
-    const id=b.dataset.approve||b.dataset.reject;
-    const idx=VERIFICATION_QUEUE.findIndex(x=>x.id===id);
-    VERIFICATION_QUEUE.splice(idx,1);
-    ADMIN_STATS.pendingVerifications=VERIFICATION_QUEUE.length;
-    document.getElementById('statVerif').textContent=ADMIN_STATS.pendingVerifications;
-    renderVerification();
-  }));
-}
-renderVerification();
+if(session) renderVerification();
 </script>
 </body>
 </html>

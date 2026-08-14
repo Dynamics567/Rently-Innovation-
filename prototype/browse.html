@@ -159,10 +159,13 @@ select.sort-select{border:1.5px solid var(--line-strong);border-radius:999px;pad
 </div>
 
 <script src="assets/rently.js"></script>
+<script src="assets/api.js"></script>
 <script>
 document.getElementById('mapToggle').innerHTML = icon('map',{size:15}) + '<span id="mapToggleLbl">Map view</span>';
 document.getElementById('searchGoBtn').innerHTML = icon('search',{size:16,stroke:2.4});
 document.getElementById('emptyIcon').innerHTML = icon('search',{size:22});
+
+const SORT_MAP = {rec:'recommended','price-asc':'price_asc','price-desc':'price_desc',rating:'rating'};
 
 /* ---- state ---- */
 const params = new URLSearchParams(window.location.search);
@@ -173,62 +176,121 @@ let state = {
   instant: false, verified: false,
   minRating: 0,
   sort: 'rec',
-  visible: 9,
+  cursor: null, hasMore: false,
 };
+let allCategories = [];
+let loadedListings = [];
+
+/* ---- fetch + render (real API — replaces the old client-side LISTINGS.filter()) ---- */
+async function search(reset=true){
+  if(reset){ state.cursor=null; loadedListings=[]; }
+  const query = new URLSearchParams();
+  if(state.cat!=='all') query.set('category', state.cat);
+  if(state.q) query.set('q', state.q);
+  if(state.priceMin!=null) query.set('priceMin', String(state.priceMin*100));
+  if(state.priceMax!=null) query.set('priceMax', String(state.priceMax*100));
+  if(state.instant) query.set('instantOnly','true');
+  if(state.minRating) query.set('ratingMin', String(state.minRating));
+  query.set('sort', SORT_MAP[state.sort]||'recommended');
+  query.set('limit','12');
+  if(state.cursor) query.set('cursor', state.cursor);
+
+  const grid=document.getElementById('resultsGrid');
+  grid.style.opacity='.5';
+  try{
+    const categoryById = await getCategoryMapById();
+    const {data, meta} = await apiFetch('/listings?'+query.toString(), {auth:false});
+    const mapped = await mapListings(data, categoryById);
+    loadedListings = reset ? mapped : loadedListings.concat(mapped);
+    state.cursor = meta?.nextCursor || null;
+    state.hasMore = !!meta?.hasMore;
+    renderResults();
+  }catch(e){
+    grid.innerHTML = `<p style="color:var(--ink-faint);font-size:13px;padding:20px">${apiErrorMessage(e)}</p>`;
+    document.getElementById('emptyState').style.display='none';
+  }finally{
+    grid.style.opacity='1';
+  }
+}
+
+function renderResults(){
+  // "Verified providers only" has no backend filter (verification lives on
+  // the provider, not indexed on listings) — applied client-side to the
+  // loaded page(s) rather than sent as a query param.
+  const visible = state.verified ? loadedListings.filter(l=>l.verified) : loadedListings;
+  const catObj = allCategories.find(c=>c.key===state.cat);
+  document.getElementById('resultsTitle').textContent = catObj ? catObj.name : 'All listings';
+  document.getElementById('resultsCount').textContent = `${visible.length} listing${visible.length===1?'':'s'}`;
+  document.getElementById('loadMoreBtn').style.display = state.hasMore ? 'inline-flex':'none';
+
+  const grid=document.getElementById('resultsGrid');
+  const empty=document.getElementById('emptyState');
+  if(visible.length===0){
+    grid.style.display='none'; empty.style.display='block';
+  } else {
+    grid.style.display='grid'; empty.style.display='none';
+    grid.innerHTML = visible.map(l=>rcard(l)).join('');
+  }
+}
 
 /* ---- category chips (toolbar) ---- */
-const chipCats = [{key:'all',name:'All categories'}, ...CATEGORIES];
-document.getElementById('catChipRow').innerHTML = chipCats.map(c=>`<button class="cat-chip ${state.cat===c.key?'on':''}" data-cat="${c.key}">${c.name}</button>`).join('');
-document.getElementById('catChipRow').addEventListener('click',e=>{
-  const b=e.target.closest('.cat-chip'); if(!b) return;
-  state.cat=b.dataset.cat; state.visible=9;
-  syncFilterCats(); render();
-});
+function renderCatChips(){
+  const chipCats = [{key:'all',name:'All categories'}, ...allCategories];
+  document.getElementById('catChipRow').innerHTML = chipCats.map(c=>`<button class="cat-chip ${state.cat===c.key?'on':''}" data-cat="${c.key}">${c.name}</button>`).join('');
+  document.getElementById('catChipRow').addEventListener('click',e=>{
+    const b=e.target.closest('.cat-chip'); if(!b) return;
+    state.cat=b.dataset.cat;
+    syncFilterCats(); search(true);
+  });
+}
 
 /* ---- sidebar category checkboxes (mirrors chip row) ---- */
 function syncFilterCats(){
-  document.getElementById('filterCats').innerHTML = CATEGORIES.map(c=>`
-    <label class="f-check"><input type="checkbox" data-cat="${c.key}" ${state.cat===c.key?'checked':''}> ${c.name}<span class="cnt">${c.count}</span></label>
+  document.getElementById('filterCats').innerHTML = allCategories.map(c=>`
+    <label class="f-check"><input type="checkbox" data-cat="${c.key}" ${state.cat===c.key?'checked':''}> ${c.name}</label>
   `).join('');
   document.querySelectorAll('#filterCats input').forEach(cb=>cb.addEventListener('change',()=>{
     state.cat = cb.checked ? cb.dataset.cat : 'all';
     document.querySelectorAll('#filterCats input').forEach(o=>{ if(o!==cb) o.checked=false; });
     document.querySelectorAll('.cat-chip').forEach(c=>c.classList.toggle('on',c.dataset.cat===state.cat));
-    state.visible=9; render();
+    search(true);
   }));
   document.querySelectorAll('.cat-chip').forEach(c=>c.classList.toggle('on',c.dataset.cat===state.cat));
 }
-syncFilterCats();
 
 /* ---- "What" search field: pick a category or a popular term, filters live ---- */
 function updateWhatDisplay(){
-  const catObj = CATEGORIES.find(c=>c.key===state.cat);
+  const catObj = allCategories.find(c=>c.key===state.cat);
   const val = catObj ? catObj.name : (state.q || 'Anything, anywhere');
   document.getElementById('valWhat').textContent = val;
   document.querySelector('[data-panel="what"]').classList.toggle('filled', !!(catObj || state.q));
 }
-document.getElementById('categorySearchChips').innerHTML = CATEGORIES.map(c=>`<div class="pchip" data-cat="${c.key}">${icon(CATEGORY_ICON[c.key]||'grid',{size:13,stroke:2})}${c.name}</div>`).join('');
-document.getElementById('categorySearchChips').addEventListener('click',e=>{
-  const chip=e.target.closest('.pchip'); if(!chip) return;
-  state.q=''; state.cat=chip.dataset.cat; state.visible=9;
-  syncFilterCats(); updateWhatDisplay(); render(); closePanels();
-});
+function renderCategorySearchChips(){
+  document.getElementById('categorySearchChips').innerHTML = allCategories.map(c=>`<div class="pchip" data-cat="${c.key}">${icon(CATEGORY_ICON[c.key]||'grid',{size:13,stroke:2})}${c.name}</div>`).join('');
+  document.getElementById('categorySearchChips').addEventListener('click',e=>{
+    const chip=e.target.closest('.pchip'); if(!chip) return;
+    state.q=''; state.cat=chip.dataset.cat;
+    syncFilterCats(); updateWhatDisplay(); search(true); closePanels();
+  });
+}
 document.getElementById('popularSearches').innerHTML = POPULAR_SEARCHES.map(r=>`<div class="pchip" data-q="${r}">${r}</div>`).join('');
 document.getElementById('popularSearches').addEventListener('click',e=>{
   const chip=e.target.closest('.pchip'); if(!chip) return;
-  state.cat='all'; state.q=chip.dataset.q; state.visible=9;
-  syncFilterCats(); updateWhatDisplay(); render(); closePanels();
+  state.cat='all'; state.q=chip.dataset.q;
+  syncFilterCats(); updateWhatDisplay(); search(true); closePanels();
 });
-updateWhatDisplay();
 
 /* ---- price filter ---- */
-document.getElementById('priceMin').addEventListener('input',e=>{state.priceMin=e.target.value?+e.target.value:null;state.visible=9;render();});
-document.getElementById('priceMax').addEventListener('input',e=>{state.priceMax=e.target.value?+e.target.value:null;state.visible=9;render();});
+document.getElementById('priceMin').addEventListener('input',e=>{state.priceMin=e.target.value?+e.target.value:null;search(true);});
+document.getElementById('priceMax').addEventListener('input',e=>{state.priceMax=e.target.value?+e.target.value:null;search(true);});
 
 /* ---- toggles ---- */
 function wireSwitch(id,key){
   const el=document.getElementById(id);
-  el.addEventListener('click',()=>{ state[key]=!state[key]; el.classList.toggle('on',state[key]); state.visible=9; render(); });
+  el.addEventListener('click',()=>{
+    state[key]=!state[key]; el.classList.toggle('on',state[key]);
+    if(key==='verified') renderResults(); else search(true);
+  });
 }
 wireSwitch('toggleInstant','instant');
 wireSwitch('toggleVerified','verified');
@@ -239,11 +301,11 @@ document.querySelectorAll('.rpill').forEach(p=>p.addEventListener('click',()=>{
   const r=+p.dataset.r;
   state.minRating = state.minRating===r ? 0 : r;
   document.querySelectorAll('.rpill').forEach(o=>o.classList.toggle('on', +o.dataset.r===state.minRating));
-  state.visible=9; render();
+  search(true);
 }));
 
 /* ---- sort + map toggle ---- */
-document.getElementById('sortSelect').addEventListener('change',e=>{state.sort=e.target.value;render();});
+document.getElementById('sortSelect').addEventListener('change',e=>{state.sort=e.target.value;search(true);});
 document.getElementById('mapToggle').addEventListener('click',()=>{
   const on=document.getElementById('mapToggle').classList.toggle('on');
   document.getElementById('mapToggleLbl').textContent = on ? 'List view' : 'Map view';
@@ -251,52 +313,20 @@ document.getElementById('mapToggle').addEventListener('click',()=>{
 
 /* ---- clear all ---- */
 function resetFilters(){
-  state = {cat:'all',q:'',priceMin:null,priceMax:null,instant:false,verified:false,minRating:0,sort:'rec',visible:9};
+  state = {cat:'all',q:'',priceMin:null,priceMax:null,instant:false,verified:false,minRating:0,sort:'rec',cursor:null,hasMore:false};
   document.getElementById('priceMin').value=''; document.getElementById('priceMax').value='';
   document.getElementById('sortSelect').value='rec';
   document.querySelectorAll('.switch').forEach(s=>s.classList.remove('on'));
   document.querySelectorAll('.rpill').forEach(p=>p.classList.remove('on'));
-  syncFilterCats(); render();
+  syncFilterCats(); updateWhatDisplay(); search(true);
 }
 document.getElementById('clearAllFilters').addEventListener('click',resetFilters);
 document.getElementById('emptyReset').addEventListener('click',resetFilters);
-document.getElementById('loadMoreBtn').addEventListener('click',()=>{state.visible+=9;render();});
+document.getElementById('loadMoreBtn').addEventListener('click',()=>search(false));
 
-/* ---- render ---- */
-function render(){
-  const q = (state.q||'').trim().toLowerCase();
-  let list = LISTINGS.filter(l=>{
-    if(state.cat!=='all' && l.cat!==state.cat) return false;
-    if(state.priceMin!=null && l.price<state.priceMin) return false;
-    if(state.priceMax!=null && l.price>state.priceMax) return false;
-    if(state.instant && l.mode!=='instant') return false;
-    if(state.verified && !l.verified) return false;
-    if(l.rating<state.minRating) return false;
-    if(q && !(l.title.toLowerCase().includes(q) || l.catName.toLowerCase().includes(q) || l.loc.toLowerCase().includes(q) || l.provider.toLowerCase().includes(q))) return false;
-    return true;
-  });
-  if(state.sort==='price-asc') list.sort((a,b)=>a.price-b.price);
-  if(state.sort==='price-desc') list.sort((a,b)=>b.price-a.price);
-  if(state.sort==='rating') list.sort((a,b)=>b.rating-a.rating);
+document.getElementById('searchGoBtn').addEventListener('click',()=>{ closePanels(); search(true); document.getElementById('resultsGrid').scrollIntoView({behavior:'smooth',block:'start'}); });
 
-  const catObj = CATEGORIES.find(c=>c.key===state.cat);
-  document.getElementById('resultsTitle').textContent = catObj ? catObj.name : 'All listings';
-  document.getElementById('resultsCount').textContent = `${list.length} listing${list.length===1?'':'s'}`;
-  document.getElementById('loadMoreBtn').style.display = list.length>state.visible ? 'inline-flex':'none';
-
-  const grid=document.getElementById('resultsGrid');
-  const empty=document.getElementById('emptyState');
-  if(list.length===0){
-    grid.style.display='none'; empty.style.display='block';
-  } else {
-    grid.style.display='grid'; empty.style.display='none';
-    grid.innerHTML = list.slice(0,state.visible).map(l=>rcard(l)).join('');
-  }
-}
-
-document.getElementById('searchGoBtn').addEventListener('click',()=>{ closePanels(); render(); document.getElementById('resultsGrid').scrollIntoView({behavior:'smooth',block:'start'}); });
-
-/* ---- search panel: locations / calendar (shared with homepage) ---- */
+/* ---- search panel: locations / calendar (local mock — no geocoding backend) ---- */
 function renderLocations(filter=''){
   const list=LOCATIONS.filter(l=>l[0].toLowerCase().includes(filter.toLowerCase()));
   document.getElementById('locationList').innerHTML = list.map(l=>`<div class="auto-item" onclick="document.getElementById('valWhere').textContent='${l[0]}';closePanels()"><div class="pin">${icon('pin',{size:14})}</div><div>${l[0]}<div class="sub">${l[1]}, Nigeria</div></div></div>`).join('');
@@ -316,7 +346,15 @@ function closePanels(){document.querySelectorAll('.search-panel').forEach(p=>p.c
 document.addEventListener('click',(e)=>{if(!e.target.closest('.search-pill')) closePanels();});
 document.getElementById('panel-where').addEventListener('click',e=>e.stopPropagation());
 
-render();
+/* ---- init ---- */
+(async function init(){
+  allCategories = await getCategories().catch(()=>[]);
+  renderCatChips();
+  syncFilterCats();
+  renderCategorySearchChips();
+  updateWhatDisplay();
+  search(true);
+})();
 </script>
 </body>
 </html>

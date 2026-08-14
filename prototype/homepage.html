@@ -166,7 +166,7 @@
       <a href="auth?role=provider">Become a Provider</a>
     </div>
     <div class="nav-cta">
-      <a class="pill-btn ghost" href="auth">Log in</a>
+      <a class="pill-btn ghost" href="auth" id="navAuthLink">Log in</a>
     </div>
   </div>
 </nav>
@@ -381,6 +381,7 @@
 </footer>
 
 <script src="assets/rently.js"></script>
+<script src="assets/api.js"></script>
 <script>
 /* ============ ICONS THAT need JS (inserted after rently.js loads) ============ */
 document.getElementById('searchGoBtn').innerHTML = icon('search',{size:16,stroke:2.4});
@@ -407,31 +408,61 @@ document.querySelectorAll('.c-arrow')[1].innerHTML = icon('chevronRight',{size:1
 /* ============ PROVIDER-SPLIT ART (unrelated to the hero) ============ */
 paintArt(document.getElementById('art-provider'),'provider',130,.14);
 
-/* ============ RENDER: CATEGORIES (first 6 of the taxonomy, bento-mapped) ============ */
-document.getElementById('catBento').innerHTML = CATEGORIES.slice(0,6).map(c=>`
-  <a class="cat-tile ${c.size}" href="browse?cat=${c.key}">
-    <div class="art"></div>
-    <div class="arrow">${icon('arrowUpRight',{size:14,stroke:2.3})}</div>
-    <div class="txt"><div class="n">${c.name}</div><div class="c">${c.count.toLocaleString()} listings</div></div>
-  </a>
-`).join('');
-[...document.querySelectorAll('#catBento .cat-tile')].forEach((el,i)=>{
-  const art=el.querySelector('.art');
-  art.style.cssText='position:absolute;inset:0;'+artStyle(CATEGORIES[i].key);
-  art.innerHTML=artHTML(CATEGORIES[i].key,120,.2);
-});
+/* ============ SESSION-AWARE NAV ============ */
+(function(){
+  const session=getSession();
+  if(session){
+    const link=document.getElementById('navAuthLink');
+    link.textContent='Dashboard';
+    link.href = session.user.roles.includes('provider') ? 'dashboard-provider' : 'dashboard-renter';
+  }
+})();
 
-/* ============ RENDER: MARKETPLACE + POPULAR ============ */
-document.getElementById('marketGrid').innerHTML = LISTINGS.slice(0,5).map((l,i)=>rcard(l,i===0)).join('');
-document.getElementById('popScroll').innerHTML = '<div style="width:1px;flex-shrink:0"></div>'+[...LISTINGS].reverse().map(l=>rcard(l)).join('')+'<div style="width:1px;flex-shrink:0"></div>';
+/* ============ RENDER: CATEGORIES, MARKETPLACE, POPULAR, VERIFY AVATARS — all real, fetched once ============ */
+let selectedCat=null;
+(async function initHome(){
+  let categories=[];
+  try{
+    categories = await getCategories();
+    document.getElementById('catBento').innerHTML = categories.slice(0,6).map((c,i)=>`
+      <a class="cat-tile ${['c-large','c-med','c-small','c-small','c-med','c-small'][i]||'c-small'}" href="browse?cat=${c.key}">
+        <div class="art"></div>
+        <div class="arrow">${icon('arrowUpRight',{size:14,stroke:2.3})}</div>
+        <div class="txt"><div class="n">${c.name}</div></div>
+      </a>
+    `).join('');
+    [...document.querySelectorAll('#catBento .cat-tile')].forEach((el,i)=>{
+      const art=el.querySelector('.art');
+      art.style.cssText='position:absolute;inset:0;'+artStyle(categories[i].key);
+      art.innerHTML=artHTML(categories[i].key,120,.2);
+    });
+    document.getElementById('categorySearchChips').innerHTML = categories.map(c=>`<div class="pchip" data-cat="${c.key}" onclick="pickCategory('${c.key}','${c.name.replace(/'/g,"\\'")}')">${icon(CATEGORY_ICON[c.key]||'grid',{size:13,stroke:2})}${c.name}</div>`).join('');
+  }catch(e){
+    document.getElementById('catBento').innerHTML = '<p style="color:var(--ink-faint);font-size:13px;padding:20px">Couldn\'t load categories right now.</p>';
+  }
+
+  try{
+    const categoryById = await getCategoryMapById();
+    const {data: liveListings} = await apiFetch('/listings?limit=15',{auth:false});
+    const mapped = await mapListings(liveListings, categoryById);
+    document.getElementById('marketGrid').innerHTML = mapped.length
+      ? mapped.slice(0,5).map((l,i)=>rcard(l,i===0)).join('')
+      : '<p style="color:var(--ink-faint);font-size:13px;padding:20px">No listings live yet — be the first to <a href="auth?role=provider">become a provider</a>.</p>';
+    document.getElementById('popScroll').innerHTML = mapped.length
+      ? '<div style="width:1px;flex-shrink:0"></div>'+[...mapped].reverse().map(l=>rcard(l)).join('')+'<div style="width:1px;flex-shrink:0"></div>'
+      : '';
+    // Reuses providers already resolved for the listing cards above — no extra calls.
+    const uniqueProviders = [...new Map(mapped.map(l=>[l.providerId,l])).values()].slice(0,5);
+    document.getElementById('verifyAvatars').innerHTML = uniqueProviders.map(l=>`<div class="p-avatar">${l.pAvatar}</div>`).join('');
+  }catch(e){
+    document.getElementById('marketGrid').innerHTML = '<p style="color:var(--ink-faint);font-size:13px;padding:20px">Couldn\'t load listings right now.</p>';
+  }
+})();
 function scrollPop(dir){document.getElementById('popScroll').scrollBy({left:dir*300,behavior:'smooth'});}
 
-/* ============ VERIFY AVATARS ============ */
-document.getElementById('verifyAvatars').innerHTML = PROVIDERS.slice(0,5).map(p=>`<div class="p-avatar">${p.avatar}</div>`).join('');
-
-/* ============ SEARCH: category / recent / popular / locations ============ */
-let selectedCat=null;
-document.getElementById('categorySearchChips').innerHTML = CATEGORIES.map(c=>`<div class="pchip" data-cat="${c.key}" onclick="pickCategory('${c.key}','${c.name.replace(/'/g,"\\'")}')">${icon(CATEGORY_ICON[c.key]||'grid',{size:13,stroke:2})}${c.name}</div>`).join('');
+/* ============ SEARCH: category / recent / popular / locations ============
+   Recent/popular searches and the location autosuggest stay local UI mock
+   data — there's no search-history or geocoding backend to wire these to. */
 function pickCategory(key,name){
   selectedCat=key;
   document.getElementById('valWhat').textContent=name;

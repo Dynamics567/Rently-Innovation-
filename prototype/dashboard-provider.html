@@ -90,17 +90,17 @@ body{padding-top:0;}
     <!-- ============ OVERVIEW ============ -->
     <div class="d-view active" id="view-overview">
       <div class="app-head">
-        <div><h1>Good afternoon, EventCraft</h1><p>Here's how your listings are performing this month.</p></div>
+        <div><h1 id="overviewGreeting">Good afternoon</h1><p>Here's how your listings are performing this month.</p></div>
         <button class="pill-btn green" id="addListingBtn2"></button>
       </div>
 
       <div class="banner warning" id="actionBanner" style="margin-bottom:32px;"></div>
 
       <div class="kpi-row" style="margin-bottom:44px;">
-        <div class="kpi"><div class="lbl">Total earnings</div><div class="val">₦412,500</div><div class="delta up" id="delta1"></div></div>
-        <div class="kpi"><div class="lbl">Active listings</div><div class="val">3</div><div class="delta up" id="delta2"></div></div>
-        <div class="kpi"><div class="lbl">Pending requests</div><div class="val">2</div><div class="delta" style="color:var(--amber-ink)" id="delta3"></div></div>
-        <div class="kpi"><div class="lbl">Average rating</div><div class="val">4.8</div><div class="delta up" id="delta4"></div></div>
+        <div class="kpi"><div class="lbl">Gross bookings value</div><div class="val" id="kpiGross">—</div></div>
+        <div class="kpi"><div class="lbl">Active listings</div><div class="val" id="kpiActiveListings">—</div></div>
+        <div class="kpi"><div class="lbl">Pending requests</div><div class="val" id="kpiPending">—</div></div>
+        <div class="kpi"><div class="lbl">Average rating</div><div class="val" id="kpiRating">—</div></div>
       </div>
 
       <div class="section-block">
@@ -151,41 +151,25 @@ body{padding-top:0;}
     <div class="d-view" id="view-earnings">
       <div class="app-head"><div><h1>Earnings</h1><p>Payouts settle 7 days after a rental completes, direct to your linked bank account.</p></div></div>
       <div class="kpi-row" style="margin-bottom:36px;">
-        <div class="kpi"><div class="lbl">Paid out to date</div><div class="val">₦342,500</div></div>
-        <div class="kpi"><div class="lbl">Pending payout</div><div class="val">₦22,000</div></div>
-        <div class="kpi"><div class="lbl">This month</div><div class="val">₦177,000</div></div>
-        <div class="kpi"><div class="lbl">Platform commission</div><div class="val">5%</div></div>
+        <div class="kpi"><div class="lbl">Gross bookings value</div><div class="val" id="kpiGross2">—</div></div>
       </div>
-      <div class="dtable-wrap">
-        <table class="dtable">
-          <thead><tr><th>Date</th><th>Listing</th><th>Renter</th><th>Amount</th><th>Commission</th><th>Status</th><th>Payout</th></tr></thead>
-          <tbody id="transactionsTbody"></tbody>
-        </table>
-      </div>
+      <div class="banner info"><div><div class="t">Payout tracking is coming soon</div><div class="d">Commission and payout schedules will appear here once the Payments module is live — for now, "gross bookings value" reflects the total of your confirmed and completed bookings.</div></div></div>
     </div>
 
     <!-- ============ SETTINGS ============ -->
     <div class="d-view" id="view-settings">
       <div class="app-head"><div><h1>Provider settings</h1><p>Your public profile, verification status and payout details.</p></div></div>
       <div class="settings-form">
-        <div class="banner success" id="verifiedBanner" style="margin-bottom:28px;"></div>
-        <div class="field"><label>Business name</label><input type="text" value="EventCraft NG" /></div>
-        <div class="field"><label>Bio</label><textarea>Full-service event infrastructure — tents, drapery, staging and décor for weddings and corporate functions across Lagos.</textarea></div>
-        <div class="field"><label>Typical response time</label>
-          <select><option>Under 1 hour</option><option selected>Under 2 hours</option><option>Under 6 hours</option><option>Under 24 hours</option></select>
-        </div>
-        <h4 style="font-size:14px;margin:28px 0 14px;">Payout account</h4>
-        <div class="payout-fields">
-          <div class="field" style="margin-bottom:14px;"><label>Bank</label><select><option>GTBank</option><option>Access Bank</option><option>Zenith Bank</option><option>Kuda</option></select></div>
-          <div class="field" style="margin-bottom:0;"><label>Account number</label><input type="text" value="0123456789" /></div>
-        </div>
-        <div class="field"><label>Notification channels</label>
+        <div class="banner" id="verifiedBanner" style="margin-bottom:28px;"></div>
+        <div class="field"><label>Business name <span style="color:var(--ink-faint);font-weight:400">(cannot be changed yet)</span></label><input type="text" id="settingsBusinessName" disabled /></div>
+        <div class="field"><label>Average rating</label><input type="text" id="settingsRating" disabled /></div>
+        <div class="banner info" style="margin-bottom:20px;" id="editingComingSoon"></div>
+        <div class="field"><label>Notification channels <span style="color:var(--ink-faint);font-weight:400">(coming soon)</span></label>
           <div class="toggle-row"><span>New booking requests</span><div class="switch on" data-key="req"></div></div>
           <div class="toggle-row"><span>Payout &amp; deposit confirmations</span><div class="switch on" data-key="payout"></div></div>
           <div class="toggle-row"><span>SMS for urgent requests</span><div class="switch on" data-key="sms"></div></div>
           <div class="toggle-row" style="margin-bottom:0;"><span>WhatsApp</span><div class="switch" data-key="whatsapp"></div></div>
         </div>
-        <button class="pill-btn green" style="margin-top:8px;">Save changes</button>
       </div>
     </div>
   </main>
@@ -197,18 +181,30 @@ body{padding-top:0;}
     <button class="modal-close" id="closeAddListing"></button>
     <h3 style="font-size:20px;margin-bottom:6px;">List a new item</h3>
     <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:24px;">It'll go live after a quick review — usually within a few hours.</p>
-    <div class="field"><label>Title</label><input type="text" placeholder="e.g. Chiavari Chairs (Set of 100)" /></div>
+    <div id="modalError" class="banner danger" style="display:none;margin-bottom:16px;"></div>
+    <div class="field"><label>Title</label><input type="text" id="modalTitle" placeholder="e.g. Chiavari Chairs (Set of 100)" /></div>
     <div class="field"><label>Category</label><select id="modalCatSelect"></select></div>
-    <div class="field"><label>Price per day (₦)</label><input type="number" placeholder="15000" /></div>
-    <div class="field"><label>Description</label><textarea placeholder="What's included, condition, delivery options..."></textarea></div>
-    <div class="field"><label>Photos</label>
-      <div style="border:1.5px dashed var(--line-strong);border-radius:14px;padding:26px;text-align:center;color:var(--ink-faint);font-size:13px;" id="uploadDrop"></div>
+    <div class="form-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
+      <div class="field"><label>Price per day (₦)</label><input type="number" id="modalPrice" placeholder="15000" /></div>
+      <div class="field"><label>Deposit (₦, optional)</label><input type="number" id="modalDeposit" placeholder="10000" /></div>
+    </div>
+    <div class="field"><label>Location</label><input type="text" id="modalLocation" placeholder="e.g. Lekki Phase 1, Lagos" /></div>
+    <div class="field"><label>Booking mode</label>
+      <select id="modalBookingMode"><option value="request">Request to Book</option><option value="instant">Instant Book</option></select>
+    </div>
+    <div class="field"><label>Description</label><textarea id="modalDesc" placeholder="What's included, condition, delivery options..."></textarea></div>
+    <div class="field"><label>Photos <span style="color:var(--ink-faint);font-weight:400">(optional)</span></label>
+      <input type="file" id="modalPhotos" accept="image/*" multiple style="font-size:13px;" />
     </div>
     <button class="pill-btn green block lg" id="submitListingBtn">Submit for review</button>
   </div>
 </div>
 
 <script src="assets/rently.js"></script>
+<script src="assets/api.js"></script>
+<script>
+const session = requireSession('provider');
+</script>
 <script>
 document.getElementById('bellBtn').innerHTML = icon('bell',{size:17})+'<span class="dot"></span>';
 document.getElementById('ddSwitch').innerHTML = icon('user',{size:15})+' Switch to Renter';
@@ -231,8 +227,9 @@ document.getElementById('mLinkRenterSwitch').innerHTML = icon('user',{size:16})+
 document.getElementById('addListingBtn').innerHTML = icon('plus',{size:15})+' Add new listing';
 document.getElementById('addListingBtn2').innerHTML = icon('plus',{size:15})+' Add new listing';
 document.getElementById('closeAddListing').innerHTML = icon('close',{size:15});
-document.getElementById('uploadDrop').innerHTML = icon('upload',{size:20})+'<div style="margin-top:8px;">Drag photos here, or click to upload</div>';
+document.getElementById('activeRentalsEmptyIcon').innerHTML = icon('calendar',{size:22});
 
+document.getElementById('ddLogout').addEventListener('click',(e)=>{ e.preventDefault(); clearSession(); window.location.href='auth'; });
 initAvatarMenu();
 initNotifDropdown();
 
@@ -245,43 +242,87 @@ function goView(v){
 }
 document.querySelectorAll('.side-link[data-view]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goView(l.dataset.view);}));
 document.querySelectorAll('[data-view-link]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goView(l.dataset.viewLink);}));
+document.querySelectorAll('#view-settings .switch').forEach(s=>s.addEventListener('click',()=>s.classList.toggle('on')));
 
-/* ---- overview: action banner + requests + recent table ---- */
-const pendingCount = PROVIDER_REQUESTS.filter(r=>r.status==='pending').length;
-document.getElementById('actionBanner').innerHTML = icon('alert',{size:16})+`<div><div class="t">${pendingCount} request${pendingCount===1?'':'s'} waiting on you</div><div class="d">Providers who respond within 2 hours convert 3× more often — jump into Requests to approve or decline.</div></div>`;
-document.getElementById('delta1').innerHTML = icon('arrowUpRight',{size:11})+' 12% vs last month';
-document.getElementById('delta2').textContent='1 draft, 1 paused';
-document.getElementById('delta3').textContent='Respond within 24h';
-document.getElementById('delta4').innerHTML = icon('arrowUpRight',{size:11})+' from 34 reviews';
+let myProvider=null, categoryById=null, allCategories=[];
+let myListings=[], myRequests=[], myActiveRentals=[];
 
-function requestRow(r,compact=false){
+function money2(minor){ return money(Math.round((minor||0)/100)); }
+
+/* ---- listings ---- */
+function statusBadgeListing(s){
+  const map={live:['confirmed','Live'],paused:['pending','Paused'],draft:['info','Draft'],pending_review:['pending','In review'],rejected:['cancelled','Rejected']};
+  const [cls,lbl]=map[s]||['info',s];
+  return `<span class="badge ${cls}">${lbl}</span>`;
+}
+async function loadListings(){
+  try{
+    const {data} = await apiFetch('/listings/mine?limit=100');
+    myListings = data.map(l=>{
+      const cat=categoryById.get(l.categoryId);
+      return {id:l.id, title:l.title, status:l.status, cat:cat?cat.key:'spaces', catName:cat?cat.name:'Other', price:Math.round(l.priceMinor/100)};
+    });
+    document.getElementById('listingsTbody').innerHTML = myListings.length ? myListings.map(l=>`
+      <tr>
+        <td><div class="listing-thumb-cell"><div class="thumb">${artDiv(l.cat,120,.22)}</div><span>${l.title}</span></div></td>
+        <td>${l.catName}</td>
+        <td class="num">${money(l.price)}/day</td>
+        <td>${statusBadgeListing(l.status)}</td>
+        <td class="num">—</td>
+        <td class="num">—</td>
+        <td><div class="tbl-actions"><button class="tbl-icon-btn" disabled title="Editing is coming soon" aria-label="Edit">${icon('edit',{size:15})}</button></div></td>
+      </tr>`).join('') : `<tr><td colspan="7" style="color:var(--ink-faint);padding:20px 0;">No listings yet — click "Add new listing" above.</td></tr>`;
+    document.getElementById('kpiActiveListings').textContent = myListings.filter(l=>l.status==='live').length;
+  }catch(e){
+    document.getElementById('listingsTbody').innerHTML = `<tr><td colspan="7" style="color:var(--ink-faint)">${apiErrorMessage(e)}</td></tr>`;
+  }
+}
+
+/* ---- requests (pending request-to-book bookings) ---- */
+function requestRow(r){
   return `<div class="request-row">
-    <div class="p-avatar">${r.renterAvatar}</div>
+    <div class="p-avatar">${r.renterTag.slice(-2)}</div>
     <div class="r-main">
-      <div class="r-title">${r.renter} <span style="color:var(--ink-faint);font-weight:400">wants to book</span> ${r.listing}</div>
+      <div class="r-title">${r.renterTag} <span style="color:var(--ink-faint);font-weight:400">wants to book</span> ${r.listingTitle}</div>
       <div class="r-sub">${new Date(r.dateFrom).toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${new Date(r.dateTo).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${money(r.total)}</div>
     </div>
-    ${r.status==='pending' ? `<div class="r-actions"><button class="pill-btn ghost sm" data-decline="${r.id}">Decline</button><button class="pill-btn green sm" data-approve="${r.id}">Approve</button></div>` : `<span class="badge confirmed">${icon('check',{size:10,stroke:3})}Approved</span>`}
+    <div class="r-actions"><button class="pill-btn ghost sm" data-decline="${r.id}">Decline</button><button class="pill-btn green sm" data-approve="${r.id}">Approve</button></div>
   </div>`;
 }
-function renderRequests(){
-  document.getElementById('overviewRequests').innerHTML = PROVIDER_REQUESTS.filter(r=>r.status==='pending').slice(0,2).map(r=>requestRow(r)).join('') || `<p style="color:var(--ink-faint);font-size:13.5px;">No pending requests — nice work staying on top of things.</p>`;
-  document.getElementById('requestsList').innerHTML = PROVIDER_REQUESTS.map(r=>requestRow(r)).join('');
-  document.querySelectorAll('[data-approve]').forEach(b=>b.addEventListener('click',()=>{
-    const r=PROVIDER_REQUESTS.find(x=>x.id===b.dataset.approve); r.status='approved'; renderRequests();
-  }));
-  document.querySelectorAll('[data-decline]').forEach(b=>b.addEventListener('click',()=>{
-    const idx=PROVIDER_REQUESTS.findIndex(x=>x.id===b.dataset.decline); PROVIDER_REQUESTS.splice(idx,1); renderRequests();
-  }));
+async function loadRequests(){
+  try{
+    const {data} = await apiFetch('/bookings?role=provider&status=pending&limit=100');
+    myRequests = await Promise.all(data.map(async b=>{
+      let listingTitle='A listing';
+      try{ const {data:l}=await apiFetch(`/listings/${b.listingId}`,{auth:false}); listingTitle=l.title; }catch(e){}
+      return {id:b.id, listingTitle, dateFrom:b.startsAt.slice(0,10), dateTo:b.endsAt.slice(0,10), total:Math.round(b.totalMinor/100), renterTag:'Renter #'+b.renterId.slice(0,6).toUpperCase()};
+    }));
+    document.getElementById('overviewRequests').innerHTML = myRequests.slice(0,2).map(r=>requestRow(r)).join('') || `<p style="color:var(--ink-faint);font-size:13.5px;">No pending requests — nice work staying on top of things.</p>`;
+    document.getElementById('requestsList').innerHTML = myRequests.map(r=>requestRow(r)).join('') || `<p style="color:var(--ink-faint);font-size:13.5px;">No pending requests.</p>`;
+    document.querySelectorAll('[data-approve]').forEach(b=>b.addEventListener('click', async ()=>{
+      b.disabled=true;
+      try{ await apiFetch(`/bookings/${b.dataset.approve}/approve`,{method:'POST'}); await Promise.all([loadRequests(),loadActiveRentals()]); }
+      catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
+    }));
+    document.querySelectorAll('[data-decline]').forEach(b=>b.addEventListener('click', async ()=>{
+      b.disabled=true;
+      try{ await apiFetch(`/bookings/${b.dataset.decline}/decline`,{method:'POST'}); await loadRequests(); }
+      catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
+    }));
+    document.getElementById('kpiPending').textContent = myRequests.length;
+    document.getElementById('actionBanner').innerHTML = icon('alert',{size:16})+`<div><div class="t">${myRequests.length} request${myRequests.length===1?'':'s'} waiting on you</div><div class="d">Providers who respond quickly convert more often — jump into Requests to approve or decline.</div></div>`;
+    document.getElementById('actionBanner').style.display = myRequests.length ? 'flex' : 'none';
+  }catch(e){
+    document.getElementById('requestsList').innerHTML = `<p style="color:var(--ink-faint)">${apiErrorMessage(e)}</p>`;
+  }
 }
-renderRequests();
 
-/* ---- active rentals: schedule pickup/return, inspect, release deposit ---- */
+/* ---- active rentals: confirm handover / schedule return / confirm return / release deposit ---- */
 const STAGE_ACTION = {
-  ready:{label:'Ready for pickup',cls:'confirmed',action:'Confirm handover',next:'active'},
-  active:{label:'Out with renter',cls:'confirmed',action:'Schedule return',next:'returnsched'},
-  returnsched:{label:'Return due',cls:'pending',action:'Mark as returned',next:'returned'},
-  returned:{label:'Awaiting inspection',cls:'pending',action:'Release deposit',next:null},
+  ready:{label:'Ready for pickup',cls:'confirmed',action:'Confirm handover',endpoint:'confirm-handover'},
+  active:{label:'Out with renter',cls:'confirmed',action:'Schedule return',endpoint:'schedule-return'},
+  returnsched:{label:'Return due',cls:'pending',action:'Mark as returned',endpoint:'confirm-return'},
+  returned:{label:'Awaiting inspection',cls:'pending',action:'Release deposit',endpoint:'release-deposit'},
 };
 function activeRentalRow(r){
   const s=STAGE_ACTION[r.stage];
@@ -289,83 +330,138 @@ function activeRentalRow(r){
     ? `Due back ${new Date(r.dateTo).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`
     : `${new Date(r.dateFrom).toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${new Date(r.dateTo).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`;
   return `<div class="request-row">
-    <div class="p-avatar">${r.renterAvatar}</div>
+    <div class="p-avatar">${r.renterTag.slice(-2)}</div>
     <div class="r-main">
-      <div class="r-title">${r.title} <span style="color:var(--ink-faint);font-weight:400">— ${r.renter}</span></div>
+      <div class="r-title">${r.title} <span style="color:var(--ink-faint);font-weight:400">— ${r.renterTag}</span></div>
       <div class="r-sub">${due} · Deposit ${money(r.deposit)} held</div>
     </div>
     <span class="badge ${s.cls}" style="margin-right:8px;">${s.label}</span>
-    <div class="r-actions">
-      ${r.stage==='returned' ? `<button class="pill-btn ghost sm" data-photos="${r.id}">${icon('camera',{size:13})} Inspection photos</button>` : ''}
-      <button class="pill-btn green sm" data-advance="${r.id}">${s.action}</button>
-    </div>
+    <div class="r-actions"><button class="pill-btn green sm" data-advance="${r.id}" data-endpoint="${s.endpoint}">${s.action}</button></div>
   </div>`;
 }
-function renderActiveRentals(){
-  const list=document.getElementById('activeRentalsList'), empty=document.getElementById('activeRentalsEmpty');
-  if(PROVIDER_ACTIVE_RENTALS.length===0){ list.innerHTML=''; empty.style.display='block'; return; }
-  empty.style.display='none';
-  list.innerHTML = PROVIDER_ACTIVE_RENTALS.map(r=>activeRentalRow(r)).join('');
-  document.querySelectorAll('[data-advance]').forEach(b=>b.addEventListener('click',()=>{
-    const r=PROVIDER_ACTIVE_RENTALS.find(x=>x.id===b.dataset.advance);
-    const next=STAGE_ACTION[r.stage].next;
-    if(next){ r.stage=next; renderActiveRentals(); }
-    else { const idx=PROVIDER_ACTIVE_RENTALS.findIndex(x=>x.id===r.id); PROVIDER_ACTIVE_RENTALS.splice(idx,1); renderActiveRentals(); }
-  }));
-  document.querySelectorAll('[data-photos]').forEach(b=>b.addEventListener('click',(e)=>{
-    e.stopPropagation();
-    b.innerHTML = icon('check',{size:13,stroke:3})+' Photos uploaded';
-    b.disabled=true;
-  }));
+async function loadActiveRentals(){
+  try{
+    const {data} = await apiFetch('/bookings?role=provider&status=confirmed&limit=100');
+    const relevant = data.filter(b=>['ready','active','returnsched','returned'].includes(b.stage));
+    myActiveRentals = await Promise.all(relevant.map(async b=>{
+      let title='A listing';
+      try{ const {data:l}=await apiFetch(`/listings/${b.listingId}`,{auth:false}); title=l.title; }catch(e){}
+      return {id:b.id, stage:b.stage, title, dateFrom:b.startsAt.slice(0,10), dateTo:b.endsAt.slice(0,10), deposit:Math.round((b.depositMinor||0)/100), renterTag:'Renter #'+b.renterId.slice(0,6).toUpperCase()};
+    }));
+    const list=document.getElementById('activeRentalsList'), empty=document.getElementById('activeRentalsEmpty');
+    if(myActiveRentals.length===0){ list.innerHTML=''; empty.style.display='block'; }
+    else{
+      empty.style.display='none';
+      list.innerHTML = myActiveRentals.map(r=>activeRentalRow(r)).join('');
+      document.querySelectorAll('[data-advance]').forEach(b=>b.addEventListener('click', async ()=>{
+        b.disabled=true;
+        try{ await apiFetch(`/bookings/${b.dataset.advance}/${b.dataset.endpoint}`,{method:'POST'}); await loadActiveRentals(); }
+        catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
+      }));
+    }
+  }catch(e){
+    document.getElementById('activeRentalsList').innerHTML = `<p style="color:var(--ink-faint)">${apiErrorMessage(e)}</p>`;
+  }
 }
-document.getElementById('activeRentalsEmptyIcon').innerHTML = icon('calendar',{size:22});
-renderActiveRentals();
 
-document.getElementById('overviewTable').innerHTML = `
-  <thead><tr><th>Date</th><th>Listing</th><th>Renter</th><th>Amount</th><th>Status</th></tr></thead>
-  <tbody>${TRANSACTIONS.slice(0,3).map(t=>`<tr><td>${new Date(t.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td><td>${t.listing}</td><td>${t.renter}</td><td class="num">${money(t.amount)}</td><td><span class="badge ${t.status==='paid'?'completed':'pending'}">${t.status==='paid'?'Paid':'Pending'}</span></td></tr>`).join('')}</tbody>`;
-
-/* ---- listings table ---- */
-function statusBadgeListing(s){
-  const map={live:'confirmed',paused:'pending',draft:'info'};
-  return `<span class="badge ${map[s]}">${s.charAt(0).toUpperCase()+s.slice(1)}</span>`;
+/* ---- earnings: honest "gross bookings value" only — no real commission/payout tracking yet ---- */
+async function loadEarnings(){
+  try{
+    const [{data:confirmed},{data:completed}] = await Promise.all([
+      apiFetch('/bookings?role=provider&status=confirmed&limit=100'),
+      apiFetch('/bookings?role=provider&status=completed&limit=100'),
+    ]);
+    const grossStr = money2([...confirmed,...completed].reduce((sum,b)=>sum+b.totalMinor,0));
+    document.getElementById('kpiGross').textContent = grossStr;
+    document.getElementById('kpiGross2').textContent = grossStr;
+  }catch(e){
+    document.getElementById('kpiGross').textContent='—';
+    document.getElementById('kpiGross2').textContent='—';
+  }
 }
-document.getElementById('listingsTbody').innerHTML = PROVIDER_LISTINGS.map(l=>`
-  <tr>
-    <td><div class="listing-thumb-cell"><div class="thumb">${artDiv(l.cat,120,.22)}</div><span>${l.title}</span></div></td>
-    <td>${(CATEGORIES.find(c=>c.key===l.cat)||{}).name||l.cat}</td>
-    <td class="num">${money(l.price)}/day</td>
-    <td>${statusBadgeListing(l.status)}</td>
-    <td class="num">${l.views}</td>
-    <td class="num">${l.bookings}</td>
-    <td><div class="tbl-actions"><button class="tbl-icon-btn" aria-label="Edit">${icon('edit',{size:15})}</button><button class="tbl-icon-btn" aria-label="More">${icon('more',{size:15})}</button></div></td>
-  </tr>`).join('');
-
-/* ---- earnings table ---- */
-document.getElementById('transactionsTbody').innerHTML = TRANSACTIONS.map(t=>`
-  <tr>
-    <td>${new Date(t.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td>
-    <td>${t.listing}</td>
-    <td>${t.renter}</td>
-    <td class="num">${money(t.amount)}</td>
-    <td class="num">${money(t.commission)}</td>
-    <td><span class="badge ${t.status==='paid'?'completed':'pending'}">${t.status==='paid'?'Paid':'Pending'}</span></td>
-    <td>${new Date(t.payout).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td>
-  </tr>`).join('');
-
-/* ---- settings ---- */
-document.getElementById('verifiedBanner').innerHTML = icon('shield',{size:16})+`<div><div class="t">Business verified</div><div class="d">CAC registration confirmed — your listings carry the Verified badge renters trust.</div></div>`;
-document.querySelectorAll('#view-settings .switch').forEach(s=>s.addEventListener('click',()=>s.classList.toggle('on')));
 
 /* ---- add listing modal ---- */
-document.getElementById('modalCatSelect').innerHTML = CATEGORIES.map(c=>`<option value="${c.key}">${c.name}</option>`).join('');
 function openModal(){ document.getElementById('addListingOverlay').classList.add('open'); }
 function closeModal(){ document.getElementById('addListingOverlay').classList.remove('open'); }
 document.getElementById('addListingBtn').addEventListener('click',openModal);
 document.getElementById('addListingBtn2').addEventListener('click',openModal);
 document.getElementById('closeAddListing').addEventListener('click',closeModal);
 document.getElementById('addListingOverlay').addEventListener('click',(e)=>{ if(e.target.id==='addListingOverlay') closeModal(); });
-document.getElementById('submitListingBtn').addEventListener('click',()=>{ closeModal(); goView('listings'); });
+document.getElementById('submitListingBtn').addEventListener('click', async ()=>{
+  const errEl=document.getElementById('modalError'); errEl.style.display='none';
+  const title=document.getElementById('modalTitle').value.trim();
+  const categoryId=document.getElementById('modalCatSelect').value;
+  const priceNaira=+document.getElementById('modalPrice').value;
+  const depositNaira=+document.getElementById('modalDeposit').value||0;
+  const locationText=document.getElementById('modalLocation').value.trim();
+  const bookingMode=document.getElementById('modalBookingMode').value;
+  const description=document.getElementById('modalDesc').value.trim();
+  const files=document.getElementById('modalPhotos').files;
+
+  if(!title||!categoryId||!priceNaira||!locationText||!description){
+    errEl.innerHTML=icon('alert',{size:15})+'<div>Please fill in title, category, price, location and description.</div>'; errEl.style.display='flex'; return;
+  }
+  const btn=document.getElementById('submitListingBtn');
+  btn.disabled=true; const original=btn.textContent; btn.textContent='Submitting…';
+  try{
+    const {data:listing} = await apiFetch('/listings',{method:'POST',body:{
+      categoryId, title, description, priceMinor:Math.round(priceNaira*100), priceUnit:'day',
+      depositMinor:Math.round(depositNaira*100), locationText, bookingMode,
+    }});
+    for(const file of files){
+      const fd=new FormData(); fd.append('file',file);
+      await apiUpload(`/listings/${listing.id}/photos`,fd).catch(()=>{});
+    }
+    await apiFetch(`/listings/${listing.id}/publish`,{method:'POST'});
+    closeModal();
+    ['modalTitle','modalPrice','modalDeposit','modalLocation','modalDesc'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('modalPhotos').value='';
+    await loadListings();
+    goView('listings');
+  }catch(e){
+    errEl.innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(e)}</div>`; errEl.style.display='flex';
+  }finally{
+    btn.disabled=false; btn.textContent=original;
+  }
+});
+
+(async function init(){
+  if(!session) return;
+  categoryById = await getCategoryMapById().catch(()=>new Map());
+  allCategories = [...categoryById.values()];
+  document.getElementById('modalCatSelect').innerHTML = allCategories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+
+  try{
+    const {data} = await apiFetch('/providers/me');
+    myProvider = data;
+  }catch(e){
+    try{
+      const {data} = await apiFetch('/providers/profile',{method:'POST',body:{}});
+      myProvider = data;
+    }catch(e2){
+      document.querySelector('.app-main').innerHTML = `<div style="padding:80px 40px;color:var(--ink-faint)">Couldn't set up your provider profile. ${apiErrorMessage(e2)}</div>`;
+      return;
+    }
+  }
+
+  const displayName = myProvider.businessName || session.user.fullName;
+  document.getElementById('overviewGreeting').textContent = 'Good day, '+displayName.split(' ')[0];
+  document.getElementById('avatarBtn').textContent = initials(displayName);
+  document.querySelector('#avatarDropdown .n').textContent = displayName;
+  document.querySelector('#avatarDropdown .e').textContent = 'Provider account';
+  document.getElementById('kpiRating').textContent = myProvider.avgRating>0 ? myProvider.avgRating : 'New';
+
+  document.getElementById('settingsBusinessName').value = myProvider.businessName || '';
+  document.getElementById('settingsRating').value = myProvider.avgRating>0 ? myProvider.avgRating+' / 5' : 'No ratings yet';
+  const verified = myProvider.verificationStatus==='verified';
+  document.getElementById('verifiedBanner').className='banner '+(verified?'success':'warning');
+  document.getElementById('verifiedBanner').innerHTML = verified
+    ? icon('shield',{size:16})+`<div><div class="t">Business verified</div><div class="d">Your listings carry the Verified badge renters trust.</div></div>`
+    : icon('clock',{size:16})+`<div><div class="t">Verification pending</div><div class="d">An admin will review your account before your listings can go live to renters.</div></div>`;
+  document.getElementById('editingComingSoon').innerHTML = icon('info',{size:16})+`<div><div class="t">Profile editing is coming soon</div><div class="d">Business name, bio and payout account setup aren't wired up yet.</div></div>`;
+
+  await Promise.all([loadListings(), loadRequests(), loadActiveRentals(), loadEarnings()]);
+})();
 </script>
 </body>
 </html>

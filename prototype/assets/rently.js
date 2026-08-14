@@ -310,11 +310,21 @@ function stageDate(booking,stage){
 function fmtStageTime(d){
   return d.toLocaleDateString('en-US',{month:'short',day:'numeric'})+' · '+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
 }
-function renderStageTimeline(booking,currentKey){
+function renderStageTimeline(booking,currentKey,history){
   const curIdx=stageIdx(currentKey);
+  // `history` (real BookingStatusHistory rows, {toStage,createdAt}) takes
+  // priority when provided — real transition timestamps instead of the
+  // synthetic offset math `stageDate()` was built for the mock prototype.
+  const timeFor=(s)=>{
+    if(history){
+      const row=history.find(h=>h.toStage===s.key);
+      return row ? fmtStageTime(new Date(row.createdAt)) : '';
+    }
+    return fmtStageTime(stageDate(booking,s));
+  };
   return STAGES.map((s,i)=>{
     const state = i<curIdx?'done':(i===curIdx?'active':'upcoming');
-    const time = i<=curIdx ? fmtStageTime(stageDate(booking,s)) : '';
+    const time = i<=curIdx ? timeFor(s) : '';
     const circ = state==='done' ? icon('check',{size:12,stroke:3}) : (i+1);
     const line = i<STAGES.length-1 ? `<div class="tl-line ${i<curIdx?'done':''}"></div>` : '';
     return `<div class="tl-item ${state}">

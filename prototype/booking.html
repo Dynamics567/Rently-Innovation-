@@ -128,11 +128,6 @@ body{padding-top:0;}
       </div>
     </div>
 
-    <div class="demo-bar">
-      <span class="lbl">Prototype preview</span>
-      <select id="stageSelect"></select>
-      <span style="font-size:12px;color:var(--ink-faint)">— jump to any point in this booking's lifecycle to see how the page adapts</span>
-    </div>
   </div>
 </div>
 
@@ -170,6 +165,12 @@ body{padding-top:0;}
           <div class="receipt-row"><span>Service fee</span><span id="oSumFee"></span></div>
           <div class="receipt-row"><span>Refundable deposit</span><span id="oSumDeposit"></span></div>
           <div class="receipt-row total"><span>Total</span><span id="oSumTotal"></span></div>
+        </div>
+        <div class="panel-card" id="cancelCard" style="display:none;">
+          <h3 style="font-size:14px;">Need to cancel?</h3>
+          <p class="lede" style="margin-bottom:14px;">You can cancel any time before pickup. Refunds follow the provider's cancellation policy.</p>
+          <div id="cancelError" class="banner danger" style="display:none;margin-bottom:14px;"></div>
+          <button class="pill-btn ghost sm" id="cancelBookingBtn">Cancel booking</button>
         </div>
       </div>
 
@@ -260,29 +261,23 @@ body{padding-top:0;}
 </div>
 
 <script src="assets/rently.js"></script>
+<script src="assets/api.js"></script>
 <script>
-const params=new URLSearchParams(window.location.search);
-const booking = BOOKINGS.find(b=>b.id===params.get('id')) || BOOKINGS.find(b=>b.status==='active') || BOOKINGS[0];
-const listing = LISTINGS.find(l=>l.id===booking.listingId);
-const provider = PROVIDERS.find(p=>p.id===listing.providerId);
+const session = requireSession();
+const BEFORE_PICKUP = ['requested','accepted','payment','reserved','ready'];
 
 document.getElementById('bellBtn').innerHTML = icon('bell',{size:17})+'<span class="dot"></span>';
 document.getElementById('ddBookings').innerHTML = icon('calendar',{size:15})+' My bookings';
 document.getElementById('ddSwitch').innerHTML = icon('building',{size:15})+' Switch to Provider';
 document.getElementById('ddLogout').innerHTML = icon('logout',{size:15})+' Log out';
+document.getElementById('avatarBtn').textContent = session ? initials(session.user.fullName) : '';
+document.querySelector('#avatarDropdown .n').textContent = session ? session.user.fullName : '';
+document.querySelector('#avatarDropdown .e').textContent = session ? (session.user.email||'') : '';
+document.getElementById('ddLogout').addEventListener('click',(e)=>{ e.preventDefault(); clearSession(); window.location.href='auth'; });
 initAvatarMenu();
 initNotifDropdown();
 document.getElementById('backLink').innerHTML = icon('chevronLeft',{size:12})+' Back to my bookings';
 
-/* ---- header ---- */
-document.getElementById('bkThumb').innerHTML = artDiv(listing.img||listing.cat,120,.2);
-document.getElementById('bkTitle').textContent = listing.title;
-const dFrom=new Date(booking.dateFrom+'T10:00:00'), dTo=new Date(booking.dateTo+'T17:00:00');
-const fmt=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-document.getElementById('bkSub').textContent = `${fmt(dFrom)} – ${fmt(dTo)} · ${provider.name}`;
-document.getElementById('bkRef').textContent = 'Reference RNT-'+booking.id.toUpperCase().padEnd(6,'X')+'-2026';
-
-/* ---- stage select (demo control) ---- */
 const STATUS_BADGE = {
   requested:['pending','Awaiting provider'], accepted:['pending','Accepted'], payment:['pending','Payment complete'],
   reserved:['confirmed','Reserved'], ready:['confirmed','Ready for pickup'], pickedup:['confirmed','Picked up'],
@@ -305,27 +300,75 @@ function pseudoQR(seed,cells=9){
   return html;
 }
 
-const VALID_STAGES = STAGES.map(s=>s.key);
-const sel=document.getElementById('stageSelect');
-sel.innerHTML = STAGES.map(s=>`<option value="${s.key}">${s.label}</option>`).join('');
-let currentStage = VALID_STAGES.includes(booking.stage) ? booking.stage : 'requested';
-if(booking.status==='cancelled'){
-  document.getElementById('cancelledView').style.display='block';
-  document.getElementById('normalView').style.display='none';
-  document.querySelector('.demo-bar').style.display='none';
-  document.getElementById('cancelIcon').innerHTML = icon('close',{size:20});
-  document.getElementById('cancelDesc').textContent = `This request for ${listing.title} was cancelled before pickup. Your ${money(booking.deposit)} deposit was fully refunded — no charge was made.`;
-  document.getElementById('bkStatusBadge').className='badge cancelled';
-  document.getElementById('bkStatusBadge').textContent='Cancelled';
-} else {
-  sel.value = currentStage;
-  sel.addEventListener('change',()=>{ currentStage=sel.value; render(); });
-  render();
+let booking=null, listing=null, provider=null, history=[];
+const fmt=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+
+async function loadBooking(){
+  const bookingId=new URLSearchParams(window.location.search).get('id');
+  const {data} = await apiFetch(`/bookings/${bookingId}`);
+  history = data.history||[];
+  booking = mapBooking(data);
+  const categoryById = await getCategoryMapById();
+  try{
+    const {data: apiListing} = await apiFetch(`/listings/${booking.listingId}`,{auth:false});
+    listing = await mapListing(apiListing, categoryById);
+    provider = await getProviderCached(listing.providerId);
+  }catch(e){
+    // The listing was later paused/unpublished — booking tracking still works, just without live listing details.
+    listing = {title:'This listing', cat:'spaces', img:undefined, price:0, unit:'day', loc:'—', providerId:null};
+    provider = {name:'the provider', avatar:'PR', verified:false, rating:0};
+  }
 }
 
+(async function init(){
+  if(!session) return;
+  try{
+    await loadBooking();
+  }catch(e){
+    document.querySelector('.container').innerHTML = `<div style="padding:100px 0;text-align:center;color:var(--ink-faint)">This booking couldn't be found. <a href="dashboard-renter">Back to my bookings</a>.</div>`;
+    return;
+  }
+
+  document.getElementById('bkThumb').innerHTML = artDiv(listing.img||listing.cat,120,.2);
+  document.getElementById('bkTitle').textContent = listing.title;
+  const dFrom=new Date(booking.dateFrom+'T10:00:00'), dTo=new Date(booking.dateTo+'T17:00:00');
+  document.getElementById('bkSub').textContent = `${fmt(dFrom)} – ${fmt(dTo)} · ${provider.name}`;
+  document.getElementById('bkRef').textContent = 'Reference RNT-'+booking.id.slice(0,8).toUpperCase();
+
+  document.getElementById('cancelBookingBtn').addEventListener('click', async ()=>{
+    const btn=document.getElementById('cancelBookingBtn');
+    const errEl=document.getElementById('cancelError'); errEl.style.display='none';
+    btn.disabled=true; const original=btn.textContent; btn.textContent='Cancelling…';
+    try{
+      await apiFetch(`/bookings/${booking.id}/cancel`,{method:'POST',body:{reason:'Cancelled by renter'}});
+      await loadBooking();
+      render();
+    }catch(e){
+      errEl.innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(e)}</div>`; errEl.style.display='flex';
+      btn.disabled=false; btn.textContent=original;
+    }
+  });
+
+  render();
+})();
+
 function render(){
-  const idx=stageIdx(currentStage);
-  document.getElementById('timelineWrap').innerHTML = renderStageTimeline(booking,currentStage);
+  const currentStage = booking.status==='cancelled' ? null : booking.stage;
+  if(booking.status==='cancelled'){
+    document.getElementById('cancelledView').style.display='block';
+    document.getElementById('normalView').style.display='none';
+    document.getElementById('cancelIcon').innerHTML = icon('close',{size:20});
+    document.getElementById('cancelDesc').textContent = `This booking for ${listing.title} was cancelled before pickup. Any payment made was fully refunded.`;
+    document.getElementById('bkStatusBadge').className='badge cancelled';
+    document.getElementById('bkStatusBadge').textContent='Cancelled';
+    return;
+  }
+  document.getElementById('cancelledView').style.display='none';
+  document.getElementById('normalView').style.display='grid';
+  document.getElementById('cancelCard').style.display = BEFORE_PICKUP.includes(currentStage) ? 'block' : 'none';
+
+  const dFrom=new Date(booking.dateFrom+'T10:00:00'), dTo=new Date(booking.dateTo+'T17:00:00');
+  document.getElementById('timelineWrap').innerHTML = renderStageTimeline(booking,currentStage,history);
   const [badgeCls,badgeLbl]=STATUS_BADGE[currentStage];
   document.getElementById('bkStatusBadge').className='badge '+badgeCls;
   document.getElementById('bkStatusBadge').textContent=badgeLbl;
@@ -347,7 +390,7 @@ function render(){
     const adminIdx=groups.admin.indexOf(currentStage);
     document.getElementById('adminTitle').textContent = ['Your request was sent','The provider is reviewing your dates','Payment captured — item on hold','Your item is reserved'][adminIdx];
     document.getElementById('adminLede').textContent = currentStage==='requested'
-      ? `${provider.name} typically responds in ${provider.responseTime}. You won't be charged unless they approve.`
+      ? `${provider.name} has been notified. You won't be charged unless they approve.`
       : `Everything is on track for your rental starting ${fmt(dFrom)}. We'll notify you the moment it's ready for pickup.`;
     ['chkRequest','chkAccept','chkPay','chkReserve'].forEach((id,i)=>{
       document.getElementById(id).innerHTML = i<=adminIdx ? icon('check',{size:13,stroke:3}) : icon('clock',{size:12});
@@ -366,7 +409,7 @@ function render(){
   // ---- Group B: ready ----
   if(currentStage==='ready'){
     document.getElementById('qrPickup').innerHTML = pseudoQR(booking.id+'-pickup',8);
-    document.getElementById('pickupWhere').textContent = listing.delivery ? 'Delivery address confirmed' : 'Pickup address shared: '+listing.loc;
+    document.getElementById('pickupWhere').textContent = 'Pickup address shared: '+listing.loc;
     ['chkAgreement','chkDeposit','chkPickupWhere'].forEach(id=>document.getElementById(id).innerHTML=icon('check',{size:13,stroke:3}));
   }
 

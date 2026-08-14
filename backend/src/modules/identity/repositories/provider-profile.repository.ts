@@ -15,6 +15,11 @@ export class ProviderProfileRepository extends BaseRepository<ProviderProfile> {
     return this.repository.findOne({ where: { userId } });
   }
 
+  /** Backs the public GET /providers/:id profile — needs the linked User for the individual-provider display-name fallback. */
+  async findByIdWithUser(id: string): Promise<ProviderProfile | null> {
+    return this.repository.findOne({ where: { id }, relations: ['user'] });
+  }
+
   /** Backs GET /admin/providers/verification-queue (PRD FR9.1). */
   async findPendingVerification(): Promise<ProviderProfile[]> {
     return this.repository.find({
