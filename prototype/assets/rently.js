@@ -445,3 +445,63 @@ function createDateRangePicker(calEl,onChange){
   render();
   return {render,clear,get range(){return [rangeStart,rangeEnd];}};
 }
+
+/* ================================================================
+   LIVE UPDATE DETECTION
+   Polls version.json (regenerated on every Vercel deploy — see
+   /write-version.js and vercel.json's buildCommand) and reloads once a
+   newer build has gone live. Runs on every page automatically since this
+   file is loaded everywhere — no per-page wiring needed.
+
+   A deploy landing mid-checkout or mid-form shouldn't just yank the page
+   out from under someone, so the reload is deferred (and a small "Refresh"
+   prompt shown instead) while the visitor looks busy: a focused form
+   field, an open modal, or an in-flight submit (this codebase consistently
+   disables its buttons while an async action is pending, so a disabled
+   button is a reliable proxy for "don't reload yet"). The deferred reload
+   fires the moment they stop.
+   ================================================================ */
+(function watchForUpdates(){
+  let knownVersion=null;
+  let pendingReload=false;
+
+  function isUserBusy(){
+    const tag=document.activeElement && document.activeElement.tagName;
+    if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT') return true;
+    if(document.querySelector('.overlay.open')) return true;
+    if(document.querySelector('button:disabled')) return true;
+    return false;
+  }
+
+  function showUpdateToast(){
+    if(document.getElementById('updateToast')) return;
+    const el=document.createElement('div');
+    el.id='updateToast';
+    el.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#151310;color:#fff;padding:12px 20px;border-radius:999px;display:flex;align-items:center;gap:14px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.28);font-family:inherit;';
+    el.innerHTML='<span>A new version of Rently is available.</span><button style="background:#fff;color:#151310;border-radius:999px;padding:6px 14px;font-weight:700;font-size:12.5px;flex-shrink:0;">Refresh</button>';
+    el.querySelector('button').addEventListener('click',()=>window.location.reload());
+    document.body.appendChild(el);
+  }
+
+  async function checkVersion(){
+    try{
+      const res=await fetch('version.json?_='+Date.now(),{cache:'no-store'});
+      if(!res.ok) return;
+      const {version}=await res.json();
+      if(knownVersion===null){ knownVersion=version; return; }
+      if(version!==knownVersion && !pendingReload){
+        pendingReload=true;
+        if(isUserBusy()) showUpdateToast();
+        else window.location.reload();
+      }
+    }catch(e){ /* offline or a network hiccup — just try again next interval */ }
+  }
+
+  document.addEventListener('focusout',()=>{
+    if(!pendingReload) return;
+    setTimeout(()=>{ if(!isUserBusy()) window.location.reload(); }, 50);
+  });
+
+  checkVersion();
+  setInterval(checkVersion, 60000);
+})();

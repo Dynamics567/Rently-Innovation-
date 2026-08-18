@@ -1,4 +1,5 @@
 {
   "outputDirectory": "prototype",
-  "cleanUrls": true
+  "cleanUrls": true,
+  "buildCommand": "node write-version.js"
 }
