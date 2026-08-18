@@ -161,6 +161,29 @@ document.getElementById('mLinkProviderSwitch').innerHTML = icon('building',{size
 document.getElementById('bookingsEmptyIcon').innerHTML = icon('calendar',{size:22});
 document.getElementById('uploadPhotoBtn').innerHTML = icon('camera',{size:14})+' Change photo';
 
+/* ---- switch to provider: the account needs the `provider` role before
+   dashboard-provider.html's requireSession('provider') will let it in — a
+   plain <a href> silently bounced back here otherwise. Upgrade on click,
+   then refresh the cached session with the server's real roles. */
+['ddSwitch','linkProviderSwitch','mLinkProviderSwitch'].forEach(id=>{
+  document.getElementById(id).addEventListener('click', async (e)=>{
+    if(session.user.roles.includes('provider')) return; // already a provider, plain link navigation is fine
+    e.preventDefault();
+    const el=e.currentTarget;
+    const original=el.innerHTML;
+    el.style.pointerEvents='none';
+    try{
+      await apiFetch('/providers/profile',{method:'POST',body:{}});
+      const {data: freshUser} = await apiFetch('/users/me');
+      localStorage.setItem('rently_user', JSON.stringify(freshUser));
+      window.location.href='dashboard-provider';
+    }catch(err){
+      el.innerHTML=original; el.style.pointerEvents='';
+      alert(apiErrorMessage(err));
+    }
+  });
+});
+
 if(session){
   const initialsStr = initials(session.user.fullName);
   document.getElementById('avatarBtn').textContent = initialsStr;

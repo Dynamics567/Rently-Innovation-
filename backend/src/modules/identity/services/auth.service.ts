@@ -34,12 +34,16 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+    // Every account is a Renter at minimum — signing up as a Provider adds
+    // that role on top, it never replaces the baseline one. Every account
+    // can browse and book, whether or not it can also list.
+    const roles = new Set([UserRole.RENTER, ...(dto.roles ?? [])]);
     const user = this.userRepository.create({
       email: dto.email,
       phone: dto.phone,
       passwordHash,
       fullName: dto.fullName,
-      roles: dto.roles?.length ? dto.roles : [UserRole.RENTER],
+      roles: [...roles],
     });
     await this.userRepository.save(user);
 
