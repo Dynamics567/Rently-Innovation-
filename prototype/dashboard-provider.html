@@ -185,17 +185,18 @@ body{padding-top:0;}
     <h3 style="font-size:20px;margin-bottom:6px;">List a new item</h3>
     <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:24px;">It'll go live after a quick review — usually within a few hours.</p>
     <div id="modalError" class="banner danger" style="display:none;margin-bottom:16px;"></div>
-    <div class="field"><label>Title</label><input type="text" id="modalTitle" placeholder="e.g. Chiavari Chairs (Set of 100)" /></div>
-    <div class="field"><label>Category</label><select id="modalCatSelect"></select></div>
+    <p style="font-size:12px;color:var(--ink-faint);margin-bottom:16px;"><span class="req">*</span> Required</p>
+    <div class="field" id="fieldTitle"><label>Title <span class="req">*</span></label><input type="text" id="modalTitle" placeholder="e.g. Chiavari Chairs (Set of 100)" /><div class="err-msg"></div></div>
+    <div class="field" id="fieldCat"><label>Category <span class="req">*</span></label><select id="modalCatSelect"></select><div class="err-msg"></div></div>
     <div class="form-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
-      <div class="field"><label>Price per day (₦)</label><input type="number" id="modalPrice" placeholder="15000" /></div>
+      <div class="field" id="fieldPrice"><label>Price per day (₦) <span class="req">*</span></label><input type="number" id="modalPrice" placeholder="15000" /><div class="err-msg"></div></div>
       <div class="field"><label>Deposit (₦, optional)</label><input type="number" id="modalDeposit" placeholder="10000" /></div>
     </div>
-    <div class="field"><label>Location</label><input type="text" id="modalLocation" placeholder="e.g. Lekki Phase 1, Lagos" /></div>
+    <div class="field" id="fieldLocation"><label>Location <span class="req">*</span></label><input type="text" id="modalLocation" placeholder="e.g. Lekki Phase 1, Lagos" /><div class="err-msg"></div></div>
     <div class="field"><label>Booking mode</label>
       <select id="modalBookingMode"><option value="request">Request to Book</option><option value="instant">Instant Book</option></select>
     </div>
-    <div class="field"><label>Description</label><textarea id="modalDesc" placeholder="What's included, condition, delivery options..."></textarea></div>
+    <div class="field" id="fieldDesc"><label>Description <span class="req">*</span></label><textarea id="modalDesc" placeholder="What's included, condition, delivery options..."></textarea><div class="err-msg"></div></div>
     <div class="field"><label>Photos <span style="color:var(--ink-faint);font-weight:400">(optional)</span></label>
       <input type="file" id="modalPhotos" accept="image/*" multiple style="font-size:13px;" />
     </div>
@@ -384,14 +385,27 @@ async function loadEarnings(){
 }
 
 /* ---- add listing modal ---- */
-function openModal(){ document.getElementById('addListingOverlay').classList.add('open'); }
+function openModal(){ document.getElementById('addListingOverlay').classList.add('open'); clearFieldErrors(); document.getElementById('modalError').style.display='none'; }
 function closeModal(){ document.getElementById('addListingOverlay').classList.remove('open'); }
 document.getElementById('addListingBtn').addEventListener('click',openModal);
 document.getElementById('addListingBtn2').addEventListener('click',openModal);
 document.getElementById('closeAddListing').addEventListener('click',closeModal);
 document.getElementById('addListingOverlay').addEventListener('click',(e)=>{ if(e.target.id==='addListingOverlay') closeModal(); });
+function clearFieldErrors(){
+  ['fieldTitle','fieldCat','fieldPrice','fieldLocation','fieldDesc'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.classList.remove('error');
+    el.querySelector('.err-msg').textContent='';
+  });
+}
+function markFieldError(fieldId, message){
+  const el=document.getElementById(fieldId);
+  el.classList.add('error');
+  el.querySelector('.err-msg').innerHTML = icon('alert',{size:12})+' '+message;
+}
 document.getElementById('submitListingBtn').addEventListener('click', async ()=>{
   const errEl=document.getElementById('modalError'); errEl.style.display='none';
+  clearFieldErrors();
   const title=document.getElementById('modalTitle').value.trim();
   const categoryId=document.getElementById('modalCatSelect').value;
   const priceNaira=+document.getElementById('modalPrice').value;
@@ -401,8 +415,16 @@ document.getElementById('submitListingBtn').addEventListener('click', async ()=>
   const description=document.getElementById('modalDesc').value.trim();
   const files=document.getElementById('modalPhotos').files;
 
-  if(!title||!categoryId||!priceNaira||!locationText||!description){
-    errEl.innerHTML=icon('alert',{size:15})+'<div>Please fill in title, category, price, location and description.</div>'; errEl.style.display='flex'; return;
+  let firstInvalid=null;
+  if(!title){ markFieldError('fieldTitle','Please enter a title.'); firstInvalid=firstInvalid||'modalTitle'; }
+  if(!categoryId){ markFieldError('fieldCat','Please select a category.'); firstInvalid=firstInvalid||'modalCatSelect'; }
+  if(!priceNaira){ markFieldError('fieldPrice','Please enter a price per day.'); firstInvalid=firstInvalid||'modalPrice'; }
+  if(!locationText){ markFieldError('fieldLocation','Please enter a location.'); firstInvalid=firstInvalid||'modalLocation'; }
+  if(!description){ markFieldError('fieldDesc','Please enter a description.'); firstInvalid=firstInvalid||'modalDesc'; }
+  if(firstInvalid){
+    errEl.innerHTML=icon('alert',{size:15})+'<div>Please fix the highlighted field(s) below.</div>'; errEl.style.display='flex';
+    document.getElementById(firstInvalid).focus();
+    return;
   }
   const btn=document.getElementById('submitListingBtn');
   btn.disabled=true; const original=btn.textContent; btn.textContent='Submitting…';

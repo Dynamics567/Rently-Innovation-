@@ -135,6 +135,25 @@ async function apiFetch(path, { method = 'GET', body, auth = true, idempotencyKe
   return { data: json.data, meta: json.meta };
 }
 
+/**
+ * Re-mints the access token from the current DB state and refreshes the
+ * cached user. The JWT's `roles` claim is baked in at issue time — after
+ * any server-side role change (e.g. POST /providers/profile granting the
+ * provider role), the *old* token keeps authorizing as the *old* roles
+ * until this runs, even though GET /users/me would already show the new
+ * ones. Call this right after any such change, before navigating to a
+ * page gated on the new role.
+ */
+async function refreshSession() {
+  const session = getSession();
+  if (!session) return null;
+  const { data: tokens } = await apiFetch('/auth/refresh', { method: 'POST', auth: false, body: { refreshToken: session.refresh } });
+  setSession(session.user, tokens);
+  const { data: freshUser } = await apiFetch('/users/me');
+  setSession(freshUser, tokens);
+  return freshUser;
+}
+
 /** Multipart upload — no Content-Type header, the browser sets the boundary. */
 async function apiUpload(path, formData) {
   const session = getSession();
