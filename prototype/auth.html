@@ -97,7 +97,7 @@ body{min-height:100vh;}
         <div id="providerNote" class="banner info" style="display:none;margin-bottom:20px;"></div>
         <div id="authError" class="banner danger" style="display:none;margin-bottom:20px;"></div>
 
-        <a class="text-link faint" id="forgotLink" style="margin-bottom:22px;display:inline-flex;">Forgot password?</a>
+        <a class="text-link faint" id="forgotLink" style="margin-bottom:22px;display:inline-flex;cursor:pointer;">Forgot password?</a>
         <button class="pill-btn blue lg block" id="submitAuthBtn">Log in</button>
 
         <div class="divider">or continue with</div>
@@ -105,6 +105,30 @@ body{min-height:100vh;}
         <button class="social-btn" id="appleBtn"></button>
 
         <p class="switch-mode" id="switchModeRow"></p>
+      </div>
+
+      <!-- SCREEN: forgot password — request a reset link -->
+      <div id="screenForgot" style="display:none;">
+        <h1>Reset your password</h1>
+        <p class="sub">Enter your email and we'll send you a link to reset your password.</p>
+        <div id="forgotError" class="banner danger" style="display:none;margin-bottom:20px;"></div>
+        <div id="forgotSuccess" class="banner success" style="display:none;margin-bottom:20px;"></div>
+        <div class="field"><label>Email address</label><input type="email" id="forgotEmailInput" placeholder="you@example.com" /></div>
+        <button class="pill-btn blue lg block" id="sendResetBtn" style="margin-bottom:16px;">Send reset link</button>
+        <a class="text-link faint" id="backToLoginLink" style="cursor:pointer;">Back to log in</a>
+      </div>
+
+      <!-- SCREEN: set new password — reached via the emailed ?resetToken= link -->
+      <div id="screenReset" style="display:none;">
+        <h1>Set a new password</h1>
+        <p class="sub">Choose a new password for your account.</p>
+        <div id="resetError" class="banner danger" style="display:none;margin-bottom:20px;"></div>
+        <div id="resetSuccess" class="banner success" style="display:none;margin-bottom:20px;"></div>
+        <div id="resetFormFields">
+          <div class="field"><label>New password</label><input type="password" id="newPasswordInput" placeholder="••••••••" /></div>
+          <div class="field"><label>Confirm new password</label><input type="password" id="confirmPasswordInput" placeholder="••••••••" /></div>
+          <button class="pill-btn blue lg block" id="submitResetBtn">Set new password</button>
+        </div>
       </div>
 
       <p class="fine-print">By continuing you agree to Rently's <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>, including NDPR data handling.</p>
@@ -118,8 +142,11 @@ body{min-height:100vh;}
 const params=new URLSearchParams(window.location.search);
 const initialProvider = params.get('role')==='provider';
 
-// Already signed in — send straight to the right dashboard.
+// Already signed in — send straight to the right dashboard. Skipped when
+// landing via a password-reset link: that flow must work even with a
+// stale/logged-in session already in this browser.
 (function(){
+  if(params.get('resetToken')) return;
   const session=getSession();
   if(session) window.location.href = session.user.roles.includes('provider') ? 'dashboard-provider' : 'dashboard-renter';
 })();
@@ -218,6 +245,71 @@ document.getElementById('submitAuthBtn').addEventListener('click', async ()=>{
     btn.textContent=originalLabel;
   }
 });
+
+/* ================================================================
+   FORGOT PASSWORD
+   ================================================================ */
+function showScreen(name){
+  ['screenForm','screenForgot','screenReset'].forEach(id=>{
+    document.getElementById(id).style.display = id===name ? 'block' : 'none';
+  });
+}
+
+document.getElementById('forgotLink').addEventListener('click',()=>{
+  document.getElementById('forgotError').style.display='none';
+  document.getElementById('forgotSuccess').style.display='none';
+  document.getElementById('forgotEmailInput').value = document.getElementById('emailInput').value;
+  showScreen('screenForgot');
+});
+document.getElementById('backToLoginLink').addEventListener('click',()=>showScreen('screenForm'));
+
+document.getElementById('sendResetBtn').addEventListener('click', async ()=>{
+  const errEl=document.getElementById('forgotError'), okEl=document.getElementById('forgotSuccess');
+  errEl.style.display='none'; okEl.style.display='none';
+  const email=document.getElementById('forgotEmailInput').value.trim();
+  if(!email){ errEl.innerHTML=icon('alert',{size:15})+'<div>Please enter your email address.</div>'; errEl.style.display='flex'; return; }
+
+  const btn=document.getElementById('sendResetBtn');
+  btn.disabled=true; const original=btn.textContent; btn.textContent='Sending…';
+  try{
+    await apiFetch('/auth/password/reset-request',{method:'POST',auth:false,body:{email}});
+    okEl.innerHTML=icon('check',{size:15})+'<div>If an account exists for that email, a reset link is on its way. It expires in 30 minutes.</div>';
+    okEl.style.display='flex';
+    document.getElementById('forgotEmailInput').value='';
+  }catch(err){
+    errEl.innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(err)}</div>`; errEl.style.display='flex';
+  }finally{
+    btn.disabled=false; btn.textContent=original;
+  }
+});
+
+/* ---- landing here via the emailed ?resetToken= link ---- */
+const resetToken = params.get('resetToken');
+if(resetToken){
+  showScreen('screenReset');
+  document.getElementById('submitResetBtn').addEventListener('click', async ()=>{
+    const errEl=document.getElementById('resetError'), okEl=document.getElementById('resetSuccess');
+    errEl.style.display='none'; okEl.style.display='none';
+    const newPassword=document.getElementById('newPasswordInput').value;
+    const confirmPassword=document.getElementById('confirmPasswordInput').value;
+
+    if(!newPassword || newPassword.length<8){ errEl.innerHTML=icon('alert',{size:15})+'<div>Password must be at least 8 characters.</div>'; errEl.style.display='flex'; return; }
+    if(newPassword!==confirmPassword){ errEl.innerHTML=icon('alert',{size:15})+'<div>Passwords don\'t match.</div>'; errEl.style.display='flex'; return; }
+
+    const btn=document.getElementById('submitResetBtn');
+    btn.disabled=true; const original=btn.textContent; btn.textContent='Saving…';
+    try{
+      await apiFetch('/auth/password/reset',{method:'POST',auth:false,body:{token:resetToken,newPassword}});
+      document.getElementById('resetFormFields').style.display='none';
+      okEl.innerHTML=icon('check',{size:15})+'<div>Your password has been reset. You can now log in with your new password.</div>';
+      okEl.style.display='flex';
+      setTimeout(()=>{ window.location.href='auth'; }, 2500);
+    }catch(err){
+      errEl.innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(err)}</div>`; errEl.style.display='flex';
+      btn.disabled=false; btn.textContent=original;
+    }
+  });
+}
 </script>
 </body>
 </html>

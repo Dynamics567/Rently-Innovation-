@@ -3,6 +3,7 @@ export interface AppConfig {
   port: number;
   apiPrefix: string;
   corsOrigins: string[];
+  frontendUrl: string;
 }
 
 export interface DatabaseConfig {
@@ -49,6 +50,7 @@ export default () => ({
     // not unit tests, since versioning is applied by Nest's HTTP adapter).
     apiPrefix: process.env.API_PREFIX ?? 'api',
     corsOrigins: (process.env.CORS_ORIGINS ?? '').split(',').filter(Boolean),
+    frontendUrl: process.env.FRONTEND_URL ?? 'https://rentlyhub.com.ng',
   } as AppConfig,
   database: {
     host: process.env.DB_HOST,

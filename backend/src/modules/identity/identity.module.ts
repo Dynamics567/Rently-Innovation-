@@ -9,9 +9,11 @@ import { User } from './entities/user.entity';
 import { ProviderProfile } from './entities/provider-profile.entity';
 import { VerificationDocument } from './entities/verification-document.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
+import { PasswordResetToken } from './entities/password-reset-token.entity';
 
 import { UserRepository } from './repositories/user.repository';
 import { ProviderProfileRepository } from './repositories/provider-profile.repository';
+import { PasswordResetTokenRepository } from './repositories/password-reset-token.repository';
 
 import { AuthService } from './services/auth.service';
 import { TokenService } from './services/token.service';
@@ -19,6 +21,7 @@ import { OtpService } from './services/otp.service';
 import { UsersService } from './services/users.service';
 import { ProviderProfileService } from './services/provider-profile.service';
 import { ConsoleSmsSender, SMS_SENDER } from './services/sms-sender.port';
+import { ConsoleEmailSender, EMAIL_SENDER } from './services/email-sender.port';
 
 import { AuthController } from './controllers/auth.controller';
 import { UsersController } from './controllers/users.controller';
@@ -38,7 +41,7 @@ import { IsSelfOrAdminPolicy } from './policies/is-self-or-admin.policy';
  */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, ProviderProfile, VerificationDocument, RefreshToken]),
+    TypeOrmModule.forFeature([User, ProviderProfile, VerificationDocument, RefreshToken, PasswordResetToken]),
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -53,6 +56,7 @@ import { IsSelfOrAdminPolicy } from './policies/is-self-or-admin.policy';
   providers: [
     UserRepository,
     ProviderProfileRepository,
+    PasswordResetTokenRepository,
     AuthService,
     TokenService,
     OtpService,
@@ -61,6 +65,7 @@ import { IsSelfOrAdminPolicy } from './policies/is-self-or-admin.policy';
     JwtStrategy,
     IsSelfOrAdminPolicy,
     { provide: SMS_SENDER, useClass: ConsoleSmsSender },
+    { provide: EMAIL_SENDER, useClass: ConsoleEmailSender },
   ],
   exports: [AuthService, UsersService, ProviderProfileService],
 })

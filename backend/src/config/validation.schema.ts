@@ -11,6 +11,7 @@ export const validationSchema = Joi.object({
   PORT: Joi.number().default(3000),
   API_PREFIX: Joi.string().default('api'),
   CORS_ORIGINS: Joi.string().allow('').default(''),
+  FRONTEND_URL: Joi.string().default('https://rentlyhub.com.ng'),
 
   DB_HOST: Joi.string().required(),
   DB_PORT: Joi.number().default(5432),

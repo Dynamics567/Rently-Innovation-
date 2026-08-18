@@ -9,6 +9,7 @@ import { SignupDto } from '../dto/signup.dto';
 import { LoginDto } from '../dto/login.dto';
 import { RefreshTokenDto } from '../dto/refresh-token.dto';
 import { RequestOtpDto, VerifyOtpDto } from '../dto/otp.dto';
+import { RequestPasswordResetDto, ResetPasswordDto } from '../dto/password-reset.dto';
 
 /**
  * Thin by design: a controller's only job is HTTP concerns (route, status
@@ -61,6 +62,20 @@ export class AuthController {
   @Post('otp/request')
   async requestOtp(@Body() dto: RequestOtpDto) {
     await this.otpService.requestOtp(dto.phone);
+  }
+
+  @Public()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Post('password/reset-request')
+  async requestPasswordReset(@Body() dto: RequestPasswordResetDto) {
+    await this.authService.requestPasswordReset(dto.email);
+  }
+
+  @Public()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Post('password/reset')
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    await this.authService.resetPassword(dto.token, dto.newPassword);
   }
 
   @HttpCode(HttpStatus.NO_CONTENT)

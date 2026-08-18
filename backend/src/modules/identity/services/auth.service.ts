@@ -1,10 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import { randomBytes, createHash } from 'crypto';
 import { DomainException } from '@common/errors/domain.exception';
 import { ErrorCode } from '@common/errors/error-codes.enum';
+import { AppConfig } from '@config/configuration';
 import { UserRepository } from '../repositories/user.repository';
+import { PasswordResetTokenRepository } from '../repositories/password-reset-token.repository';
 import { TokenService, TokenPair } from './token.service';
 import { OtpService } from './otp.service';
+import { EMAIL_SENDER, EmailSender } from './email-sender.port';
 import { SignupDto } from '../dto/signup.dto';
 import { LoginDto } from '../dto/login.dto';
 import { User } from '../entities/user.entity';
@@ -12,13 +17,17 @@ import { UserRole } from '../enums/user-role.enum';
 import { UserAccountStatus } from '../enums/verification-status.enum';
 
 const BCRYPT_ROUNDS = 12;
+const PASSWORD_RESET_TTL_MINUTES = 30;
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly userRepository: UserRepository,
+    private readonly passwordResetTokenRepository: PasswordResetTokenRepository,
     private readonly tokenService: TokenService,
     private readonly otpService: OtpService,
+    private readonly configService: ConfigService,
+    @Inject(EMAIL_SENDER) private readonly emailSender: EmailSender,
   ) {}
 
   async signup(dto: SignupDto): Promise<{ user: User; tokens: TokenPair }> {
@@ -102,5 +111,61 @@ export class AuthService {
     const user = await this.userRepository.findByIdOrFail(userId, 'User');
     user.phoneVerifiedAt = new Date();
     await this.userRepository.save(user);
+  }
+
+  /**
+   * Always resolves silently, whether or not the email is registered —
+   * same constant-response principle as login(), so this endpoint can't be
+   * used to enumerate which emails have accounts. The reset link is only
+   * actually emailed when a matching user exists.
+   */
+  async requestPasswordReset(email: string): Promise<void> {
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) return;
+
+    const rawToken = randomBytes(32).toString('hex');
+    const tokenHash = this.hashToken(rawToken);
+    const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MINUTES * 60 * 1000);
+    await this.passwordResetTokenRepository.save(
+      this.passwordResetTokenRepository.create({ userId: user.id, tokenHash, expiresAt }),
+    );
+
+    const frontendUrl = this.configService.get<AppConfig>('app')!.frontendUrl;
+    const resetLink = `${frontendUrl}/auth?resetToken=${rawToken}`;
+    await this.emailSender.send(
+      email,
+      'Reset your Rently password',
+      `We received a request to reset your password. This link expires in ${PASSWORD_RESET_TTL_MINUTES} minutes:\n\n${resetLink}\n\nIf you didn't request this, you can ignore this email.`,
+    );
+  }
+
+  /**
+   * Single-use — the token is marked spent the moment it succeeds, and
+   * every outstanding refresh token for the account is revoked, forcing a
+   * fresh login everywhere. That's deliberate: a password reset is exactly
+   * the moment to assume prior sessions might not be trustworthy.
+   */
+  async resetPassword(rawToken: string, newPassword: string): Promise<void> {
+    const tokenHash = this.hashToken(rawToken);
+    const resetToken = await this.passwordResetTokenRepository.findByTokenHash(tokenHash);
+    if (!resetToken || !resetToken.isActive()) {
+      throw DomainException.unprocessable(
+        ErrorCode.PASSWORD_RESET_TOKEN_INVALID,
+        'This password reset link is invalid or has expired.',
+      );
+    }
+
+    const user = await this.userRepository.findByIdOrFail(resetToken.userId, 'User');
+    user.passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await this.userRepository.save(user);
+
+    resetToken.usedAt = new Date();
+    await this.passwordResetTokenRepository.save(resetToken);
+
+    await this.tokenService.revokeAllForUser(user.id);
+  }
+
+  private hashToken(value: string): string {
+    return createHash('sha256').update(value).digest('hex');
   }
 }

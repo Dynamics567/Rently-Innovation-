@@ -1,8 +1,10 @@
 import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { UserRepository } from '../repositories/user.repository';
+import { PasswordResetTokenRepository } from '../repositories/password-reset-token.repository';
 import { TokenService } from './token.service';
 import { OtpService } from './otp.service';
+import { EmailSender } from './email-sender.port';
 import { UserAccountStatus } from '../enums/verification-status.enum';
 import { UserRole } from '../enums/user-role.enum';
 
@@ -19,28 +21,43 @@ describe('AuthService', () => {
   // hand-rolled test doubles, not required to satisfy the full collaborator
   // interface, only the methods AuthService actually calls.
   let userRepository: Record<
-    'findByEmailOrPhone' | 'create' | 'save' | 'findByIdOrFail',
+    'findByEmailOrPhone' | 'findByEmail' | 'create' | 'save' | 'findByIdOrFail',
     jest.Mock
   >;
-  let tokenService: Record<'issueTokenPair', jest.Mock>;
+  let passwordResetTokenRepository: Record<'create' | 'save' | 'findByTokenHash', jest.Mock>;
+  let tokenService: Record<'issueTokenPair' | 'revokeAllForUser', jest.Mock>;
   let otpService: Record<'requestOtp', jest.Mock>;
+  let configService: { get: jest.Mock };
+  let emailSender: Record<'send', jest.Mock>;
 
   beforeEach(() => {
     userRepository = {
       findByEmailOrPhone: jest.fn(),
+      findByEmail: jest.fn(),
       create: jest.fn((partial) => partial),
       save: jest.fn(async (entity) => ({ ...entity, id: 'user-1' })),
       findByIdOrFail: jest.fn(),
     };
+    passwordResetTokenRepository = {
+      create: jest.fn((partial) => partial),
+      save: jest.fn(async (entity) => ({ ...entity, id: 'reset-token-1' })),
+      findByTokenHash: jest.fn(),
+    };
     tokenService = {
       issueTokenPair: jest.fn(async () => ({ accessToken: 'access', refreshToken: 'refresh' })),
+      revokeAllForUser: jest.fn(async () => undefined),
     };
     otpService = { requestOtp: jest.fn(async () => undefined) };
+    configService = { get: jest.fn(() => ({ frontendUrl: 'https://rentlyhub.com.ng' })) };
+    emailSender = { send: jest.fn(async () => undefined) };
 
     authService = new AuthService(
       userRepository as unknown as UserRepository,
+      passwordResetTokenRepository as unknown as PasswordResetTokenRepository,
       tokenService as unknown as TokenService,
       otpService as unknown as OtpService,
+      configService as any,
+      emailSender as unknown as EmailSender,
     );
   });
 
@@ -71,6 +88,21 @@ describe('AuthService', () => {
       expect(userRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({ roles: [UserRole.RENTER] }),
       );
+    });
+
+    it('grants renter alongside an explicitly requested role, never in its place', async () => {
+      userRepository.findByEmailOrPhone.mockResolvedValue(null);
+
+      await authService.signup({
+        email: 'provider@example.com',
+        password: 'password123',
+        fullName: 'Test Provider',
+        roles: [UserRole.PROVIDER],
+      } as any);
+
+      const created = userRepository.create.mock.calls[0][0];
+      expect(created.roles).toEqual(expect.arrayContaining([UserRole.RENTER, UserRole.PROVIDER]));
+      expect(created.roles).toHaveLength(2);
     });
   });
 
@@ -121,6 +153,70 @@ describe('AuthService', () => {
 
       expect(tokenService.issueTokenPair).toHaveBeenCalledWith(user);
       expect(result.tokens).toEqual({ accessToken: 'access', refreshToken: 'refresh' });
+    });
+  });
+
+  describe('requestPasswordReset', () => {
+    it('resolves silently for an email with no account (no user enumeration)', async () => {
+      userRepository.findByEmail.mockResolvedValue(null);
+
+      await expect(authService.requestPasswordReset('ghost@example.com')).resolves.toBeUndefined();
+      expect(passwordResetTokenRepository.save).not.toHaveBeenCalled();
+      expect(emailSender.send).not.toHaveBeenCalled();
+    });
+
+    it('saves a hashed token and emails a reset link for a known account', async () => {
+      userRepository.findByEmail.mockResolvedValue({ id: 'user-1' } as any);
+
+      await authService.requestPasswordReset('user@example.com');
+
+      expect(passwordResetTokenRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'user-1', tokenHash: expect.any(String) }),
+      );
+      // The raw token must never be persisted — only its hash.
+      const saved = passwordResetTokenRepository.save.mock.calls[0][0];
+      expect(saved.tokenHash).not.toContain('resetToken=');
+
+      expect(emailSender.send).toHaveBeenCalledWith(
+        'user@example.com',
+        expect.any(String),
+        expect.stringContaining('https://rentlyhub.com.ng/auth?resetToken='),
+      );
+    });
+  });
+
+  describe('resetPassword', () => {
+    it('rejects an unknown token', async () => {
+      passwordResetTokenRepository.findByTokenHash.mockResolvedValue(null);
+
+      await expect(authService.resetPassword('bad-token', 'newpassword123')).rejects.toMatchObject({
+        code: 'PASSWORD_RESET_TOKEN_INVALID',
+      });
+    });
+
+    it('rejects an expired or already-used token', async () => {
+      passwordResetTokenRepository.findByTokenHash.mockResolvedValue({
+        isActive: () => false,
+      } as any);
+
+      await expect(authService.resetPassword('stale-token', 'newpassword123')).rejects.toMatchObject({
+        code: 'PASSWORD_RESET_TOKEN_INVALID',
+      });
+    });
+
+    it('updates the password, marks the token used, and revokes every session on success', async () => {
+      const resetToken = { userId: 'user-1', isActive: () => true, usedAt: null as Date | null };
+      passwordResetTokenRepository.findByTokenHash.mockResolvedValue(resetToken as any);
+      userRepository.findByIdOrFail.mockResolvedValue({ id: 'user-1', passwordHash: 'old-hash' } as any);
+
+      await authService.resetPassword('valid-token', 'newpassword123');
+
+      expect(userRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ passwordHash: expect.not.stringMatching('old-hash') }),
+      );
+      expect(resetToken.usedAt).not.toBeNull();
+      expect(passwordResetTokenRepository.save).toHaveBeenCalledWith(resetToken);
+      expect(tokenService.revokeAllForUser).toHaveBeenCalledWith('user-1');
     });
   });
 });
