@@ -104,6 +104,20 @@ describe('AuthService', () => {
       expect(created.roles).toEqual(expect.arrayContaining([UserRole.RENTER, UserRole.PROVIDER]));
       expect(created.roles).toHaveLength(2);
     });
+
+    it('never grants admin/super_admin through signup, even if requested — the DTO should already reject this, but the service re-checks (defense in depth)', async () => {
+      userRepository.findByEmailOrPhone.mockResolvedValue(null);
+
+      await authService.signup({
+        email: 'attacker@example.com',
+        password: 'password123',
+        fullName: 'Attacker',
+        roles: [UserRole.ADMIN, UserRole.SUPER_ADMIN],
+      } as any);
+
+      const created = userRepository.create.mock.calls[0][0];
+      expect(created.roles).toEqual([UserRole.RENTER]);
+    });
   });
 
   describe('login', () => {

@@ -10,7 +10,7 @@ import { PasswordResetTokenRepository } from '../repositories/password-reset-tok
 import { TokenService, TokenPair } from './token.service';
 import { OtpService } from './otp.service';
 import { EMAIL_SENDER, EmailSender } from './email-sender.port';
-import { SignupDto } from '../dto/signup.dto';
+import { SignupDto, SELF_SERVICE_ROLES } from '../dto/signup.dto';
 import { LoginDto } from '../dto/login.dto';
 import { User } from '../entities/user.entity';
 import { UserRole } from '../enums/user-role.enum';
@@ -46,7 +46,14 @@ export class AuthService {
     // Every account is a Renter at minimum — signing up as a Provider adds
     // that role on top, it never replaces the baseline one. Every account
     // can browse and book, whether or not it can also list.
-    const roles = new Set([UserRole.RENTER, ...(dto.roles ?? [])]);
+    //
+    // Re-filtered against SELF_SERVICE_ROLES here, not just at the DTO
+    // layer (SignupDto's @IsIn) — this is the actual privilege boundary.
+    // Never trust a single validation layer for "can this request make an
+    // admin account," the same way login() never trusts the client to say
+    // which error occurred.
+    const requestedRoles = (dto.roles ?? []).filter((r) => (SELF_SERVICE_ROLES as readonly UserRole[]).includes(r));
+    const roles = new Set([UserRole.RENTER, ...requestedRoles]);
     const user = this.userRepository.create({
       email: dto.email,
       phone: dto.phone,
