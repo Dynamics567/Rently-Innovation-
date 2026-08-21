@@ -5,7 +5,12 @@ import { Booking } from '../entities/booking.entity';
 import { BookingStatusHistory } from '../entities/booking-status-history.entity';
 import { BookingStage, BookingStatus } from '../enums/booking.enums';
 import { ListingsService } from '@modules/catalog/services/listings.service';
-import { BookingMode, CancellationPolicy, ListingStatus, PriceUnit } from '@modules/catalog/enums/listing.enums';
+import {
+  BookingMode,
+  CancellationPolicy,
+  ListingStatus,
+  PriceUnit,
+} from '@modules/catalog/enums/listing.enums';
 import { PaymentPort } from './payment.port';
 
 /**
@@ -77,7 +82,11 @@ describe('BookingService', () => {
     const historyManagerRepo = fakeRepo();
     const manager = {
       getRepository: jest.fn((entity: unknown) =>
-        entity === Booking ? bookingManagerRepo : entity === BookingStatusHistory ? historyManagerRepo : undefined,
+        entity === Booking
+          ? bookingManagerRepo
+          : entity === BookingStatusHistory
+            ? historyManagerRepo
+            : undefined,
       ),
     };
     dataSource = { transaction: jest.fn((cb: (m: unknown) => unknown) => cb(manager)) };
@@ -92,12 +101,21 @@ describe('BookingService', () => {
   });
 
   describe('create', () => {
-    const dto = { listingId: 'listing-1', from: '2026-08-10T10:00:00Z', to: '2026-08-13T10:00:00Z' };
+    const dto = {
+      listingId: 'listing-1',
+      from: '2026-08-10T10:00:00Z',
+      to: '2026-08-13T10:00:00Z',
+    };
 
     it('rejects booking a listing that is not live', async () => {
-      listingsService.findByIdOrFail.mockResolvedValue({ ...liveListing, status: ListingStatus.DRAFT });
+      listingsService.findByIdOrFail.mockResolvedValue({
+        ...liveListing,
+        status: ListingStatus.DRAFT,
+      });
 
-      await expect(service.create('renter-1', dto)).rejects.toMatchObject({ code: 'LISTING_NOT_LIVE' });
+      await expect(service.create('renter-1', dto)).rejects.toMatchObject({
+        code: 'LISTING_NOT_LIVE',
+      });
       expect(paymentPort.charge).not.toHaveBeenCalled();
     });
 
@@ -120,11 +138,17 @@ describe('BookingService', () => {
     });
 
     it('captures payment and reserves immediately for an instant-book listing', async () => {
-      listingsService.findByIdOrFail.mockResolvedValue({ ...liveListing, bookingMode: BookingMode.INSTANT });
+      listingsService.findByIdOrFail.mockResolvedValue({
+        ...liveListing,
+        bookingMode: BookingMode.INSTANT,
+      });
 
       const result: any = await service.create('renter-1', dto);
 
-      expect(paymentPort.charge).toHaveBeenCalledWith({ bookingId: expect.any(String), amountMinor: quote.totalMinor });
+      expect(paymentPort.charge).toHaveBeenCalledWith({
+        bookingId: expect.any(String),
+        amountMinor: quote.totalMinor,
+      });
       expect(result.stage).toBe(BookingStage.RESERVED);
       expect(result.status).toBe(BookingStatus.CONFIRMED);
     });
@@ -162,7 +186,10 @@ describe('BookingService', () => {
 
       const result: any = await service.approve('booking-1', 'provider-user-1');
 
-      expect(paymentPort.charge).toHaveBeenCalledWith({ bookingId: 'booking-1', amountMinor: 78000 });
+      expect(paymentPort.charge).toHaveBeenCalledWith({
+        bookingId: 'booking-1',
+        amountMinor: 78000,
+      });
       expect(result.stage).toBe(BookingStage.RESERVED);
       expect(result.status).toBe(BookingStatus.CONFIRMED);
     });
@@ -226,7 +253,10 @@ describe('BookingService', () => {
     });
 
     it('advances a reserved booking straight through to active', async () => {
-      bookingRepository.findByIdOrFail.mockResolvedValue({ stage: BookingStage.RESERVED, status: BookingStatus.CONFIRMED });
+      bookingRepository.findByIdOrFail.mockResolvedValue({
+        stage: BookingStage.RESERVED,
+        status: BookingStatus.CONFIRMED,
+      });
 
       const result: any = await service.confirmHandover('booking-1', 'provider-user-1');
 
@@ -253,7 +283,10 @@ describe('BookingService', () => {
 
       const result: any = await service.releaseDeposit('booking-1', 'provider-user-1');
 
-      expect(paymentPort.release).toHaveBeenCalledWith({ bookingId: 'booking-1', amountMinor: 15000 });
+      expect(paymentPort.release).toHaveBeenCalledWith({
+        bookingId: 'booking-1',
+        amountMinor: 15000,
+      });
       expect(result.stage).toBe(BookingStage.COMPLETED);
       expect(result.status).toBe(BookingStatus.COMPLETED);
     });

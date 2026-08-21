@@ -20,6 +20,7 @@ import { ListingAttributeValidatorService } from './services/listing-attribute-v
 
 import { CategoriesController } from './controllers/categories.controller';
 import { ListingsController } from './controllers/listings.controller';
+import { AdminListingsController } from './controllers/admin-listings.controller';
 
 import { IsListingOwnerPolicy } from './policies/is-listing-owner.policy';
 
@@ -36,7 +37,7 @@ import { IsListingOwnerPolicy } from './policies/is-listing-owner.policy';
     StorageModule,
     IdentityModule,
   ],
-  controllers: [CategoriesController, ListingsController],
+  controllers: [CategoriesController, ListingsController, AdminListingsController],
   providers: [
     CategoryRepository,
     ListingRepository,

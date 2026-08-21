@@ -45,6 +45,7 @@ body{padding-top:0;}
 
 <div class="mobile-tabbar">
   <a class="side-link active" data-view="overview" id="mLinkOverview"></a>
+  <a class="side-link" data-view="listings" id="mLinkListings"></a>
   <a class="side-link" data-view="bookings" id="mLinkBookings"></a>
   <a class="side-link" data-view="disputes" id="mLinkDisputes"></a>
   <a class="side-link" data-view="verification" id="mLinkVerification"></a>
@@ -54,6 +55,7 @@ body{padding-top:0;}
   <aside class="app-side">
     <div class="side-group-lbl">Platform</div>
     <a class="side-link active" data-view="overview" id="linkOverview"></a>
+    <a class="side-link" data-view="listings" id="linkListings"></a>
     <a class="side-link" data-view="bookings" id="linkBookings"></a>
     <a class="side-link" data-view="disputes" id="linkDisputes"></a>
     <a class="side-link" data-view="verification" id="linkVerification"></a>
@@ -85,10 +87,16 @@ body{padding-top:0;}
       </div>
     </div>
 
+    <!-- ============ LISTINGS MODERATION ============ -->
+    <div class="d-view" id="view-listings">
+      <div class="app-head"><div><h1>Listings moderation</h1><p>New listings wait here after a provider submits them, until approved or rejected.</p></div></div>
+      <div id="moderationList"></div>
+    </div>
+
     <!-- ============ BOOKINGS ============ -->
     <div class="d-view" id="view-bookings">
       <div class="app-head"><div><h1>All bookings</h1><p>Every booking on Rently, across every provider and category.</p></div></div>
-      <div class="banner info"><div><div class="t">Not available yet</div><div class="d">A platform-wide bookings view needs the Admin module, which hasn't been built yet — only the provider-verification queue is wired up so far.</div></div></div>
+      <div class="banner info"><div><div class="t">Not available yet</div><div class="d">A platform-wide bookings view needs the Admin module, which hasn't been built yet — provider verification and listings moderation are wired up so far.</div></div></div>
     </div>
 
     <!-- ============ DISPUTES ============ -->
@@ -113,11 +121,13 @@ const session = requireSession('admin');
 <script>
 document.querySelector('.admin-badge').innerHTML = icon('shield',{size:11,stroke:3})+' Admin';
 document.getElementById('linkOverview').innerHTML = icon('grid',{size:17})+' Overview';
+document.getElementById('linkListings').innerHTML = icon('grid',{size:17})+' Listings';
 document.getElementById('linkBookings').innerHTML = icon('calendar',{size:17})+' All Bookings';
 document.getElementById('linkDisputes').innerHTML = icon('alert',{size:17})+' Disputes';
 document.getElementById('linkVerification').innerHTML = icon('shield',{size:17})+' Verification';
 document.getElementById('linkExit').innerHTML = icon('logout',{size:17})+' Exit to site';
 document.getElementById('mLinkOverview').innerHTML = icon('grid',{size:16})+' Overview';
+document.getElementById('mLinkListings').innerHTML = icon('grid',{size:16})+' Listings';
 document.getElementById('mLinkBookings').innerHTML = icon('calendar',{size:16})+' Bookings';
 document.getElementById('mLinkDisputes').innerHTML = icon('alert',{size:16})+' Disputes';
 document.getElementById('mLinkVerification').innerHTML = icon('shield',{size:16})+' Verify';
@@ -139,6 +149,57 @@ document.getElementById('statActive').textContent = '—';
 document.getElementById('statDisputes').textContent = '—';
 document.getElementById('statRating').textContent = '—';
 
+/* ---- "Needs attention" banner combines both real queues (verification + listings) ---- */
+const pendingCounts = { verification: 0, listings: 0 };
+function renderAttentionBanner(){
+  const total = pendingCounts.verification + pendingCounts.listings;
+  const parts = [];
+  if(pendingCounts.verification) parts.push(`${pendingCounts.verification} provider${pendingCounts.verification===1?'':'s'} waiting on verification`);
+  if(pendingCounts.listings) parts.push(`${pendingCounts.listings} listing${pendingCounts.listings===1?'':'s'} waiting on review`);
+  document.getElementById('attentionBanner').innerHTML = total===0
+    ? icon('check',{size:16})+`<div><div class="t">Nothing needs attention right now</div><div class="d">No pending provider verifications or listing reviews.</div></div>`
+    : icon('alert',{size:16})+`<div><div class="t">${parts.join(' · ')}</div><div class="d">Items older than 24 hours risk breaching Rently's response-time SLA.</div></div>`;
+}
+
+/* ---- listings moderation queue (real) ---- */
+async function renderModeration(){
+  try{
+    const {data} = await apiFetch('/admin/listings/moderation-queue');
+    pendingCounts.listings = data.length;
+    renderAttentionBanner();
+    const categoryById = await getCategoryMapById().catch(()=>new Map());
+    document.getElementById('moderationList').innerHTML = data.length===0
+      ? `<p style="color:var(--ink-faint);font-size:13.5px;">No listings waiting on review.</p>`
+      : data.map(l=>{
+          const cat = categoryById.get(l.categoryId);
+          return `
+      <div class="queue-row">
+        <div class="q-main">
+          <div class="q-title">${l.title} <span class="badge info" style="margin-left:6px;">${cat?cat.name:'Uncategorized'}</span></div>
+          <div class="q-sub">Submitted ${new Date(l.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${money(Math.round(l.priceMinor/100))}/${l.priceUnit} · ${l.locationText}</div>
+        </div>
+        <div class="q-actions">
+          <button class="pill-btn ghost sm" data-reject-listing="${l.id}">Reject</button>
+          <button class="pill-btn green sm" data-approve-listing="${l.id}">Approve</button>
+        </div>
+      </div>`;
+        }).join('');
+    document.querySelectorAll('[data-approve-listing]').forEach(b=>b.addEventListener('click', async ()=>{
+      b.disabled=true;
+      try{ await apiFetch(`/admin/listings/${b.dataset.approveListing}/approve`,{method:'POST'}); await renderModeration(); }
+      catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
+    }));
+    document.querySelectorAll('[data-reject-listing]').forEach(b=>b.addEventListener('click', async ()=>{
+      if(!confirm('Reject this listing? The provider will need to edit and resubmit it.')) return;
+      b.disabled=true;
+      try{ await apiFetch(`/admin/listings/${b.dataset.rejectListing}/reject`,{method:'POST'}); await renderModeration(); }
+      catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
+    }));
+  }catch(e){
+    document.getElementById('moderationList').innerHTML = `<p style="color:var(--ink-faint)">${apiErrorMessage(e)}</p>`;
+  }
+}
+
 /* ---- verification queue (real) ---- */
 function typeOf(v){ return v.businessRegistrationNo ? 'Business' : 'Individual'; }
 function docsOf(v){ return (v.verificationDocuments||[]).length ? v.verificationDocuments.map(d=>d.docType).join(', ') : 'No documents submitted yet'; }
@@ -146,7 +207,8 @@ async function renderVerification(){
   try{
     const {data} = await apiFetch('/admin/providers/verification-queue');
     document.getElementById('statVerif').textContent = data.length;
-    document.getElementById('attentionBanner').innerHTML = icon('alert',{size:16})+`<div><div class="t">${data.length} provider${data.length===1?'':'s'} waiting on verification</div><div class="d">Verifications older than 24 hours risk breaching Rently's response-time SLA.</div></div>`;
+    pendingCounts.verification = data.length;
+    renderAttentionBanner();
     document.getElementById('verificationList').innerHTML = data.length===0
       ? `<p style="color:var(--ink-faint);font-size:13.5px;">No providers waiting on verification.</p>`
       : data.map(v=>`
@@ -176,7 +238,7 @@ async function renderVerification(){
     document.getElementById('verificationList').innerHTML = `<p style="color:var(--ink-faint)">${apiErrorMessage(e)}</p>`;
   }
 }
-if(session) renderVerification();
+if(session){ renderVerification(); renderModeration(); }
 </script>
 </body>
 </html>

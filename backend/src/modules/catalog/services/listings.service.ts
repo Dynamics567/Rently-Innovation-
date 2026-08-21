@@ -101,6 +101,11 @@ export class ListingsService {
     return this.listingRepository.search(dto, ALL_STATUSES);
   }
 
+  /** [Admin] Every listing awaiting moderation, across all providers — GET /admin/listings/moderation-queue. */
+  async getModerationQueue(): Promise<Listing[]> {
+    return this.listingRepository.findPendingReview();
+  }
+
   async softDelete(id: string): Promise<void> {
     await this.listingRepository.softDelete(id);
   }
@@ -130,13 +135,7 @@ export class ListingsService {
     return this.listingRepository.save(listing);
   }
 
-  /**
-   * [Admin] Approves a pending_review listing. Lives here rather than in a
-   * dedicated Admin module (not built this phase) so the moderation flow is
-   * actually testable end-to-end; the endpoint is @Roles(ADMIN)-gated in
-   * ListingsController and can move into AdminModule later without this
-   * logic changing.
-   */
+  /** [Admin] Approves a pending_review listing — see AdminListingsController. */
   async approve(id: string): Promise<Listing> {
     const listing = await this.findByIdOrFail(id);
     if (listing.status !== ListingStatus.PENDING_REVIEW) {

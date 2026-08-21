@@ -213,7 +213,9 @@ describe('AuthService', () => {
         isActive: () => false,
       } as any);
 
-      await expect(authService.resetPassword('stale-token', 'newpassword123')).rejects.toMatchObject({
+      await expect(
+        authService.resetPassword('stale-token', 'newpassword123'),
+      ).rejects.toMatchObject({
         code: 'PASSWORD_RESET_TOKEN_INVALID',
       });
     });
@@ -221,7 +223,10 @@ describe('AuthService', () => {
     it('updates the password, marks the token used, and revokes every session on success', async () => {
       const resetToken = { userId: 'user-1', isActive: () => true, usedAt: null as Date | null };
       passwordResetTokenRepository.findByTokenHash.mockResolvedValue(resetToken as any);
-      userRepository.findByIdOrFail.mockResolvedValue({ id: 'user-1', passwordHash: 'old-hash' } as any);
+      userRepository.findByIdOrFail.mockResolvedValue({
+        id: 'user-1',
+        passwordHash: 'old-hash',
+      } as any);
 
       await authService.resetPassword('valid-token', 'newpassword123');
 

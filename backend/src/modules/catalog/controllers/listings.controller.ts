@@ -100,22 +100,6 @@ export class ListingsController {
     return this.listingsService.duplicate(id);
   }
 
-  // Temporary home for moderation actions — see ListingsService.approve() doc
-  // comment. Moves to a dedicated AdminModule controller once it exists.
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
-  @ApiBearerAuth()
-  @Post(':id/approve')
-  async approve(@Param('id') id: string) {
-    return this.listingsService.approve(id);
-  }
-
-  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
-  @ApiBearerAuth()
-  @Post(':id/reject')
-  async reject(@Param('id') id: string) {
-    return this.listingsService.reject(id);
-  }
-
   @CheckPolicies(IsListingOwnerPolicy)
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')

@@ -41,7 +41,13 @@ import { IsSelfOrAdminPolicy } from './policies/is-self-or-admin.policy';
  */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, ProviderProfile, VerificationDocument, RefreshToken, PasswordResetToken]),
+    TypeOrmModule.forFeature([
+      User,
+      ProviderProfile,
+      VerificationDocument,
+      RefreshToken,
+      PasswordResetToken,
+    ]),
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

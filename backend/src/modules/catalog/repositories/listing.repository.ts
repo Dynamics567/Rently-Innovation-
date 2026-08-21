@@ -122,4 +122,12 @@ export class ListingRepository extends BaseRepository<Listing> {
       },
     };
   }
+
+  /** Backs GET /admin/listings/moderation-queue — unscoped by provider, unlike search()/searchOwn(). */
+  async findPendingReview(): Promise<Listing[]> {
+    return this.repository.find({
+      where: { status: ListingStatus.PENDING_REVIEW },
+      order: { createdAt: 'ASC' },
+    });
+  }
 }

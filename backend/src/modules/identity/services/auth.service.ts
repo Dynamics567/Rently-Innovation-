@@ -52,7 +52,9 @@ export class AuthService {
     // Never trust a single validation layer for "can this request make an
     // admin account," the same way login() never trusts the client to say
     // which error occurred.
-    const requestedRoles = (dto.roles ?? []).filter((r) => (SELF_SERVICE_ROLES as readonly UserRole[]).includes(r));
+    const requestedRoles = (dto.roles ?? []).filter((r) =>
+      (SELF_SERVICE_ROLES as readonly UserRole[]).includes(r),
+    );
     const roles = new Set([UserRole.RENTER, ...requestedRoles]);
     const user = this.userRepository.create({
       email: dto.email,
