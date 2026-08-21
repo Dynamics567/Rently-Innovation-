@@ -32,6 +32,9 @@ body{padding-top:0;}
 .tabs-filter{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;}
 .tabs-filter button{padding:8px 15px;border-radius:999px;border:1.5px solid var(--line-strong);font-size:12.5px;font-weight:600;color:var(--ink-soft);}
 .tabs-filter button.on{background:var(--ink);border-color:var(--ink);color:#fff;}
+.role-check{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--ink-soft);margin-bottom:12px;cursor:pointer;}
+.role-check:last-child{margin-bottom:0;}
+.role-check input{accent-color:var(--ink);width:16px;height:16px;}
 </style>
 </head>
 <body class="no-grain">
@@ -49,6 +52,7 @@ body{padding-top:0;}
   <a class="side-link" data-view="bookings" id="mLinkBookings"></a>
   <a class="side-link" data-view="disputes" id="mLinkDisputes"></a>
   <a class="side-link" data-view="verification" id="mLinkVerification"></a>
+  <a class="side-link" data-view="team" id="mLinkTeam" style="display:none;"></a>
 </div>
 
 <div class="app-shell">
@@ -59,6 +63,7 @@ body{padding-top:0;}
     <a class="side-link" data-view="bookings" id="linkBookings"></a>
     <a class="side-link" data-view="disputes" id="linkDisputes"></a>
     <a class="side-link" data-view="verification" id="linkVerification"></a>
+    <a class="side-link" data-view="team" id="linkTeam" style="display:none;"></a>
     <div class="side-group-lbl">Exit</div>
     <a class="side-link" href="homepage" id="linkExit"></a>
   </aside>
@@ -110,6 +115,19 @@ body{padding-top:0;}
       <div class="app-head"><div><h1>Provider verification queue</h1><p>New providers can't publish a listing until their ID or business registration is approved.</p></div></div>
       <div id="verificationList"></div>
     </div>
+
+    <!-- ============ TEAM & ACCESS (super admin only) ============ -->
+    <div class="d-view" id="view-team">
+      <div class="app-head"><div><h1>Team &amp; access</h1><p>Look up an account by email and grant or remove admin access.</p></div></div>
+      <div class="section-block" style="max-width:480px;">
+        <div style="display:flex;gap:10px;align-items:flex-end;">
+          <div class="field" style="flex:1;margin-bottom:0;"><label>Find a person by email</label><input type="email" id="teamEmailInput" placeholder="person@example.com" /></div>
+          <button class="pill-btn blue" id="teamSearchBtn" style="margin-bottom:0;">Search</button>
+        </div>
+        <div id="teamError" class="banner danger" style="display:none;margin-top:16px;"></div>
+      </div>
+      <div id="teamResult" style="max-width:480px;"></div>
+    </div>
   </main>
 </div>
 
@@ -131,6 +149,15 @@ document.getElementById('mLinkListings').innerHTML = icon('grid',{size:16})+' Li
 document.getElementById('mLinkBookings').innerHTML = icon('calendar',{size:16})+' Bookings';
 document.getElementById('mLinkDisputes').innerHTML = icon('alert',{size:16})+' Disputes';
 document.getElementById('mLinkVerification').innerHTML = icon('shield',{size:16})+' Verify';
+document.getElementById('linkTeam').innerHTML = icon('user',{size:17})+' Team & Access';
+document.getElementById('mLinkTeam').innerHTML = icon('user',{size:16})+' Team';
+
+/* ---- "Team & Access" is SUPER_ADMIN-only on the backend — hide the nav
+   entirely for a plain admin rather than show a screen that would just 403. ---- */
+if(session && session.user.roles.includes('super_admin')){
+  document.getElementById('linkTeam').style.display='';
+  document.getElementById('mLinkTeam').style.display='';
+}
 
 function goView(v){
   document.querySelectorAll('.side-link[data-view]').forEach(o=>o.classList.toggle('active',o.dataset.view===v));
@@ -238,6 +265,67 @@ async function renderVerification(){
     document.getElementById('verificationList').innerHTML = `<p style="color:var(--ink-faint)">${apiErrorMessage(e)}</p>`;
   }
 }
+/* ---- team & access: look up a user by email, edit their roles (super admin only) ---- */
+const ROLE_OPTIONS = ['provider','provider_staff','admin','super_admin'];
+const ROLE_LABELS = {provider:'Provider',provider_staff:'Provider staff',admin:'Admin',super_admin:'Super admin'};
+
+function renderTeamResult(user){
+  document.getElementById('teamResult').innerHTML = `
+    <div class="panel-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:20px;">
+        <div>
+          <div style="font-size:15px;font-weight:600;">${user.fullName}</div>
+          <div style="font-size:12.5px;color:var(--ink-faint);margin-top:2px;">${user.email||user.phone||''}</div>
+        </div>
+        <span class="badge info">Renter · baseline</span>
+      </div>
+      <div style="margin-bottom:20px;">
+        ${ROLE_OPTIONS.map(r=>`
+          <label class="role-check">
+            <input type="checkbox" data-role="${r}" ${user.roles.includes(r)?'checked':''} />
+            ${ROLE_LABELS[r]}
+          </label>`).join('')}
+      </div>
+      <div id="teamSaveError" class="banner danger" style="display:none;margin-bottom:16px;"></div>
+      <button class="pill-btn blue" id="teamSaveBtn">Save roles</button>
+    </div>`;
+
+  document.getElementById('teamSaveBtn').addEventListener('click', async ()=>{
+    const errEl=document.getElementById('teamSaveError');
+    errEl.style.display='none';
+    const selected = ROLE_OPTIONS.filter(r=>document.querySelector(`[data-role="${r}"]`).checked);
+    const btn=document.getElementById('teamSaveBtn');
+    btn.disabled=true; const original=btn.textContent; btn.textContent='Saving…';
+    try{
+      const {data:updated} = await apiFetch(`/admin/users/${user.id}/roles`,{method:'PATCH',body:{roles:selected}});
+      btn.textContent='Saved';
+      setTimeout(()=>renderTeamResult(updated), 900);
+    }catch(e){
+      errEl.innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(e)}</div>`; errEl.style.display='flex';
+      btn.disabled=false; btn.textContent=original;
+    }
+  });
+}
+
+document.getElementById('teamSearchBtn').addEventListener('click', async ()=>{
+  const errEl=document.getElementById('teamError');
+  errEl.style.display='none';
+  document.getElementById('teamResult').innerHTML='';
+  const email=document.getElementById('teamEmailInput').value.trim();
+  if(!email){ errEl.innerHTML=icon('alert',{size:15})+'<div>Enter an email to search.</div>'; errEl.style.display='flex'; return; }
+  const btn=document.getElementById('teamSearchBtn');
+  btn.disabled=true; const original=btn.textContent; btn.textContent='Searching…';
+  try{
+    const {data:user} = await apiFetch(`/admin/users/lookup?email=${encodeURIComponent(email)}`);
+    renderTeamResult(user);
+  }catch(e){
+    errEl.innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(e)}</div>`; errEl.style.display='flex';
+  }finally{
+    btn.disabled=false; btn.textContent=original;
+  }
+});
+document.getElementById('teamEmailInput').addEventListener('keydown',(e)=>{ if(e.key==='Enter') document.getElementById('teamSearchBtn').click(); });
+
 if(session){ renderVerification(); renderModeration(); }
 </script>
 </body>

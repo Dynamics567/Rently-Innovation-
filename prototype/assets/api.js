@@ -43,14 +43,28 @@ function clearSession() {
   localStorage.removeItem(SESSION_KEYS.user);
 }
 
-/** Redirects to auth if logged out, or to the correct dashboard on a role mismatch. Call at the top of every app-shell page. */
+/**
+ * Redirects to auth if logged out, or to the correct dashboard on a role
+ * mismatch. Call at the top of every app-shell page.
+ *
+ * super_admin satisfies an 'admin' check — the backend's own @Roles guards
+ * always pair (ADMIN, SUPER_ADMIN) together for every admin-gated endpoint
+ * (see AdminProvidersController/AdminListingsController), so a super admin
+ * with only that literal role must not get bounced from admin.html while
+ * every API call they make there would otherwise succeed.
+ */
+function hasRole(session, role) {
+  if (session.user.roles.includes(role)) return true;
+  if (role === 'admin' && session.user.roles.includes('super_admin')) return true;
+  return false;
+}
 function requireSession(role) {
   const session = getSession();
   if (!session) {
     window.location.href = 'auth';
     return null;
   }
-  if (role && !session.user.roles.includes(role)) {
+  if (role && !hasRole(session, role)) {
     window.location.href = session.user.roles.includes('provider') ? 'dashboard-provider' : 'dashboard-renter';
     return null;
   }
