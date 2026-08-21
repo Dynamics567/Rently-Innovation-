@@ -27,6 +27,7 @@ import { AuthController } from './controllers/auth.controller';
 import { UsersController } from './controllers/users.controller';
 import { ProvidersController } from './controllers/providers.controller';
 import { AdminProvidersController } from './controllers/admin-providers.controller';
+import { AdminUsersController } from './controllers/admin-users.controller';
 
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { IsSelfOrAdminPolicy } from './policies/is-self-or-admin.policy';
@@ -58,7 +59,13 @@ import { IsSelfOrAdminPolicy } from './policies/is-self-or-admin.policy';
       },
     }),
   ],
-  controllers: [AuthController, UsersController, ProvidersController, AdminProvidersController],
+  controllers: [
+    AuthController,
+    UsersController,
+    ProvidersController,
+    AdminProvidersController,
+    AdminUsersController,
+  ],
   providers: [
     UserRepository,
     ProviderProfileRepository,

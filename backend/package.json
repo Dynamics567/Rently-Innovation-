@@ -9,9 +9,10 @@
     "start": "npm run start:prod",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "npm run migration:run:prod && npm run seed:prod && node dist/main",
+    "start:prod": "npm run migration:run:prod && npm run seed:prod && npm run promote:prod && node dist/main",
     "migration:run:prod": "typeorm migration:run -d dist/database/data-source.js",
     "seed:prod": "node dist/database/seeds/run-seed.js",
+    "promote:prod": "node dist/database/seeds/promote-user.js",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "test": "jest",
@@ -22,7 +23,8 @@
     "migration:generate": "npm run typeorm -- migration:generate -d src/database/data-source.ts",
     "migration:run": "npm run typeorm -- migration:run -d src/database/data-source.ts",
     "migration:revert": "npm run typeorm -- migration:revert -d src/database/data-source.ts",
-    "seed": "ts-node -r tsconfig-paths/register src/database/seeds/run-seed.ts"
+    "seed": "ts-node -r tsconfig-paths/register src/database/seeds/run-seed.ts",
+    "promote": "ts-node -r tsconfig-paths/register src/database/seeds/promote-user.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.529.1",
