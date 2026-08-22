@@ -17,10 +17,17 @@ const BCRYPT_ROUNDS = 12;
  * (see package.json's start:prod) — a no-op unless PROMOTE_EMAIL and
  * PROMOTE_ROLES are set as deploy-time env vars, which should be unset
  * again once the promotion has run once.
+ *
+ * PROMOTE_PASSWORD is optional — when set, it (re)sets the account's
+ * password directly. Exists because there's no real email provider wired
+ * up yet (ConsoleEmailSender only logs), so "Forgot password" can't
+ * actually deliver a reset link to a real inbox yet; this is the practical
+ * way to get first-login credentials to a real person until that changes.
  */
 async function run() {
   const email = process.env.PROMOTE_EMAIL;
   const rolesRaw = process.env.PROMOTE_ROLES;
+  const password = process.env.PROMOTE_PASSWORD;
   if (!email || !rolesRaw) {
     // eslint-disable-next-line no-console
     console.log('[promote-user] PROMOTE_EMAIL/PROMOTE_ROLES not set — skipping.');
@@ -38,24 +45,27 @@ async function run() {
   let user = await repo.findOne({ where: { email } });
 
   if (!user) {
-    const temporaryPassword = randomBytes(24).toString('hex');
+    const passwordToUse = password ?? randomBytes(24).toString('hex');
     user = repo.create({
       email,
       fullName: email.split('@')[0],
-      passwordHash: await bcrypt.hash(temporaryPassword, BCRYPT_ROUNDS),
+      passwordHash: await bcrypt.hash(passwordToUse, BCRYPT_ROUNDS),
       roles: [...new Set([UserRole.RENTER, ...requestedRoles])],
     });
     await repo.save(user);
     // eslint-disable-next-line no-console
     console.log(
-      `[promote-user] Created ${email} with roles [${user.roles.join(', ')}]. ` +
-        `No usable password was set — use "Forgot password" on the site to set one.`,
+      `[promote-user] Created ${email} with roles [${user.roles.join(', ')}].` +
+        (password ? '' : ' No usable password was set — use "Forgot password" on the site to set one.'),
     );
   } else {
     user.roles = [...new Set([...user.roles, ...requestedRoles])];
+    if (password) user.passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     await repo.save(user);
     // eslint-disable-next-line no-console
-    console.log(`[promote-user] ${email} now has roles [${user.roles.join(', ')}].`);
+    console.log(
+      `[promote-user] ${email} now has roles [${user.roles.join(', ')}]${password ? ' and a new password was set' : ''}.`,
+    );
   }
 
   await AppDataSource.destroy();
