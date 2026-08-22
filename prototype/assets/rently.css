@@ -341,6 +341,36 @@ h1 em,h2 em,h3 em{font-style:italic;font-weight:500;}
 
 @keyframes shimmer{0%{background-position:-300px 0;}100%{background-position:300px 0;}}
 .skel{background:linear-gradient(90deg,var(--bg-alt) 25%,var(--bg-alt-2) 37%,var(--bg-alt) 63%);background-size:400px 100%;animation:shimmer 1.6s infinite linear;border-radius:12px;}
+.skel-kpi{height:96px;border-radius:18px;}
+.skel-row{height:76px;border-radius:16px;margin-bottom:12px;}
+.skel-row:last-child{margin-bottom:0;}
+.skel-line{height:14px;border-radius:6px;margin-bottom:8px;}
+.skel-line:last-child{margin-bottom:0;}
+
+/* ================================================================
+   PANEL CARD — bordered content block (booking detail, admin lookup)
+   ================================================================ */
+.panel-card{border:1px solid var(--line);border-radius:18px;padding:28px;margin-bottom:20px;}
+.panel-card h3{font-size:17px;font-weight:500;margin-bottom:6px;}
+.panel-card .lede{font-size:13.5px;color:var(--ink-soft);margin-bottom:22px;line-height:1.65;}
+
+/* ================================================================
+   BAR CHART — shared by dashboard Reports views (renderBarChart in rently.js)
+   ================================================================ */
+.chart-bars{display:flex;align-items:stretch;gap:10px;height:180px;}
+.chart-bars.horizontal{flex-direction:column;height:auto;gap:12px;}
+.chart-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;min-width:0;}
+.chart-bar-col .chart-bar-val{font-size:11px;font-weight:700;margin-bottom:6px;color:var(--ink);}
+.chart-bar-col .chart-bar-track{flex:1;width:100%;display:flex;align-items:flex-end;}
+.chart-bar-col .chart-bar-fill{width:100%;border-radius:6px 6px 0 0;min-height:3px;transition:height .5s var(--ease);}
+.chart-bar-col .chart-bar-lbl{font-size:11px;color:var(--ink-faint);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+
+.chart-bar-row{display:flex;align-items:center;gap:12px;}
+.chart-bar-row .chart-bar-lbl{width:120px;flex-shrink:0;font-size:12.5px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.chart-bar-row .chart-bar-track{flex:1;background:var(--bg-alt);border-radius:999px;height:10px;overflow:hidden;}
+.chart-bar-row .chart-bar-track .chart-bar-fill{height:100%;border-radius:999px;min-width:3px;transition:width .5s var(--ease);}
+.chart-bar-row .chart-bar-val{width:48px;flex-shrink:0;text-align:right;font-size:12.5px;font-weight:700;font-variant-numeric:tabular-nums;}
+@media(max-width:560px){.chart-bar-row .chart-bar-lbl{width:80px;}}
 
 /* ================================================================
    AVATAR CLUSTER

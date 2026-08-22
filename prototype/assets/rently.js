@@ -128,6 +128,44 @@ function artDiv(key,iconSize=100,opacity=.18){
 function money(n){return '₦'+Math.round(n).toLocaleString('en-NG');}
 function initials(name){return name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();}
 
+/* ---------------- BAR CHART ----------------
+   Plain CSS bars via template-string injection — same convention as
+   rcard()/renderStageTimeline(). Callers pre-aggregate their own data
+   (dashboard Reports views reduce data they've already fetched); this
+   only draws. No canvas/SVG/chart library — keeps the "no build step"
+   footprint at zero. */
+function renderBarChart(container, dataPoints, opts = {}) {
+  const el = typeof container === 'string' ? document.getElementById(container) : container;
+  if (!el) return;
+  const { formatValue = (v) => v, color = 'var(--blue)', horizontal = false, maxBars = 12 } = opts;
+  const points = dataPoints.slice(0, maxBars);
+  if (!points.length) {
+    el.className = '';
+    el.innerHTML = '<p style="color:var(--ink-faint);font-size:13px;">Not enough data yet.</p>';
+    return;
+  }
+  const max = Math.max(...points.map((p) => p.value), 1);
+  if (horizontal) {
+    el.className = 'chart-bars horizontal';
+    el.innerHTML = points.map((p) => `
+      <div class="chart-bar-row">
+        <div class="chart-bar-lbl">${p.label}</div>
+        <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${Math.max(Math.round((p.value / max) * 100), 2)}%;background:${color};"></div></div>
+        <div class="chart-bar-val">${formatValue(p.value)}</div>
+      </div>
+    `).join('');
+  } else {
+    el.className = 'chart-bars';
+    el.innerHTML = points.map((p) => `
+      <div class="chart-bar-col">
+        <div class="chart-bar-val">${formatValue(p.value)}</div>
+        <div class="chart-bar-track"><div class="chart-bar-fill" style="height:${Math.max(Math.round((p.value / max) * 100), 2)}%;background:${color};"></div></div>
+        <div class="chart-bar-lbl">${p.label}</div>
+      </div>
+    `).join('');
+  }
+}
+
 /* ---------------- MOCK DATA ---------------- */
 const CATEGORIES=[
   {key:'event',name:'Event & Party',count:1240,size:'c-large'},

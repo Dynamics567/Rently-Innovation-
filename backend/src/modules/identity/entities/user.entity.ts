@@ -32,6 +32,9 @@ export class User extends BaseEntity {
   @Column({ name: 'phone_verified_at', type: 'timestamptz', nullable: true })
   phoneVerifiedAt?: Date | null;
 
+  @Column({ name: 'last_login_at', type: 'timestamptz', nullable: true })
+  lastLoginAt?: Date | null;
+
   @Column({ type: 'enum', enum: UserAccountStatus, default: UserAccountStatus.ACTIVE })
   status: UserAccountStatus;
 

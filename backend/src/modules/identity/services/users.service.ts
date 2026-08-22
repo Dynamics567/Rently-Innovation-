@@ -19,6 +19,16 @@ export class UsersService {
     return this.userRepository.save(user);
   }
 
+  /**
+   * Public, narrow projection — just enough for another user's dashboard to
+   * show a real name instead of a raw id (e.g. a provider's renter tag).
+   * Never email/phone/roles.
+   */
+  async getPublicProfile(id: string): Promise<{ id: string; fullName: string }> {
+    const user = await this.userRepository.findByIdOrFail(id, 'User');
+    return { id: user.id, fullName: user.fullName };
+  }
+
   /** [Super Admin] Finds an account by email — for locating who to promote. */
   async getByEmail(email: string): Promise<User> {
     const user = await this.userRepository.findByEmail(email);

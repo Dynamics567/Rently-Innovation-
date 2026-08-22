@@ -95,6 +95,9 @@ export class AuthService {
       throw DomainException.forbidden(ErrorCode.ACCOUNT_SUSPENDED, 'This account is suspended.');
     }
 
+    user.lastLoginAt = new Date();
+    await this.userRepository.save(user);
+
     const tokens = await this.tokenService.issueTokenPair(user);
     return { user, tokens };
   }

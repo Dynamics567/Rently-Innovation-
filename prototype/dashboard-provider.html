@@ -72,6 +72,7 @@ body{padding-top:0;}
   <a class="side-link" data-view="requests" id="mLinkRequests"></a>
   <a class="side-link" data-view="active" id="mLinkActive"></a>
   <a class="side-link" data-view="earnings" id="mLinkEarnings"></a>
+  <a class="side-link" data-view="reports" id="mLinkReports"></a>
   <a class="side-link" data-view="settings" id="mLinkSettings"></a>
   <a class="side-link" href="dashboard-renter" id="mLinkRenterSwitch"></a>
 </div>
@@ -84,6 +85,7 @@ body{padding-top:0;}
     <a class="side-link" data-view="requests" id="linkRequests"></a>
     <a class="side-link" data-view="active" id="linkActive"></a>
     <a class="side-link" data-view="earnings" id="linkEarnings"></a>
+    <a class="side-link" data-view="reports" id="linkReports"></a>
     <a class="side-link" data-view="settings" id="linkSettings"></a>
     <div class="side-group-lbl">Switch role</div>
     <a class="side-link" href="dashboard-renter" id="linkRenterSwitch"></a>
@@ -93,11 +95,11 @@ body{padding-top:0;}
     <!-- ============ OVERVIEW ============ -->
     <div class="d-view active" id="view-overview">
       <div class="app-head">
-        <div><h1 id="overviewGreeting">Good afternoon</h1><p>Here's how your listings are performing this month.</p></div>
+        <div><h1 id="overviewGreeting">Good afternoon</h1><p id="overviewSubtitle">Here's how your listings are performing this month.</p></div>
         <button class="pill-btn green" id="addListingBtn2"></button>
       </div>
 
-      <div class="banner warning" id="actionBanner" style="margin-bottom:32px;"></div>
+      <div class="banner warning" id="actionBanner" style="margin-bottom:32px;display:none;"></div>
 
       <div class="kpi-row" style="margin-bottom:44px;">
         <div class="kpi"><div class="lbl">Gross bookings value</div><div class="val" id="kpiGross">—</div></div>
@@ -107,15 +109,30 @@ body{padding-top:0;}
       </div>
 
       <div class="section-block">
-        <div class="sb-head"><h3>Requests needing your response</h3><a class="text-link faint" data-view-link="requests">View all</a></div>
-        <div id="overviewRequests"></div>
+        <div class="sb-head"><h3>Listing status</h3></div>
+        <div class="kpi-row" id="statusBreakdownRow">
+          <div class="skel skel-kpi"></div><div class="skel skel-kpi"></div><div class="skel skel-kpi"></div><div class="skel skel-kpi"></div>
+        </div>
+      </div>
+
+      <div class="section-block" id="insightsSection" style="display:none;">
+        <div class="sb-head"><h3>Insights for you</h3></div>
+        <div id="insightsList"></div>
       </div>
 
       <div class="section-block">
-        <div class="sb-head"><h3>Recent bookings</h3><a class="text-link faint" data-view-link="earnings">View earnings</a></div>
-        <div class="dtable-wrap">
-          <table class="dtable" id="overviewTable"></table>
-        </div>
+        <div class="sb-head"><h3>Quick actions</h3></div>
+        <div id="quickActions" style="display:flex;gap:12px;flex-wrap:wrap;"></div>
+      </div>
+
+      <div class="section-block">
+        <div class="sb-head"><h3>Requests needing your response</h3><a class="text-link faint" data-view-link="requests">View all</a></div>
+        <div id="overviewRequests"><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
+      </div>
+
+      <div class="section-block">
+        <div class="sb-head"><h3>Recent activity</h3></div>
+        <div id="recentActivityList"><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
       </div>
     </div>
 
@@ -127,8 +144,11 @@ body{padding-top:0;}
       </div>
       <div class="dtable-wrap">
         <table class="dtable">
-          <thead><tr><th>Listing</th><th>Category</th><th>Price</th><th>Status</th><th>Views</th><th>Bookings</th><th></th></tr></thead>
-          <tbody id="listingsTbody"></tbody>
+          <thead><tr><th>Listing</th><th>Category</th><th>Price</th><th>Status</th><th></th></tr></thead>
+          <tbody id="listingsTbody">
+            <tr><td colspan="5"><div class="skel skel-row" style="height:44px;"></div></td></tr>
+            <tr><td colspan="5"><div class="skel skel-row" style="height:44px;"></div></td></tr>
+          </tbody>
         </table>
       </div>
     </div>
@@ -136,13 +156,13 @@ body{padding-top:0;}
     <!-- ============ REQUESTS ============ -->
     <div class="d-view" id="view-requests">
       <div class="app-head"><div><h1>Booking requests</h1><p>Requests older than 24 hours hurt your response-time score — respond fast.</p></div></div>
-      <div id="requestsList"></div>
+      <div id="requestsList"><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
     </div>
 
     <!-- ============ ACTIVE RENTALS ============ -->
     <div class="d-view" id="view-active">
       <div class="app-head"><div><h1>Active rentals</h1><p>What's out, who has it, and what needs to happen next.</p></div></div>
-      <div id="activeRentalsList" style="display:flex;flex-direction:column;gap:12px;"></div>
+      <div id="activeRentalsList" style="display:flex;flex-direction:column;gap:12px;"><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
       <div class="empty-state" id="activeRentalsEmpty" style="display:none;">
         <div class="ic" id="activeRentalsEmptyIcon"></div>
         <h3>Nothing out right now</h3>
@@ -157,6 +177,34 @@ body{padding-top:0;}
         <div class="kpi"><div class="lbl">Gross bookings value</div><div class="val" id="kpiGross2">—</div></div>
       </div>
       <div class="banner info"><div><div class="t">Payout tracking is coming soon</div><div class="d">Commission and payout schedules will appear here once the Payments module is live — for now, "gross bookings value" reflects the total of your confirmed and completed bookings.</div></div></div>
+    </div>
+
+    <!-- ============ REPORTS ============ -->
+    <div class="d-view" id="view-reports">
+      <div class="app-head"><div><h1>Reports</h1><p>Built from your own listings and bookings — no fabricated numbers.</p></div></div>
+      <div class="banner info" style="margin-bottom:28px;"><div><div class="t">Scope note</div><div class="d">These reports reflect up to 100 most recent bookings per status — plenty at your current volume, but a heads-up if that changes.</div></div></div>
+
+      <div class="section-block">
+        <div class="sb-head"><h3>Earnings by month</h3></div>
+        <div id="earningsChart" style="margin-bottom:20px;"></div>
+        <div class="dtable-wrap">
+          <table class="dtable">
+            <thead><tr><th>Month</th><th>Bookings</th><th>Gross value</th></tr></thead>
+            <tbody id="earningsReportTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section-block">
+        <div class="sb-head"><h3>Listings by status</h3></div>
+        <div id="listingsStatusChart" style="margin-bottom:20px;"></div>
+        <div class="dtable-wrap">
+          <table class="dtable">
+            <thead><tr><th>Status</th><th>Count</th><th>% of total</th></tr></thead>
+            <tbody id="listingsStatusReportTbody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- ============ SETTINGS ============ -->
@@ -219,6 +267,7 @@ document.getElementById('linkListings').innerHTML = icon('list',{size:17})+' Lis
 document.getElementById('linkRequests').innerHTML = icon('message',{size:17})+' Requests';
 document.getElementById('linkActive').innerHTML = icon('clock',{size:17})+' Active Rentals';
 document.getElementById('linkEarnings').innerHTML = icon('wallet',{size:17})+' Earnings';
+document.getElementById('linkReports').innerHTML = icon('filter',{size:17})+' Reports';
 document.getElementById('linkSettings').innerHTML = icon('settings',{size:17})+' Settings';
 document.getElementById('linkRenterSwitch').innerHTML = icon('user',{size:17})+' Renter dashboard';
 document.getElementById('mLinkOverview').innerHTML = icon('grid',{size:16})+' Overview';
@@ -226,6 +275,7 @@ document.getElementById('mLinkListings').innerHTML = icon('list',{size:16})+' Li
 document.getElementById('mLinkRequests').innerHTML = icon('message',{size:16})+' Requests';
 document.getElementById('mLinkActive').innerHTML = icon('clock',{size:16})+' Active';
 document.getElementById('mLinkEarnings').innerHTML = icon('wallet',{size:16})+' Earnings';
+document.getElementById('mLinkReports').innerHTML = icon('filter',{size:16})+' Reports';
 document.getElementById('mLinkSettings').innerHTML = icon('settings',{size:16})+' Settings';
 document.getElementById('mLinkRenterSwitch').innerHTML = icon('user',{size:16})+' Renter';
 document.getElementById('addListingBtn').innerHTML = icon('plus',{size:15})+' Add new listing';
@@ -264,7 +314,7 @@ async function loadListings(){
     const {data} = await apiFetch('/listings/mine?limit=100');
     myListings = data.map(l=>{
       const cat=categoryById.get(l.categoryId);
-      return {id:l.id, title:l.title, status:l.status, cat:cat?cat.key:'spaces', catName:cat?cat.name:'Other', price:Math.round(l.priceMinor/100)};
+      return {id:l.id, title:l.title, status:l.status, cat:cat?cat.key:'spaces', catName:cat?cat.name:'Other', price:Math.round(l.priceMinor/100), createdAt:l.createdAt, updatedAt:l.updatedAt};
     });
     document.getElementById('listingsTbody').innerHTML = myListings.length ? myListings.map(l=>`
       <tr>
@@ -272,22 +322,20 @@ async function loadListings(){
         <td>${l.catName}</td>
         <td class="num">${money(l.price)}/day</td>
         <td>${statusBadgeListing(l.status)}</td>
-        <td class="num">—</td>
-        <td class="num">—</td>
         <td><div class="tbl-actions"><button class="tbl-icon-btn" disabled title="Editing is coming soon" aria-label="Edit">${icon('edit',{size:15})}</button></div></td>
-      </tr>`).join('') : `<tr><td colspan="7" style="color:var(--ink-faint);padding:20px 0;">No listings yet — click "Add new listing" above.</td></tr>`;
+      </tr>`).join('') : `<tr><td colspan="5"><div class="empty-state" style="padding:40px 24px;"><div class="ic">${icon('list',{size:22})}</div><h3>No listings yet</h3><p>Add your first listing and it'll show up here once it's live.</p></div></td></tr>`;
     document.getElementById('kpiActiveListings').textContent = myListings.filter(l=>l.status==='live').length;
   }catch(e){
-    document.getElementById('listingsTbody').innerHTML = `<tr><td colspan="7" style="color:var(--ink-faint)">${apiErrorMessage(e)}</td></tr>`;
+    document.getElementById('listingsTbody').innerHTML = `<tr><td colspan="5" style="color:var(--ink-faint)">${apiErrorMessage(e)}</td></tr>`;
   }
 }
 
 /* ---- requests (pending request-to-book bookings) ---- */
 function requestRow(r){
   return `<div class="request-row">
-    <div class="p-avatar">${r.renterTag.slice(-2)}</div>
+    <div class="p-avatar">${initials(r.renterName)}</div>
     <div class="r-main">
-      <div class="r-title">${r.renterTag} <span style="color:var(--ink-faint);font-weight:400">wants to book</span> ${r.listingTitle}</div>
+      <div class="r-title">${r.renterName} <span style="color:var(--ink-faint);font-weight:400">wants to book</span> ${r.listingTitle}</div>
       <div class="r-sub">${new Date(r.dateFrom).toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${new Date(r.dateTo).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${money(r.total)}</div>
     </div>
     <div class="r-actions"><button class="pill-btn ghost sm" data-decline="${r.id}">Decline</button><button class="pill-btn green sm" data-approve="${r.id}">Approve</button></div>
@@ -299,10 +347,11 @@ async function loadRequests(){
     myRequests = await Promise.all(data.map(async b=>{
       let listingTitle='A listing';
       try{ const {data:l}=await apiFetch(`/listings/${b.listingId}`,{auth:false}); listingTitle=l.title; }catch(e){}
-      return {id:b.id, listingTitle, dateFrom:b.startsAt.slice(0,10), dateTo:b.endsAt.slice(0,10), total:Math.round(b.totalMinor/100), renterTag:'Renter #'+b.renterId.slice(0,6).toUpperCase()};
+      const renterUser = await getUserCached(b.renterId);
+      return {id:b.id, listingTitle, dateFrom:b.startsAt.slice(0,10), dateTo:b.endsAt.slice(0,10), total:Math.round(b.totalMinor/100), renterName:renterUser.fullName, createdAt:b.createdAt};
     }));
     document.getElementById('overviewRequests').innerHTML = myRequests.slice(0,2).map(r=>requestRow(r)).join('') || `<p style="color:var(--ink-faint);font-size:13.5px;">No pending requests — nice work staying on top of things.</p>`;
-    document.getElementById('requestsList').innerHTML = myRequests.map(r=>requestRow(r)).join('') || `<p style="color:var(--ink-faint);font-size:13.5px;">No pending requests.</p>`;
+    document.getElementById('requestsList').innerHTML = myRequests.map(r=>requestRow(r)).join('') || `<div class="empty-state"><div class="ic">${icon('message',{size:22})}</div><h3>No pending requests</h3><p>New requests to book will show up here the moment a renter sends one.</p></div>`;
     document.querySelectorAll('[data-approve]').forEach(b=>b.addEventListener('click', async ()=>{
       b.disabled=true;
       try{ await apiFetch(`/bookings/${b.dataset.approve}/approve`,{method:'POST'}); await Promise.all([loadRequests(),loadActiveRentals()]); }
@@ -334,9 +383,9 @@ function activeRentalRow(r){
     ? `Due back ${new Date(r.dateTo).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`
     : `${new Date(r.dateFrom).toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${new Date(r.dateTo).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`;
   return `<div class="request-row">
-    <div class="p-avatar">${r.renterTag.slice(-2)}</div>
+    <div class="p-avatar">${initials(r.renterName)}</div>
     <div class="r-main">
-      <div class="r-title">${r.title} <span style="color:var(--ink-faint);font-weight:400">— ${r.renterTag}</span></div>
+      <div class="r-title">${r.title} <span style="color:var(--ink-faint);font-weight:400">— ${r.renterName}</span></div>
       <div class="r-sub">${due} · Deposit ${money(r.deposit)} held</div>
     </div>
     <span class="badge ${s.cls}" style="margin-right:8px;">${s.label}</span>
@@ -350,7 +399,8 @@ async function loadActiveRentals(){
     myActiveRentals = await Promise.all(relevant.map(async b=>{
       let title='A listing';
       try{ const {data:l}=await apiFetch(`/listings/${b.listingId}`,{auth:false}); title=l.title; }catch(e){}
-      return {id:b.id, stage:b.stage, title, dateFrom:b.startsAt.slice(0,10), dateTo:b.endsAt.slice(0,10), deposit:Math.round((b.depositMinor||0)/100), renterTag:'Renter #'+b.renterId.slice(0,6).toUpperCase()};
+      const renterUser = await getUserCached(b.renterId);
+      return {id:b.id, stage:b.stage, title, dateFrom:b.startsAt.slice(0,10), dateTo:b.endsAt.slice(0,10), deposit:Math.round((b.depositMinor||0)/100), renterName:renterUser.fullName, updatedAt:b.updatedAt};
     }));
     const list=document.getElementById('activeRentalsList'), empty=document.getElementById('activeRentalsEmpty');
     if(myActiveRentals.length===0){ list.innerHTML=''; empty.style.display='block'; }
@@ -369,19 +419,143 @@ async function loadActiveRentals(){
 }
 
 /* ---- earnings: honest "gross bookings value" only — no real commission/payout tracking yet ---- */
+let earningsBookings=[]; // {listingId, startsAt, totalMinor} — lifted here so Insights/Reports can reuse it, no extra fetch
 async function loadEarnings(){
   try{
     const [{data:confirmed},{data:completed}] = await Promise.all([
       apiFetch('/bookings?role=provider&status=confirmed&limit=100'),
       apiFetch('/bookings?role=provider&status=completed&limit=100'),
     ]);
-    const grossStr = money2([...confirmed,...completed].reduce((sum,b)=>sum+b.totalMinor,0));
+    earningsBookings = [...confirmed,...completed].map(b=>({listingId:b.listingId, startsAt:b.startsAt, totalMinor:b.totalMinor}));
+    const grossStr = money2(earningsBookings.reduce((sum,b)=>sum+b.totalMinor,0));
     document.getElementById('kpiGross').textContent = grossStr;
     document.getElementById('kpiGross2').textContent = grossStr;
   }catch(e){
     document.getElementById('kpiGross').textContent='—';
     document.getElementById('kpiGross2').textContent='—';
   }
+}
+
+/* ---- personalization, insights, quick actions, activity, reports — all computed
+   client-side from data the loaders above already fetched, no new calls ---- */
+function daysAgo(dateStr){ return Math.floor((Date.now()-new Date(dateStr).getTime())/86400000); }
+function relativeTime(dateStr){
+  if(!dateStr) return '';
+  const d=daysAgo(dateStr);
+  if(d<=0) return 'today';
+  if(d===1) return 'yesterday';
+  if(d<7) return d+' days ago';
+  return new Date(dateStr).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+function statusLabel(s){
+  return {live:'Live',paused:'Paused',draft:'Draft',pending_review:'In review',rejected:'Rejected'}[s]||s;
+}
+function listingStatusPhrase(s){
+  return {live:'live',paused:'paused',draft:'still a draft',pending_review:'awaiting review',rejected:'rejected'}[s]||s;
+}
+
+function renderWelcome(){
+  const displayName = myProvider.businessName || session.user.fullName;
+  const firstName = displayName.split(' ')[0];
+  document.getElementById('avatarBtn').textContent = initials(displayName);
+  document.querySelector('#avatarDropdown .n').textContent = displayName;
+  document.querySelector('#avatarDropdown .e').textContent = 'Provider account';
+
+  const liveCount = myListings.filter(l=>l.status==='live').length;
+  const isPower = liveCount>=5 || earningsBookings.length>=10;
+  let greeting, subtitle;
+  if(myListings.length===0){
+    greeting = 'Welcome to Rently, '+firstName;
+    subtitle = "Let's get your first listing live — it usually takes just a few minutes.";
+  }else{
+    greeting = 'Good day, '+firstName;
+    subtitle = isPower ? "Here's what's moving today." : "Here's how your listings are performing.";
+  }
+  if(session.user.lastLoginAt){
+    const d = daysAgo(session.user.lastLoginAt);
+    if(d>=1) subtitle += ` Welcome back — last seen ${d===1?'yesterday':d+' days ago'}.`;
+  }
+  document.getElementById('overviewGreeting').textContent = greeting;
+  document.getElementById('overviewSubtitle').textContent = subtitle;
+}
+
+function renderStatusBreakdown(){
+  const always=['live','pending_review','paused','draft'];
+  const counts = always.map(k=>({key:k,label:statusLabel(k),count:myListings.filter(l=>l.status===k).length}));
+  const rejected = myListings.filter(l=>l.status==='rejected').length;
+  if(rejected>0) counts.push({key:'rejected',label:'Rejected',count:rejected});
+  document.getElementById('statusBreakdownRow').innerHTML = counts.map(c=>`<div class="kpi"><div class="lbl">${c.label}</div><div class="val">${c.count}</div></div>`).join('');
+}
+
+function renderInsights(){
+  const insights=[];
+  if(myRequests.length){
+    const oldest = myRequests.reduce((a,b)=> new Date(a.createdAt) < new Date(b.createdAt) ? a : b);
+    const d = daysAgo(oldest.createdAt);
+    if(d>=1){
+      insights.push({icon:'clock',cls:'warning',text:`Your oldest pending request — ${oldest.renterName} for "${oldest.listingTitle}" — has been waiting ${d} day${d===1?'':'s'}.`});
+    }
+  }
+  myListings.filter(l=>l.status==='live').forEach(l=>{
+    const bookings = earningsBookings.filter(b=>b.listingId===l.id);
+    const lastDate = bookings.length
+      ? new Date(Math.max(...bookings.map(b=>new Date(b.startsAt).getTime())))
+      : (l.createdAt ? new Date(l.createdAt) : null);
+    if(lastDate){
+      const d = Math.floor((Date.now()-lastDate.getTime())/86400000);
+      if(d>=14) insights.push({icon:'alert',cls:'info',text:`"${l.title}" hasn't had a booking in ${d} days.`});
+    }
+  });
+  const section=document.getElementById('insightsSection');
+  if(!insights.length){ section.style.display='none'; return; }
+  section.style.display='block';
+  document.getElementById('insightsList').innerHTML = insights.slice(0,4).map(i=>
+    `<div class="banner ${i.cls}" style="margin-bottom:10px;">${icon(i.icon,{size:16})}<div><div class="d">${i.text}</div></div></div>`
+  ).join('');
+}
+
+function renderQuickActions(){
+  const actions=[{label:'Add listing',ic:'plus',cls:'green',handler:openModal}];
+  if(myRequests.length>0) actions.push({label:`Respond to ${myRequests.length} request${myRequests.length===1?'':'s'}`,ic:'message',cls:'ghost',handler:()=>goView('requests')});
+  if(myActiveRentals.length>0) actions.push({label:'Advance an active rental',ic:'clock',cls:'ghost',handler:()=>goView('active')});
+  const el=document.getElementById('quickActions');
+  el.innerHTML = actions.map((a,i)=>`<button class="pill-btn ${a.cls}" data-qa="${i}">${icon(a.ic,{size:15})} ${a.label}</button>`).join('');
+  el.querySelectorAll('[data-qa]').forEach((b,i)=>b.addEventListener('click',actions[i].handler));
+}
+
+function renderRecentActivity(){
+  const items=[];
+  myListings.forEach(l=>items.push({ts:l.updatedAt, text:`"${l.title}" is ${listingStatusPhrase(l.status)}`}));
+  myRequests.forEach(r=>items.push({ts:r.createdAt, text:`New request from ${r.renterName} for "${r.listingTitle}"`}));
+  myActiveRentals.forEach(r=>items.push({ts:r.updatedAt, text:`"${r.title}" — ${(STAGE_ACTION[r.stage]||{}).label||r.stage} (${r.renterName})`}));
+  items.sort((a,b)=> new Date(b.ts||0) - new Date(a.ts||0));
+  const top = items.slice(0,6);
+  document.getElementById('recentActivityList').innerHTML = top.length ? top.map(i=>
+    `<div class="row-card" style="margin-bottom:10px;"><div class="main"><div class="t">${i.text}</div><div class="s">${relativeTime(i.ts)}</div></div></div>`
+  ).join('') : `<p style="color:var(--ink-faint);font-size:13.5px;">No activity yet — it'll show up here once you have listings or bookings.</p>`;
+}
+
+function renderReports(){
+  const byMonth={};
+  earningsBookings.forEach(b=>{
+    const d=new Date(b.startsAt);
+    const key=d.toLocaleDateString('en-US',{month:'short',year:'2-digit'});
+    if(!byMonth[key]) byMonth[key]={count:0,total:0,sortKey:d.getFullYear()*12+d.getMonth()};
+    byMonth[key].count++; byMonth[key].total+=b.totalMinor;
+  });
+  const monthRows = Object.entries(byMonth).map(([label,v])=>({label,...v})).sort((a,b)=>a.sortKey-b.sortKey);
+  renderBarChart('earningsChart', monthRows.map(m=>({label:m.label,value:m.total})), {formatValue:money2, color:'var(--green)'});
+  document.getElementById('earningsReportTbody').innerHTML = monthRows.length ? monthRows.map(m=>
+    `<tr><td>${m.label}</td><td class="num">${m.count}</td><td class="num">${money2(m.total)}</td></tr>`
+  ).join('') : `<tr><td colspan="3" style="color:var(--ink-faint)">No earnings yet.</td></tr>`;
+
+  const buckets=['live','pending_review','paused','draft','rejected'];
+  const total = myListings.length || 1;
+  const statusRows = buckets.map(s=>({label:statusLabel(s),count:myListings.filter(l=>l.status===s).length})).filter(r=>r.count>0);
+  renderBarChart('listingsStatusChart', statusRows.map(r=>({label:r.label,value:r.count})), {horizontal:true, color:'var(--blue)'});
+  document.getElementById('listingsStatusReportTbody').innerHTML = statusRows.length ? statusRows.map(r=>
+    `<tr><td>${r.label}</td><td class="num">${r.count}</td><td class="num">${Math.round(r.count/total*100)}%</td></tr>`
+  ).join('') : `<tr><td colspan="3" style="color:var(--ink-faint)">No listings yet.</td></tr>`;
 }
 
 /* ---- add listing modal ---- */
@@ -469,11 +643,6 @@ document.getElementById('submitListingBtn').addEventListener('click', async ()=>
     }
   }
 
-  const displayName = myProvider.businessName || session.user.fullName;
-  document.getElementById('overviewGreeting').textContent = 'Good day, '+displayName.split(' ')[0];
-  document.getElementById('avatarBtn').textContent = initials(displayName);
-  document.querySelector('#avatarDropdown .n').textContent = displayName;
-  document.querySelector('#avatarDropdown .e').textContent = 'Provider account';
   document.getElementById('kpiRating').textContent = myProvider.avgRating>0 ? myProvider.avgRating : 'New';
 
   document.getElementById('settingsBusinessName').value = myProvider.businessName || '';
@@ -486,6 +655,12 @@ document.getElementById('submitListingBtn').addEventListener('click', async ()=>
   document.getElementById('editingComingSoon').innerHTML = icon('info',{size:16})+`<div><div class="t">Profile editing is coming soon</div><div class="d">Business name, bio and payout account setup aren't wired up yet.</div></div>`;
 
   await Promise.all([loadListings(), loadRequests(), loadActiveRentals(), loadEarnings()]);
+  renderWelcome();
+  renderStatusBreakdown();
+  renderInsights();
+  renderQuickActions();
+  renderRecentActivity();
+  renderReports();
 })();
 </script>
 </body>

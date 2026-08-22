@@ -220,6 +220,17 @@ async function getProviderCached(providerId) {
   return promise;
 }
 
+const _userCache = new Map();
+/** Resolves a real display name for a raw user id (e.g. a booking's renterId) via the public GET /users/:id — never shows a raw UUID to the viewer, even on failure. */
+async function getUserCached(userId) {
+  if (_userCache.has(userId)) return _userCache.get(userId);
+  const promise = apiFetch(`/users/${userId}`, { auth: false })
+    .then(({ data: u }) => ({ id: u.id, fullName: u.fullName }))
+    .catch(() => ({ id: userId, fullName: 'Renter #' + userId.slice(0, 6).toUpperCase() }));
+  _userCache.set(userId, promise);
+  return promise;
+}
+
 async function mapListing(l, categoryById) {
   const cat = categoryById.get(l.categoryId);
   const provider = await getProviderCached(l.providerId);
