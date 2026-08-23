@@ -36,4 +36,8 @@ export const validationSchema = Joi.object({
   STORAGE_ACCESS_KEY: Joi.string().required(),
   STORAGE_SECRET_KEY: Joi.string().required(),
   STORAGE_REGION: Joi.string().default('auto'),
+
+  // Optional — omitted means ConsoleEmailSender (log-only) stays active.
+  RESEND_API_KEY: Joi.string().optional(),
+  EMAIL_FROM: Joi.string().optional(),
 });

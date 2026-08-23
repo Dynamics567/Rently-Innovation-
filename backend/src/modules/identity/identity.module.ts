@@ -3,7 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthConfig } from '@config/configuration';
+import { AuthConfig, EmailConfig } from '@config/configuration';
 
 import { User } from './entities/user.entity';
 import { ProviderProfile } from './entities/provider-profile.entity';
@@ -22,6 +22,7 @@ import { UsersService } from './services/users.service';
 import { ProviderProfileService } from './services/provider-profile.service';
 import { ConsoleSmsSender, SMS_SENDER } from './services/sms-sender.port';
 import { ConsoleEmailSender, EMAIL_SENDER } from './services/email-sender.port';
+import { ResendEmailSender } from './services/resend-email-sender';
 
 import { AuthController } from './controllers/auth.controller';
 import { UsersController } from './controllers/users.controller';
@@ -78,7 +79,14 @@ import { IsSelfOrAdminPolicy } from './policies/is-self-or-admin.policy';
     JwtStrategy,
     IsSelfOrAdminPolicy,
     { provide: SMS_SENDER, useClass: ConsoleSmsSender },
-    { provide: EMAIL_SENDER, useClass: ConsoleEmailSender },
+    {
+      provide: EMAIL_SENDER,
+      useFactory: (configService: ConfigService) => {
+        const email = configService.get<EmailConfig>('email')!;
+        return email.resendApiKey ? new ResendEmailSender(email) : new ConsoleEmailSender();
+      },
+      inject: [ConfigService],
+    },
   ],
   exports: [AuthService, UsersService, ProviderProfileService],
 })

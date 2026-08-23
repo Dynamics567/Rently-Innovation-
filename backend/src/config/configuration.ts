@@ -40,6 +40,11 @@ export interface StorageConfig {
   region: string;
 }
 
+export interface EmailConfig {
+  resendApiKey?: string;
+  from: string;
+}
+
 export default () => ({
   app: {
     env: process.env.NODE_ENV ?? 'development',
@@ -81,4 +86,13 @@ export default () => ({
     secretKey: process.env.STORAGE_SECRET_KEY,
     region: process.env.STORAGE_REGION ?? 'auto',
   } as StorageConfig,
+  email: {
+    // Optional — unset means no real provider is configured yet, and
+    // IdentityModule falls back to ConsoleEmailSender (see identity.module.ts).
+    resendApiKey: process.env.RESEND_API_KEY,
+    // Resend's built-in sandbox sender — works with zero setup, but only
+    // this exact address, until a custom domain is verified in Resend and
+    // EMAIL_FROM is set to something like "Rently <noreply@rentlyhub.com.ng>".
+    from: process.env.EMAIL_FROM ?? 'Rently <onboarding@resend.dev>',
+  } as EmailConfig,
 });

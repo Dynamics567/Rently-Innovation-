@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { randomBytes, createHash } from 'crypto';
@@ -21,6 +21,8 @@ const PASSWORD_RESET_TTL_MINUTES = 30;
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly userRepository: UserRepository,
     private readonly passwordResetTokenRepository: PasswordResetTokenRepository,
@@ -144,11 +146,20 @@ export class AuthService {
 
     const frontendUrl = this.configService.get<AppConfig>('app')!.frontendUrl;
     const resetLink = `${frontendUrl}/auth?resetToken=${rawToken}`;
-    await this.emailSender.send(
-      email,
-      'Reset your Rently password',
-      `We received a request to reset your password. This link expires in ${PASSWORD_RESET_TTL_MINUTES} minutes:\n\n${resetLink}\n\nIf you didn't request this, you can ignore this email.`,
-    );
+    // Caught, not awaited-and-thrown: a delivery failure (provider outage,
+    // rate limit, misconfiguration) must never surface to the caller as a
+    // 500 — that would both break the constant-response guarantee above and
+    // needlessly scare a real user off a real reset attempt. The token is
+    // already saved either way; worst case they retry.
+    try {
+      await this.emailSender.send(
+        email,
+        'Reset your Rently password',
+        `We received a request to reset your password. This link expires in ${PASSWORD_RESET_TTL_MINUTES} minutes:\n\n${resetLink}\n\nIf you didn't request this, you can ignore this email.`,
+      );
+    } catch (err) {
+      this.logger.error(`Failed to send password reset email to ${email}: ${(err as Error).message}`);
+    }
   }
 
   /**
