@@ -17,10 +17,6 @@ body{padding-top:0;}
 .d-view.active{display:block;animation:fadeUp .35s var(--ease);}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 .admin-badge{display:inline-flex;align-items:center;gap:5px;background:var(--dark);color:var(--dark-ink);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:999px;margin-left:10px;}
-.kpi-row-6{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;}
-@media(max-width:1180px){.kpi-row-6{grid-template-columns:repeat(3,1fr);}}
-@media(max-width:640px){.kpi-row-6{grid-template-columns:repeat(2,1fr);}}
-.kpi .val{font-size:24px;}
 .queue-row{display:flex;gap:14px;align-items:center;padding:16px;border:1px solid var(--line);border-radius:14px;margin-bottom:12px;}
 .queue-row .q-main{flex:1;min-width:0;}
 .queue-row .q-title{font-size:13.5px;font-weight:600;}
@@ -52,6 +48,7 @@ body{padding-top:0;}
   <a class="side-link" data-view="bookings" id="mLinkBookings"></a>
   <a class="side-link" data-view="disputes" id="mLinkDisputes"></a>
   <a class="side-link" data-view="verification" id="mLinkVerification"></a>
+  <a class="side-link" data-view="reports" id="mLinkReports"></a>
   <a class="side-link" data-view="team" id="mLinkTeam" style="display:none;"></a>
 </div>
 
@@ -63,6 +60,7 @@ body{padding-top:0;}
     <a class="side-link" data-view="bookings" id="linkBookings"></a>
     <a class="side-link" data-view="disputes" id="linkDisputes"></a>
     <a class="side-link" data-view="verification" id="linkVerification"></a>
+    <a class="side-link" data-view="reports" id="linkReports"></a>
     <a class="side-link" data-view="team" id="linkTeam" style="display:none;"></a>
     <div class="side-group-lbl">Exit</div>
     <a class="side-link" href="homepage" id="linkExit"></a>
@@ -71,31 +69,50 @@ body{padding-top:0;}
   <main class="app-main">
     <!-- ============ OVERVIEW ============ -->
     <div class="d-view active" id="view-overview">
-      <div class="app-head"><div><h1>Platform overview</h1><p>Rently-wide health, at a glance — not scoped to any one provider.</p></div></div>
-      <div class="kpi-row-6" style="margin-bottom:40px;">
-        <div class="kpi"><div class="lbl">Total bookings</div><div class="val" id="statBookings"></div></div>
-        <div class="kpi"><div class="lbl">GMV this month</div><div class="val" id="statGmv"></div></div>
-        <div class="kpi"><div class="lbl">Active rentals</div><div class="val" id="statActive"></div></div>
-        <div class="kpi"><div class="lbl">Open disputes</div><div class="val" id="statDisputes"></div></div>
-        <div class="kpi"><div class="lbl">Pending verification</div><div class="val" id="statVerif"></div></div>
-        <div class="kpi"><div class="lbl">Avg. rating</div><div class="val" id="statRating"></div></div>
+      <div class="app-head"><div><h1 id="overviewGreeting">Platform overview</h1><p id="overviewSubtitle">Rently-wide health, at a glance — not scoped to any one provider.</p></div></div>
+
+      <div class="kpi-row" style="margin-bottom:24px;">
+        <div class="kpi"><div class="lbl">Pending listings</div><div class="val" id="statListings">—</div></div>
+        <div class="kpi"><div class="lbl">Pending verifications</div><div class="val" id="statVerif">—</div></div>
+        <div class="kpi"><div class="lbl">Waiting &gt;24h</div><div class="val" id="statOverdue">—</div></div>
+      </div>
+
+      <div class="banner info" style="margin-bottom:40px;"><div><div class="t">Not available yet</div><div class="d">Total bookings, GMV and open disputes need the Admin analytics and Trust &amp; Safety modules, which haven't been built yet.</div></div></div>
+
+      <div class="section-block">
+        <div class="sb-head"><h3>Queue composition</h3></div>
+        <div style="display:flex;gap:36px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:220px;">
+            <div style="font-size:12px;color:var(--ink-faint);font-weight:600;margin-bottom:12px;">Verification by type</div>
+            <div id="verifTypeChart"></div>
+          </div>
+          <div style="flex:1;min-width:220px;">
+            <div style="font-size:12px;color:var(--ink-faint);font-weight:600;margin-bottom:12px;">Listings by category</div>
+            <div id="listingCatChart"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-block" id="insightsSection" style="display:none;">
+        <div class="sb-head"><h3>Insights</h3></div>
+        <div id="insightsList"></div>
       </div>
 
       <div class="section-block">
-        <div class="sb-head"><h3>Needs attention</h3></div>
-        <div class="banner warning" id="attentionBanner"></div>
+        <div class="sb-head"><h3>Quick actions</h3></div>
+        <div id="quickActions" style="display:flex;gap:12px;flex-wrap:wrap;"></div>
       </div>
 
       <div class="section-block">
-        <div class="sb-head"><h3>Recent bookings across the platform</h3></div>
-        <div class="banner info"><div><div class="t">Not available yet</div><div class="d">A platform-wide bookings view needs the Admin module, which hasn't been built yet.</div></div></div>
+        <div class="sb-head"><h3>Recently submitted</h3></div>
+        <div id="recentSubmittedList"><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
       </div>
     </div>
 
     <!-- ============ LISTINGS MODERATION ============ -->
     <div class="d-view" id="view-listings">
       <div class="app-head"><div><h1>Listings moderation</h1><p>New listings wait here after a provider submits them, until approved or rejected.</p></div></div>
-      <div id="moderationList"></div>
+      <div id="moderationList"><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
     </div>
 
     <!-- ============ BOOKINGS ============ -->
@@ -113,7 +130,35 @@ body{padding-top:0;}
     <!-- ============ VERIFICATION ============ -->
     <div class="d-view" id="view-verification">
       <div class="app-head"><div><h1>Provider verification queue</h1><p>New providers can't publish a listing until their ID or business registration is approved.</p></div></div>
-      <div id="verificationList"></div>
+      <div id="verificationList"><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
+    </div>
+
+    <!-- ============ REPORTS ============ -->
+    <div class="d-view" id="view-reports">
+      <div class="app-head"><div><h1>Reports</h1><p>Built from the two live queues — no fabricated numbers.</p></div></div>
+      <div class="banner info" style="margin-bottom:28px;"><div><div class="t">Point-in-time snapshot</div><div class="d">This reflects the queues right now, not historical trends — approval/rejection history isn't tracked yet.</div></div></div>
+
+      <div class="section-block">
+        <div class="sb-head"><h3>Listings moderation queue by category</h3></div>
+        <div id="reportListingCatChart" style="margin-bottom:20px;"></div>
+        <div class="dtable-wrap">
+          <table class="dtable">
+            <thead><tr><th>Category</th><th>Count</th></tr></thead>
+            <tbody id="reportListingCatTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section-block">
+        <div class="sb-head"><h3>Verification queue by type</h3></div>
+        <div id="reportVerifTypeChart" style="margin-bottom:20px;"></div>
+        <div class="dtable-wrap">
+          <table class="dtable">
+            <thead><tr><th>Type</th><th>Count</th></tr></thead>
+            <tbody id="reportVerifTypeTbody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- ============ TEAM & ACCESS (super admin only) ============ -->
@@ -143,12 +188,14 @@ document.getElementById('linkListings').innerHTML = icon('grid',{size:17})+' Lis
 document.getElementById('linkBookings').innerHTML = icon('calendar',{size:17})+' All Bookings';
 document.getElementById('linkDisputes').innerHTML = icon('alert',{size:17})+' Disputes';
 document.getElementById('linkVerification').innerHTML = icon('shield',{size:17})+' Verification';
+document.getElementById('linkReports').innerHTML = icon('filter',{size:17})+' Reports';
 document.getElementById('linkExit').innerHTML = icon('logout',{size:17})+' Exit to site';
 document.getElementById('mLinkOverview').innerHTML = icon('grid',{size:16})+' Overview';
 document.getElementById('mLinkListings').innerHTML = icon('grid',{size:16})+' Listings';
 document.getElementById('mLinkBookings').innerHTML = icon('calendar',{size:16})+' Bookings';
 document.getElementById('mLinkDisputes').innerHTML = icon('alert',{size:16})+' Disputes';
 document.getElementById('mLinkVerification').innerHTML = icon('shield',{size:16})+' Verify';
+document.getElementById('mLinkReports').innerHTML = icon('filter',{size:16})+' Reports';
 document.getElementById('linkTeam').innerHTML = icon('user',{size:17})+' Team & Access';
 document.getElementById('mLinkTeam').innerHTML = icon('user',{size:16})+' Team';
 
@@ -168,32 +215,102 @@ function goView(v){
 document.querySelectorAll('.side-link[data-view]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goView(l.dataset.view);}));
 document.querySelectorAll('[data-view-link]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goView(l.dataset.viewLink);}));
 
-/* ---- overview stats — only pending-verification count is real; the rest need the
-   Admin/Trust & Safety modules, which haven't been built yet ---- */
-document.getElementById('statBookings').textContent = '—';
-document.getElementById('statGmv').textContent = '—';
-document.getElementById('statActive').textContent = '—';
-document.getElementById('statDisputes').textContent = '—';
-document.getElementById('statRating').textContent = '—';
+/* ---- welcome + personalization (from the real lastLoginAt field) ---- */
+function daysAgo(dateStr){ return Math.floor((Date.now()-new Date(dateStr).getTime())/86400000); }
+function relativeTime(dateStr){
+  if(!dateStr) return '';
+  const d=daysAgo(dateStr);
+  if(d<=0) return 'today';
+  if(d===1) return 'yesterday';
+  if(d<7) return d+' days ago';
+  return new Date(dateStr).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+function renderWelcome(){
+  const firstName = (session.user.fullName||'').split(' ')[0];
+  document.getElementById('overviewGreeting').textContent = 'Welcome, '+firstName;
+  let subtitle = 'Rently-wide health, at a glance — not scoped to any one provider.';
+  if(session.user.lastLoginAt){
+    const d = daysAgo(session.user.lastLoginAt);
+    if(d>=1) subtitle += ` Last seen ${d===1?'yesterday':d+' days ago'}.`;
+  }
+  document.getElementById('overviewSubtitle').textContent = subtitle;
+}
 
-/* ---- "Needs attention" banner combines both real queues (verification + listings) ---- */
+/* ---- overview KPIs, queue composition, insights, quick actions, recently
+   submitted, and Reports — all computed client-side from the two real
+   queues fetched by renderModeration()/renderVerification() below ---- */
 const pendingCounts = { verification: 0, listings: 0 };
-function renderAttentionBanner(){
-  const total = pendingCounts.verification + pendingCounts.listings;
-  const parts = [];
-  if(pendingCounts.verification) parts.push(`${pendingCounts.verification} provider${pendingCounts.verification===1?'':'s'} waiting on verification`);
-  if(pendingCounts.listings) parts.push(`${pendingCounts.listings} listing${pendingCounts.listings===1?'':'s'} waiting on review`);
-  document.getElementById('attentionBanner').innerHTML = total===0
-    ? icon('check',{size:16})+`<div><div class="t">Nothing needs attention right now</div><div class="d">No pending provider verifications or listing reviews.</div></div>`
-    : icon('alert',{size:16})+`<div><div class="t">${parts.join(' · ')}</div><div class="d">Items older than 24 hours risk breaching Rently's response-time SLA.</div></div>`;
+let moderationQueue=[], verificationQueue=[];
+async function renderOverviewExtras(){
+  document.getElementById('statListings').textContent = pendingCounts.listings;
+  document.getElementById('statVerif').textContent = pendingCounts.verification;
+
+  const overdueListings = moderationQueue.filter(l=>daysAgo(l.createdAt)>=1);
+  const overdueVerifs = verificationQueue.filter(v=>daysAgo(v.createdAt)>=1);
+  document.getElementById('statOverdue').textContent = overdueListings.length + overdueVerifs.length;
+
+  const categoryById = await getCategoryMapById().catch(()=>new Map());
+  const catCounts = {};
+  moderationQueue.forEach(l=>{
+    const name = (categoryById.get(l.categoryId)||{}).name || 'Uncategorized';
+    catCounts[name] = (catCounts[name]||0)+1;
+  });
+  const catRows = Object.entries(catCounts).map(([label,count])=>({label,count}));
+  const verifTypeRows = [
+    {label:'Business', count:verificationQueue.filter(v=>v.businessRegistrationNo).length},
+    {label:'Individual', count:verificationQueue.filter(v=>!v.businessRegistrationNo).length},
+  ].filter(r=>r.count>0);
+
+  renderBarChart('listingCatChart', catRows.map(r=>({label:r.label,value:r.count})), {horizontal:true, color:'var(--green)'});
+  renderBarChart('verifTypeChart', verifTypeRows.map(r=>({label:r.label,value:r.count})), {horizontal:true, color:'var(--blue)'});
+  renderBarChart('reportListingCatChart', catRows.map(r=>({label:r.label,value:r.count})), {horizontal:true, color:'var(--green)'});
+  renderBarChart('reportVerifTypeChart', verifTypeRows.map(r=>({label:r.label,value:r.count})), {horizontal:true, color:'var(--blue)'});
+  document.getElementById('reportListingCatTbody').innerHTML = catRows.length ? catRows.map(r=>
+    `<tr><td>${r.label}</td><td class="num">${r.count}</td></tr>`
+  ).join('') : `<tr><td colspan="2" style="color:var(--ink-faint)">No listings pending review.</td></tr>`;
+  document.getElementById('reportVerifTypeTbody').innerHTML = verifTypeRows.length ? verifTypeRows.map(r=>
+    `<tr><td>${r.label}</td><td class="num">${r.count}</td></tr>`
+  ).join('') : `<tr><td colspan="2" style="color:var(--ink-faint)">No providers pending verification.</td></tr>`;
+
+  const insights=[];
+  if(overdueListings.length) insights.push(`${overdueListings.length} listing${overdueListings.length===1?'':'s'} ${overdueListings.length===1?'has':'have'} waited more than 24 hours for review.`);
+  if(overdueVerifs.length) insights.push(`${overdueVerifs.length} provider verification${overdueVerifs.length===1?'':'s'} ${overdueVerifs.length===1?'has':'have'} waited more than 24 hours.`);
+  const section=document.getElementById('insightsSection');
+  if(!insights.length){ section.style.display='none'; }
+  else{
+    section.style.display='block';
+    document.getElementById('insightsList').innerHTML = insights.map(text=>
+      `<div class="banner warning" style="margin-bottom:10px;">${icon('alert',{size:16})}<div><div class="d">${text}</div></div></div>`
+    ).join('');
+  }
+
+  const actions=[];
+  if(moderationQueue.length) actions.push({label:`Review ${moderationQueue.length} pending listing${moderationQueue.length===1?'':'s'}`,ic:'grid',cls:'green',handler:()=>goView('listings')});
+  if(verificationQueue.length) actions.push({label:`Review ${verificationQueue.length} pending verification${verificationQueue.length===1?'':'s'}`,ic:'shield',cls:'green',handler:()=>goView('verification')});
+  if(session.user.roles.includes('super_admin')) actions.push({label:'Team & Access',ic:'user',cls:'ghost',handler:()=>goView('team')});
+  const qa=document.getElementById('quickActions');
+  if(!actions.length){
+    qa.innerHTML = `<p style="color:var(--ink-faint);font-size:13.5px;">Nothing needs your attention right now.</p>`;
+  }else{
+    qa.innerHTML = actions.map((a,i)=>`<button class="pill-btn ${a.cls}" data-qa="${i}">${icon(a.ic,{size:15})} ${a.label}</button>`).join('');
+    qa.querySelectorAll('[data-qa]').forEach((b,i)=>b.addEventListener('click',actions[i].handler));
+  }
+
+  const submitted = [
+    ...moderationQueue.map(l=>({ts:l.createdAt, text:`"${l.title}" submitted for review`})),
+    ...verificationQueue.map(v=>({ts:v.createdAt, text:`${v.businessName||(v.user?v.user.fullName:'A provider')} submitted for verification`})),
+  ].sort((a,b)=>new Date(b.ts||0)-new Date(a.ts||0)).slice(0,6);
+  document.getElementById('recentSubmittedList').innerHTML = submitted.length ? submitted.map(i=>
+    `<div class="row-card" style="margin-bottom:10px;"><div class="main"><div class="t">${i.text}</div><div class="s">${relativeTime(i.ts)}</div></div></div>`
+  ).join('') : `<p style="color:var(--ink-faint);font-size:13.5px;">Nothing submitted recently.</p>`;
 }
 
 /* ---- listings moderation queue (real) ---- */
 async function renderModeration(){
   try{
     const {data} = await apiFetch('/admin/listings/moderation-queue');
+    moderationQueue = data;
     pendingCounts.listings = data.length;
-    renderAttentionBanner();
     const categoryById = await getCategoryMapById().catch(()=>new Map());
     document.getElementById('moderationList').innerHTML = data.length===0
       ? `<p style="color:var(--ink-faint);font-size:13.5px;">No listings waiting on review.</p>`
@@ -225,6 +342,7 @@ async function renderModeration(){
   }catch(e){
     document.getElementById('moderationList').innerHTML = `<p style="color:var(--ink-faint)">${apiErrorMessage(e)}</p>`;
   }
+  renderOverviewExtras();
 }
 
 /* ---- verification queue (real) ---- */
@@ -233,9 +351,8 @@ function docsOf(v){ return (v.verificationDocuments||[]).length ? v.verification
 async function renderVerification(){
   try{
     const {data} = await apiFetch('/admin/providers/verification-queue');
-    document.getElementById('statVerif').textContent = data.length;
+    verificationQueue = data;
     pendingCounts.verification = data.length;
-    renderAttentionBanner();
     document.getElementById('verificationList').innerHTML = data.length===0
       ? `<p style="color:var(--ink-faint);font-size:13.5px;">No providers waiting on verification.</p>`
       : data.map(v=>`
@@ -264,6 +381,7 @@ async function renderVerification(){
   }catch(e){
     document.getElementById('verificationList').innerHTML = `<p style="color:var(--ink-faint)">${apiErrorMessage(e)}</p>`;
   }
+  renderOverviewExtras();
 }
 /* ---- team & access: look up a user by email, edit their roles (super admin only) ---- */
 const ROLE_OPTIONS = ['provider','provider_staff','admin','super_admin'];
@@ -326,7 +444,7 @@ document.getElementById('teamSearchBtn').addEventListener('click', async ()=>{
 });
 document.getElementById('teamEmailInput').addEventListener('keydown',(e)=>{ if(e.key==='Enter') document.getElementById('teamSearchBtn').click(); });
 
-if(session){ renderVerification(); renderModeration(); }
+if(session){ renderWelcome(); renderVerification(); renderModeration(); }
 </script>
 </body>
 </html>
