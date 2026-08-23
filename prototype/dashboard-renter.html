@@ -17,6 +17,10 @@ body{padding-top:0;}
 .d-view.active{display:block;animation:fadeUp .35s var(--ease);}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
 
+.section-block{margin-bottom:44px;}
+.section-block .sb-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+.section-block .sb-head h3{font-size:16px;font-weight:600;font-family:var(--sans);}
+
 .booking-row .badge{margin-left:10px;}
 .msg-row{display:flex;gap:14px;align-items:center;padding:16px;border-radius:14px;transition:.15s;cursor:pointer;}
 .msg-row:hover{background:var(--bg-alt);}
@@ -61,9 +65,11 @@ body{padding-top:0;}
 </nav>
 
 <div class="mobile-tabbar">
-  <a class="side-link active" data-view="bookings" id="mLinkBookings"></a>
+  <a class="side-link active" data-view="overview" id="mLinkOverview"></a>
+  <a class="side-link" data-view="bookings" id="mLinkBookings"></a>
   <a class="side-link" data-view="favorites" id="mLinkFavorites"></a>
   <a class="side-link" data-view="messages" id="mLinkMessages"></a>
+  <a class="side-link" data-view="reports" id="mLinkReports"></a>
   <a class="side-link" data-view="settings" id="mLinkSettings"></a>
   <a class="side-link" href="dashboard-provider" id="mLinkProviderSwitch"></a>
 </div>
@@ -71,17 +77,55 @@ body{padding-top:0;}
 <div class="app-shell">
   <aside class="app-side">
     <div class="side-group-lbl">Renter</div>
-    <a class="side-link active" data-view="bookings" id="linkBookings"></a>
+    <a class="side-link active" data-view="overview" id="linkOverview"></a>
+    <a class="side-link" data-view="bookings" id="linkBookings"></a>
     <a class="side-link" data-view="favorites" id="linkFavorites"></a>
     <a class="side-link" data-view="messages" id="linkMessages"></a>
+    <a class="side-link" data-view="reports" id="linkReports"></a>
     <a class="side-link" data-view="settings" id="linkSettings"></a>
     <div class="side-group-lbl">Switch role</div>
     <a class="side-link" href="dashboard-provider" id="linkProviderSwitch"></a>
   </aside>
 
   <main class="app-main">
+    <!-- ============ OVERVIEW ============ -->
+    <div class="d-view active" id="view-overview">
+      <div class="app-head">
+        <div><h1 id="overviewGreeting">Welcome back</h1><p id="overviewSubtitle">Here's your booking activity.</p></div>
+        <a class="pill-btn blue" href="browse">Book something new</a>
+      </div>
+
+      <div class="kpi-row" style="margin-bottom:44px;">
+        <div class="kpi"><div class="lbl">Active</div><div class="val" id="kpiActive">—</div></div>
+        <div class="kpi"><div class="lbl">Upcoming</div><div class="val" id="kpiUpcoming">—</div></div>
+        <div class="kpi"><div class="lbl">Completed</div><div class="val" id="kpiCompleted">—</div></div>
+      </div>
+
+      <div class="section-block">
+        <div class="sb-head"><h3>Booking status</h3></div>
+        <div class="kpi-row" id="statusBreakdownRow">
+          <div class="skel skel-kpi"></div><div class="skel skel-kpi"></div><div class="skel skel-kpi"></div><div class="skel skel-kpi"></div>
+        </div>
+      </div>
+
+      <div class="section-block" id="insightsSection" style="display:none;">
+        <div class="sb-head"><h3>Insights for you</h3></div>
+        <div id="insightsList"></div>
+      </div>
+
+      <div class="section-block">
+        <div class="sb-head"><h3>Quick actions</h3></div>
+        <div id="quickActions" style="display:flex;gap:12px;flex-wrap:wrap;"></div>
+      </div>
+
+      <div class="section-block">
+        <div class="sb-head"><h3>Recent activity</h3></div>
+        <div id="recentActivityList"><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
+      </div>
+    </div>
+
     <!-- ============ BOOKINGS ============ -->
-    <div class="d-view active" id="view-bookings">
+    <div class="d-view" id="view-bookings">
       <div class="app-head">
         <div><h1>My bookings</h1><p>Everything you've rented, requested, or completed on Rently.</p></div>
         <a class="pill-btn blue" href="browse">Book something new</a>
@@ -106,6 +150,33 @@ body{padding-top:0;}
     <div class="d-view" id="view-messages">
       <div class="app-head"><div><h1>Messages</h1><p>Conversations with providers about your bookings.</p></div></div>
       <div id="msgList" style="display:flex;flex-direction:column;gap:4px;"></div>
+    </div>
+
+    <!-- ============ REPORTS ============ -->
+    <div class="d-view" id="view-reports">
+      <div class="app-head"><div><h1>Reports</h1><p>Built from your own bookings — no fabricated numbers.</p></div></div>
+      <div class="banner info" style="margin-bottom:28px;"><div><div class="t">Scope note</div><div class="d">Reflects up to 100 most recent bookings.</div></div></div>
+
+      <div class="section-block">
+        <div class="sb-head"><h3>Spending by month</h3></div>
+        <div id="spendingChart" style="margin-bottom:20px;"></div>
+        <div class="dtable-wrap">
+          <table class="dtable">
+            <thead><tr><th>Month</th><th>Bookings</th><th>Total spent</th></tr></thead>
+            <tbody id="spendingReportTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section-block">
+        <div class="sb-head"><h3>Bookings by status</h3></div>
+        <div class="dtable-wrap">
+          <table class="dtable">
+            <thead><tr><th>Status</th><th>Count</th></tr></thead>
+            <tbody id="statusReportTbody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- ============ SETTINGS ============ -->
@@ -148,14 +219,18 @@ document.getElementById('bellBtn').innerHTML = icon('bell',{size:17})+'<span cla
 document.getElementById('ddBookings').innerHTML = icon('calendar',{size:15})+' My bookings';
 document.getElementById('ddSwitch').innerHTML = icon('building',{size:15})+' Switch to Provider';
 document.getElementById('ddLogout').innerHTML = icon('logout',{size:15})+' Log out';
+document.getElementById('linkOverview').innerHTML = icon('grid',{size:17})+' Overview';
 document.getElementById('linkBookings').innerHTML = icon('calendar',{size:17})+' Bookings';
 document.getElementById('linkFavorites').innerHTML = icon('heart',{size:17})+' Favorites';
 document.getElementById('linkMessages').innerHTML = icon('message',{size:17})+' Messages';
+document.getElementById('linkReports').innerHTML = icon('filter',{size:17})+' Reports';
 document.getElementById('linkSettings').innerHTML = icon('settings',{size:17})+' Settings';
 document.getElementById('linkProviderSwitch').innerHTML = icon('building',{size:17})+' Provider dashboard';
+document.getElementById('mLinkOverview').innerHTML = icon('grid',{size:16})+' Overview';
 document.getElementById('mLinkBookings').innerHTML = icon('calendar',{size:16})+' Bookings';
 document.getElementById('mLinkFavorites').innerHTML = icon('heart',{size:16})+' Favorites';
 document.getElementById('mLinkMessages').innerHTML = icon('message',{size:16})+' Messages';
+document.getElementById('mLinkReports').innerHTML = icon('filter',{size:16})+' Reports';
 document.getElementById('mLinkSettings').innerHTML = icon('settings',{size:16})+' Settings';
 document.getElementById('mLinkProviderSwitch').innerHTML = icon('building',{size:16})+' Provider';
 document.getElementById('bookingsEmptyIcon').innerHTML = icon('calendar',{size:22});
@@ -197,12 +272,13 @@ initAvatarMenu();
 initNotifDropdown();
 
 /* ---- sidebar view switching ---- */
-document.querySelectorAll('.side-link[data-view]').forEach(l=>l.addEventListener('click',(e)=>{
-  e.preventDefault();
-  document.querySelectorAll('.side-link[data-view]').forEach(o=>o.classList.toggle('active',o.dataset.view===l.dataset.view));
-  document.querySelectorAll('.d-view').forEach(v=>v.classList.remove('active'));
-  document.getElementById('view-'+l.dataset.view).classList.add('active');
-}));
+function goView(v){
+  document.querySelectorAll('.side-link[data-view]').forEach(o=>o.classList.toggle('active',o.dataset.view===v));
+  document.querySelectorAll('.d-view').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.querySelectorAll('.side-link[data-view]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goView(l.dataset.view);}));
 
 /* ---- bookings (real — GET /bookings?role=renter) ---- */
 const TABS=[['all','All'],['active','Active'],['upcoming','Upcoming'],['pending','Pending'],['completed','Completed'],['cancelled','Cancelled']];
@@ -233,9 +309,15 @@ function renderTabs(){
   document.getElementById('bookingTabs').innerHTML = TABS.map(([k,l])=>`<div class="tab ${activeTab===k?'active':''}" data-t="${k}">${l}</div>`).join('');
   document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{activeTab=t.dataset.t;renderTabs();renderBookings();}));
 }
+let loadFailed=false, loadErrorMsg='';
 function renderBookings(){
-  const list = allBookings.filter(b=>tabMatches(b,activeTab));
   const wrap=document.getElementById('bookingList'), empty=document.getElementById('bookingsEmpty');
+  if(loadFailed){
+    empty.style.display='none';
+    wrap.innerHTML = `<div class="banner danger">${icon('alert',{size:16})}<div><div class="t">Couldn't load your bookings</div><div class="d">${loadErrorMsg}</div></div></div>`;
+    return;
+  }
+  const list = allBookings.filter(b=>tabMatches(b,activeTab));
   if(list.length===0){ wrap.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
   wrap.innerHTML = list.map(b=>`<a class="row-card booking-row" href="booking?id=${b.id}">
@@ -248,7 +330,7 @@ function renderBookings(){
     </a>`).join('');
 }
 
-(async function loadBookings(){
+async function loadBookings(){
   try{
     categoryById = await getCategoryMapById();
     const {data} = await apiFetch('/bookings?role=renter&limit=100');
@@ -264,14 +346,122 @@ function renderBookings(){
       return {...b, listing};
     }));
   }catch(e){
-    document.getElementById('bookingList').innerHTML = `<p style="color:var(--ink-faint)">${apiErrorMessage(e)}</p>`;
+    loadFailed=true; loadErrorMsg=apiErrorMessage(e);
   }
   renderTabs(); renderBookings();
-})();
+}
 
 /* ---- favorites / messages — no backend yet, honest "coming soon" ---- */
-document.getElementById('favGrid').innerHTML = `<p style="color:var(--ink-faint);grid-column:1/-1;">Favorites are coming soon — you'll be able to save listings to compare later.</p>`;
-document.getElementById('msgList').innerHTML = `<p style="color:var(--ink-faint);">Messaging is coming soon — you'll be able to chat with providers here.</p>`;
+document.getElementById('favGrid').innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="ic">${icon('heart',{size:22})}</div><h3>Favorites are coming soon</h3><p>You'll be able to save listings here to compare or book later.</p></div>`;
+document.getElementById('msgList').innerHTML = `<div class="empty-state"><div class="ic">${icon('message',{size:22})}</div><h3>Messaging is coming soon</h3><p>You'll be able to chat with providers about your bookings here.</p></div>`;
+
+/* ---- personalization, insights, quick actions, activity, reports —
+   all computed client-side from allBookings, already fetched above ---- */
+function daysAgo(dateStr){ return Math.floor((Date.now()-new Date(dateStr).getTime())/86400000); }
+function relativeTime(dateStr){
+  if(!dateStr) return '';
+  const d=daysAgo(dateStr);
+  if(d<=0) return 'today';
+  if(d===1) return 'yesterday';
+  if(d<7) return d+' days ago';
+  return new Date(dateStr).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+
+function renderWelcome(){
+  const firstName = (session.user.fullName||'').split(' ')[0];
+  let greeting, subtitle;
+  if(allBookings.length===0){
+    greeting = 'Welcome to Rently, '+firstName;
+    subtitle = 'Find something to rent to get started.';
+  }else{
+    greeting = 'Hi, '+firstName;
+    const activeCount = allBookings.filter(b=>tabMatches(b,'active')).length;
+    subtitle = activeCount>0 ? "You've got an active rental right now." : "Here's your booking activity.";
+  }
+  if(session.user.lastLoginAt){
+    const d = daysAgo(session.user.lastLoginAt);
+    if(d>=1) subtitle += ` Welcome back — it's been ${d===1?'a day':d+' days'}.`;
+  }
+  document.getElementById('overviewGreeting').textContent = greeting;
+  document.getElementById('overviewSubtitle').textContent = subtitle;
+}
+
+function renderKpis(){
+  document.getElementById('kpiActive').textContent = allBookings.filter(b=>tabMatches(b,'active')).length;
+  document.getElementById('kpiUpcoming').textContent = allBookings.filter(b=>tabMatches(b,'upcoming')).length;
+  document.getElementById('kpiCompleted').textContent = allBookings.filter(b=>b.status==='completed').length;
+}
+
+function renderStatusBreakdown(){
+  const buckets = TABS.filter(([k])=>k!=='all');
+  document.getElementById('statusBreakdownRow').innerHTML = buckets.map(([k,label])=>
+    `<div class="kpi" data-jump="${k}" style="cursor:pointer;"><div class="lbl">${label}</div><div class="val">${allBookings.filter(b=>tabMatches(b,k)).length}</div></div>`
+  ).join('');
+  document.querySelectorAll('#statusBreakdownRow [data-jump]').forEach(el=>el.addEventListener('click',()=>{
+    activeTab = el.dataset.jump;
+    goView('bookings');
+    renderTabs(); renderBookings();
+  }));
+}
+
+function renderInsights(){
+  const insights=[];
+  const upcoming = allBookings.filter(b=>tabMatches(b,'upcoming')).sort((a,b)=>new Date(a.dateFrom)-new Date(b.dateFrom))[0];
+  if(upcoming){
+    const days = Math.ceil((new Date(upcoming.dateFrom).getTime()-Date.now())/86400000);
+    insights.push({icon:'calendar',cls:'info',text:`Your booking for "${upcoming.listing.title}" starts ${days<=0?'today':'in '+days+' day'+(days===1?'':'s')}.`});
+  }
+  allBookings.filter(b=>tabMatches(b,'active')).forEach(b=>{
+    insights.push({icon:'clock',cls:'warning',text:`Your rental of "${b.listing.title}" is due back ${new Date(b.dateTo).toLocaleDateString('en-US',{month:'short',day:'numeric'})}.`});
+  });
+  const section=document.getElementById('insightsSection');
+  if(!insights.length){ section.style.display='none'; return; }
+  section.style.display='block';
+  document.getElementById('insightsList').innerHTML = insights.slice(0,4).map(i=>
+    `<div class="banner ${i.cls}" style="margin-bottom:10px;">${icon(i.icon,{size:16})}<div><div class="d">${i.text}</div></div></div>`
+  ).join('');
+}
+
+function renderQuickActions(){
+  const actions=[{label:'Browse listings',ic:'search',cls:'blue',handler:()=>window.location.href='browse'}];
+  const featured = allBookings.find(b=>tabMatches(b,'active')) || allBookings.find(b=>tabMatches(b,'upcoming'));
+  if(featured) actions.push({label:'View your active booking',ic:'calendar',cls:'ghost',handler:()=>window.location.href='booking?id='+featured.id});
+  const verified = !!session.user.emailVerifiedAt || !!session.user.phoneVerifiedAt;
+  if(!verified) actions.push({label:'Verify your identity',ic:'shield',cls:'ghost',handler:()=>goView('settings')});
+  const el=document.getElementById('quickActions');
+  el.innerHTML = actions.map((a,i)=>`<button class="pill-btn ${a.cls}" data-qa="${i}">${icon(a.ic,{size:15})} ${a.label}</button>`).join('');
+  el.querySelectorAll('[data-qa]').forEach((b,i)=>b.addEventListener('click',actions[i].handler));
+}
+
+function renderRecentActivity(){
+  const items = allBookings.map(b=>({ts:b.createdAt, text:`"${b.listing.title}" — ${b.status}`}));
+  items.sort((a,b)=>new Date(b.ts||0)-new Date(a.ts||0));
+  const top = items.slice(0,5);
+  document.getElementById('recentActivityList').innerHTML = top.length ? top.map(i=>
+    `<div class="row-card" style="margin-bottom:10px;"><div class="main"><div class="t">${i.text}</div><div class="s">${relativeTime(i.ts)}</div></div></div>`
+  ).join('') : `<p style="color:var(--ink-faint);font-size:13.5px;">No activity yet — it'll show up here once you have a booking.</p>`;
+}
+
+function renderReports(){
+  const byMonth={};
+  allBookings.filter(b=>b.status!=='cancelled').forEach(b=>{
+    const d=new Date(b.dateFrom);
+    const key=d.toLocaleDateString('en-US',{month:'short',year:'2-digit'});
+    if(!byMonth[key]) byMonth[key]={count:0,total:0,sortKey:d.getFullYear()*12+d.getMonth()};
+    byMonth[key].count++; byMonth[key].total+=b.total;
+  });
+  const rows=Object.entries(byMonth).map(([label,v])=>({label,...v})).sort((a,b)=>a.sortKey-b.sortKey);
+  renderBarChart('spendingChart', rows.map(r=>({label:r.label,value:r.total})), {formatValue:money, color:'var(--blue)'});
+  document.getElementById('spendingReportTbody').innerHTML = rows.length ? rows.map(r=>
+    `<tr><td>${r.label}</td><td class="num">${r.count}</td><td class="num">${money(r.total)}</td></tr>`
+  ).join('') : `<tr><td colspan="3" style="color:var(--ink-faint)">No spending yet.</td></tr>`;
+
+  const buckets = TABS.filter(([k])=>k!=='all');
+  const statusRows = buckets.map(([k,label])=>({label,count:allBookings.filter(b=>tabMatches(b,k)).length})).filter(r=>r.count>0);
+  document.getElementById('statusReportTbody').innerHTML = statusRows.length ? statusRows.map(r=>
+    `<tr><td>${r.label}</td><td class="num">${r.count}</td></tr>`
+  ).join('') : `<tr><td colspan="2" style="color:var(--ink-faint)">No bookings yet.</td></tr>`;
+}
 
 /* ---- settings ---- */
 if(session){
@@ -305,6 +495,17 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async ()=>{
     btn.disabled=false;
   }
 });
+
+(async function init(){
+  await loadBookings();
+  renderWelcome();
+  renderKpis();
+  renderStatusBreakdown();
+  renderInsights();
+  renderQuickActions();
+  renderRecentActivity();
+  renderReports();
+})();
 </script>
 </body>
 </html>

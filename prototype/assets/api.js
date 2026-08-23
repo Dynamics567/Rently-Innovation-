@@ -271,6 +271,7 @@ function mapBooking(b) {
     total: Math.round(b.totalMinor / 100),
     deposit: Math.round((b.depositMinor || 0) / 100),
     depositStatus: b.status === 'completed' ? 'released' : b.status === 'cancelled' ? 'refunded' : 'held',
+    createdAt: b.createdAt,
   };
 }
 
