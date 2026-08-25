@@ -5,6 +5,7 @@ import { Booking } from '../entities/booking.entity';
 import { BookingStatusHistory } from '../entities/booking-status-history.entity';
 import { BookingStage, BookingStatus } from '../enums/booking.enums';
 import { ListingsService } from '@modules/catalog/services/listings.service';
+import { AvailabilityService } from '@modules/catalog/services/availability.service';
 import {
   BookingMode,
   CancellationPolicy,
@@ -24,9 +25,13 @@ import { PaymentPort } from './payment.port';
  */
 describe('BookingService', () => {
   let service: BookingService;
-  let bookingRepository: Record<'findByIdOrFail' | 'findByIdempotencyKey' | 'search', jest.Mock>;
+  let bookingRepository: Record<
+    'findByIdOrFail' | 'findByIdempotencyKey' | 'search' | 'hasOverlapWithBuffer',
+    jest.Mock
+  >;
   let historyRepository: Record<'findByBooking', jest.Mock>;
   let listingsService: Record<'findByIdOrFail' | 'getQuote', jest.Mock>;
+  let availabilityService: Record<'isBlocked', jest.Mock>;
   let paymentPort: Record<'charge' | 'refund' | 'release', jest.Mock>;
   let dataSource: { transaction: jest.Mock };
 
@@ -38,6 +43,7 @@ describe('BookingService', () => {
     priceUnit: PriceUnit.DAY,
     priceMinor: 20000,
     depositMinor: 15000,
+    turnaroundBufferMinutes: 120,
   };
 
   const quote = {
@@ -66,11 +72,15 @@ describe('BookingService', () => {
       findByIdOrFail: jest.fn(),
       findByIdempotencyKey: jest.fn(async () => null),
       search: jest.fn(),
+      hasOverlapWithBuffer: jest.fn(async () => false),
     };
     historyRepository = { findByBooking: jest.fn() };
     listingsService = {
       findByIdOrFail: jest.fn(async () => liveListing),
       getQuote: jest.fn(async () => quote),
+    };
+    availabilityService = {
+      isBlocked: jest.fn(async () => false),
     };
     paymentPort = {
       charge: jest.fn(async () => ({ providerReference: 'MOCK-REF' })),
@@ -96,6 +106,7 @@ describe('BookingService', () => {
       bookingRepository as unknown as BookingRepository,
       historyRepository as unknown as BookingStatusHistoryRepository,
       listingsService as unknown as ListingsService,
+      availabilityService as unknown as AvailabilityService,
       paymentPort as unknown as PaymentPort,
     );
   });
@@ -215,6 +226,9 @@ describe('BookingService', () => {
         status: BookingStatus.CONFIRMED,
         stage: BookingStage.RESERVED,
         totalMinor: 78000,
+        depositMinor: 0,
+        cancellationPolicy: CancellationPolicy.FLEXIBLE,
+        startsAt: new Date(Date.now() + 48 * 60 * 60 * 1000), // 48h out — well past FLEXIBLE's 24h full-refund threshold
         isBeforePickup: () => true,
       });
 

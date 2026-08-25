@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { LoggerModule } from 'nestjs-pino';
 
 import configuration from '@config/configuration';
@@ -20,10 +21,12 @@ import {
   InMemoryIdempotencyStore,
 } from '@common/interceptors/idempotency-store.interface';
 import { RequestIdMiddleware } from '@common/middleware/request-id.middleware';
+import { AuditLogModule } from '@common/audit/audit-log.module';
 
 import { IdentityModule } from '@modules/identity/identity.module';
 import { CatalogModule } from '@modules/catalog/catalog.module';
 import { BookingModule } from '@modules/booking/booking.module';
+import { NotificationsModule } from '@modules/notifications/notifications.module';
 import { HealthModule } from './health/health.module';
 
 /**
@@ -37,6 +40,11 @@ import { HealthModule } from './health/health.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, load: [configuration], validationSchema }),
+    // Global in-process event bus (ARCHITECTURE.md §1's named MVP choice) —
+    // Booking/Identity/Catalog emit domain events after their transactions
+    // resolve; NotificationsModule listens. Upgrade to Redis Streams/SQS
+    // only if a module carrying this actually gets extracted out.
+    EventEmitterModule.forRoot(),
     LoggerModule.forRoot({
       pinoHttp: {
         level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
@@ -55,10 +63,12 @@ import { HealthModule } from './health/health.module';
     }),
     DatabaseModule,
     HealthModule,
+    AuditLogModule,
     IdentityModule,
     CatalogModule,
     BookingModule,
-    // PaymentsModule, SearchModule, MessagingModule, TrustSafetyModule, AdminModule — registered here as each is built.
+    NotificationsModule,
+    // PaymentsModule, SearchModule, MessagingModule, TrustModule — registered here as each is built.
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

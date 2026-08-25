@@ -86,6 +86,13 @@ export class Listing extends BaseEntity {
   @Column({ name: 'booking_mode', type: 'enum', enum: BookingMode, default: BookingMode.REQUEST })
   bookingMode: BookingMode;
 
+  // Turnaround time a provider needs between one rental ending and the next
+  // starting (cleaning, refueling, prep) — per-listing since a car needs
+  // meaningfully more than a tent. Applied as padding on both sides of a
+  // booking's range when checking for conflicts with other bookings.
+  @Column({ name: 'turnaround_buffer_minutes', type: 'int', default: 120 })
+  turnaroundBufferMinutes: number;
+
   @Column({ type: 'enum', enum: ListingStatus, default: ListingStatus.DRAFT })
   status: ListingStatus;
 

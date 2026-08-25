@@ -88,6 +88,6 @@ import { IsSelfOrAdminPolicy } from './policies/is-self-or-admin.policy';
       inject: [ConfigService],
     },
   ],
-  exports: [AuthService, UsersService, ProviderProfileService],
+  exports: [AuthService, UsersService, ProviderProfileService, EMAIL_SENDER],
 })
 export class IdentityModule {}

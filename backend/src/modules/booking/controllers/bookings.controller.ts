@@ -68,6 +68,12 @@ export class BookingsController {
   }
 
   @CheckPolicies(IsBookingPartyPolicy)
+  @Get(':id/cancellation-preview')
+  async previewCancellation(@Param('id') id: string) {
+    return this.bookingService.previewCancellationRefund(id);
+  }
+
+  @CheckPolicies(IsBookingPartyPolicy)
   @Post(':id/cancel')
   async cancel(
     @Param('id') id: string,

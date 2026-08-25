@@ -6,6 +6,7 @@ import { ErrorCode } from '@common/errors/error-codes.enum';
 import { CursorPage } from '@common/dto/cursor-pagination.dto';
 import { toTstzRangeLiteral } from '@common/utils/tstzrange.util';
 import { ListingsService } from '@modules/catalog/services/listings.service';
+import { AvailabilityService } from '@modules/catalog/services/availability.service';
 import { ListingStatus, BookingMode } from '@modules/catalog/enums/listing.enums';
 import { Booking } from '../entities/booking.entity';
 import { BookingStatusHistory } from '../entities/booking-status-history.entity';
@@ -15,6 +16,7 @@ import { BOOKING_STAGE_ORDER, BookingStage, BookingStatus } from '../enums/booki
 import { CreateBookingDto } from '../dto/create-booking.dto';
 import { QueryBookingsDto } from '../dto/query-bookings.dto';
 import { PAYMENT_PORT, PaymentPort } from './payment.port';
+import { computeCancellationRefund, CancellationRefund } from './cancellation-refund.util';
 
 interface StageStep {
   stage: BookingStage;
@@ -28,6 +30,7 @@ export class BookingService {
     private readonly bookingRepository: BookingRepository,
     private readonly historyRepository: BookingStatusHistoryRepository,
     private readonly listingsService: ListingsService,
+    private readonly availabilityService: AvailabilityService,
     @Inject(PAYMENT_PORT) private readonly paymentPort: PaymentPort,
   ) {}
 
@@ -92,6 +95,35 @@ export class BookingService {
 
     const from = new Date(dto.from);
     const to = new Date(dto.to);
+
+    // Two application-level guards layered on top of the DB-level
+    // no_overlapping_bookings EXCLUDE constraint, which remains the only
+    // true race-proof guarantee (neither of these is aware of it). A
+    // provider's manual block or an unmet turnaround buffer are both lower-
+    // stakes races than two renters fighting for the same instant — worst
+    // case here is a booking the provider then has to decline, not a true
+    // double-booking — so a check-then-write is an accepted, proportionate
+    // gap rather than something that needs its own exclusion constraint.
+    const blocked = await this.availabilityService.isBlocked(dto.listingId, from, to);
+    if (blocked) {
+      throw DomainException.conflict(
+        ErrorCode.BOOKING_DATES_UNAVAILABLE,
+        'These dates fall within a period the provider has blocked.',
+      );
+    }
+    const bufferConflict = await this.bookingRepository.hasOverlapWithBuffer(
+      dto.listingId,
+      from,
+      to,
+      listing.turnaroundBufferMinutes,
+    );
+    if (bufferConflict) {
+      throw DomainException.conflict(
+        ErrorCode.BOOKING_DATES_UNAVAILABLE,
+        `This provider needs ${listing.turnaroundBufferMinutes} minutes between rentals — these dates are too close to another booking.`,
+      );
+    }
+
     const quote = await this.listingsService.getQuote(dto.listingId, from, to);
 
     return this.dataSource.transaction(async (manager) => {
@@ -209,7 +241,13 @@ export class BookingService {
     );
   }
 
-  /** Full refund pre-pickup, per the frontend's "cancelled bookings are fully refunded" copy. Not allowed once the item has left the provider's hands — that goes through the normal return workflow instead. */
+  /**
+   * Refunds according to the booking's snapshotted cancellation policy
+   * (flexible/moderate/strict, proration by time-before-pickup — see
+   * cancellation-refund.util.ts) rather than always refunding in full. Not
+   * allowed once the item has left the provider's hands — that goes through
+   * the normal return workflow instead.
+   */
   async cancel(bookingId: string, actingUserId: string, reason?: string): Promise<Booking> {
     const booking = await this.findByIdOrFail(bookingId);
     if (!booking.isBeforePickup() || booking.status === BookingStatus.CANCELLED) {
@@ -220,15 +258,48 @@ export class BookingService {
     }
 
     return this.dataSource.transaction(async (manager) => {
+      let refundNote = reason;
       if (booking.status === BookingStatus.CONFIRMED) {
+        const refund = computeCancellationRefund(
+          booking.cancellationPolicy,
+          booking.startsAt,
+          new Date(),
+          booking.totalMinor,
+          booking.depositMinor,
+        );
         await this.paymentPort.refund({
           bookingId: booking.id,
-          amountMinor: booking.totalMinor,
+          amountMinor: refund.refundMinor,
           reason,
         });
+        const pctLabel = Math.round(refund.refundPct * 100);
+        refundNote = [reason, `Refunded ${pctLabel}% per ${booking.cancellationPolicy} policy.`]
+          .filter(Boolean)
+          .join(' — ');
       }
-      return this.setStatusOnly(manager, booking, BookingStatus.CANCELLED, actingUserId, reason);
+      return this.setStatusOnly(manager, booking, BookingStatus.CANCELLED, actingUserId, refundNote);
     });
+  }
+
+  /** Pure read — lets the frontend show "you'll get back ₦X" before the renter confirms cancellation. */
+  async previewCancellationRefund(bookingId: string): Promise<CancellationRefund> {
+    const booking = await this.findByIdOrFail(bookingId);
+    if (booking.status !== BookingStatus.CONFIRMED) {
+      // Nothing has been charged yet (still pending) or there's nothing left to refund (already closed) — full or zero refund is unambiguous, no proration math needed.
+      const isPending = booking.status === BookingStatus.PENDING;
+      return {
+        refundMinor: isPending ? booking.totalMinor : 0,
+        refundPct: isPending ? 1 : 0,
+        penaltyMinor: isPending ? 0 : booking.totalMinor,
+      };
+    }
+    return computeCancellationRefund(
+      booking.cancellationPolicy,
+      booking.startsAt,
+      new Date(),
+      booking.totalMinor,
+      booking.depositMinor,
+    );
   }
 
   /** [Provider] One handover action covers ready → pickedup → active, since the frontend has no separate "mark ready" step. */
