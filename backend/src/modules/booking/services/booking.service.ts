@@ -1,10 +1,12 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DataSource, EntityManager } from 'typeorm';
 import { DomainException } from '@common/errors/domain.exception';
 import { ErrorCode } from '@common/errors/error-codes.enum';
 import { CursorPage } from '@common/dto/cursor-pagination.dto';
 import { toTstzRangeLiteral } from '@common/utils/tstzrange.util';
+import { DomainEvents, BookingLifecycleEventPayload } from '@common/events/domain-events';
 import { ListingsService } from '@modules/catalog/services/listings.service';
 import { AvailabilityService } from '@modules/catalog/services/availability.service';
 import { AssetsService } from '@modules/catalog/services/assets.service';
@@ -34,6 +36,8 @@ interface StageStep {
 
 @Injectable()
 export class BookingService {
+  private readonly logger = new Logger(BookingService.name);
+
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly bookingRepository: BookingRepository,
@@ -45,7 +49,41 @@ export class BookingService {
     private readonly assetsService: AssetsService,
     private readonly providerProfileService: ProviderProfileService,
     @Inject(PAYMENT_PORT) private readonly paymentPort: PaymentPort,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
+
+  /**
+   * Fire-and-awaited (not fire-and-forget): the extra listing lookup is one
+   * cheap read, and awaiting it means a failure here can't outlive the
+   * request as a dangling promise. Never throws -- a notification failing
+   * to emit must never fail the booking action that triggered it, same
+   * philosophy as NotificationsService.notifyEmail's own try/catch.
+   */
+  private async emitBookingEvent(
+    eventName: (typeof DomainEvents)[keyof typeof DomainEvents],
+    booking: Booking,
+    recipientId: string,
+    extra: Partial<BookingLifecycleEventPayload> = {},
+  ): Promise<void> {
+    try {
+      const listing = await this.listingsService.findByIdOrFail(booking.listingId);
+      const payload: BookingLifecycleEventPayload = {
+        bookingId: booking.id,
+        recipientId,
+        listingTitle: listing.title,
+        ...extra,
+      };
+      this.eventEmitter.emit(eventName, payload);
+    } catch (err) {
+      this.logger.error(`Failed to emit ${eventName} for booking ${booking.id}: ${(err as Error).message}`);
+    }
+  }
+
+  private async getProviderUserId(listingId: string): Promise<string> {
+    const listing = await this.listingsService.findByIdOrFail(listingId);
+    const provider = await this.providerProfileService.getById(listing.providerId);
+    return provider.userId;
+  }
 
   async findByIdOrFail(id: string): Promise<Booking> {
     return this.bookingRepository.findByIdOrFail(id, 'Booking');
@@ -166,7 +204,7 @@ export class BookingService {
 
     const quote = await this.listingsService.getQuote(dto.listingId, from, to);
 
-    return this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       const booking = manager.getRepository(Booking).create({
         listingId: dto.listingId,
         assetId,
@@ -230,6 +268,12 @@ export class BookingService {
 
       return saved;
     });
+
+    const providerUserId = await this.getProviderUserId(result.listingId).catch(() => null);
+    if (providerUserId) {
+      await this.emitBookingEvent(DomainEvents.BookingCreated, result, providerUserId);
+    }
+    return result;
   }
 
   /** [Provider] Request-to-Book only — captures payment on approval, never before. */
@@ -242,7 +286,7 @@ export class BookingService {
       );
     }
 
-    return this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       const charge = await this.paymentPort.charge({
         bookingId: booking.id,
         amountMinor: booking.totalMinor,
@@ -267,6 +311,8 @@ export class BookingService {
         actingUserId,
       );
     });
+    await this.emitBookingEvent(DomainEvents.BookingApproved, result, result.renterId);
+    return result;
   }
 
   async decline(bookingId: string, actingUserId: string, reason?: string): Promise<Booking> {
@@ -277,9 +323,11 @@ export class BookingService {
         'Only a pending booking can be declined.',
       );
     }
-    return this.dataSource.transaction((manager) =>
+    const result = await this.dataSource.transaction((manager) =>
       this.setStatusOnly(manager, booking, BookingStatus.DECLINED, actingUserId, reason),
     );
+    await this.emitBookingEvent(DomainEvents.BookingDeclined, result, result.renterId, { reason });
+    return result;
   }
 
   /**
@@ -298,7 +346,7 @@ export class BookingService {
       );
     }
 
-    return this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       let refundNote = reason;
       if (booking.status === BookingStatus.CONFIRMED) {
         const refund = computeCancellationRefund(
@@ -320,6 +368,14 @@ export class BookingService {
       }
       return this.setStatusOnly(manager, booking, BookingStatus.CANCELLED, actingUserId, refundNote);
     });
+
+    // Notify whichever party didn't do the cancelling.
+    const recipientId =
+      actingUserId === result.renterId ? await this.getProviderUserId(result.listingId).catch(() => null) : result.renterId;
+    if (recipientId) {
+      await this.emitBookingEvent(DomainEvents.BookingCancelled, result, recipientId, { reason });
+    }
+    return result;
   }
 
   /** Pure read — lets the frontend show "you'll get back ₦X" before the renter confirms cancellation. */
@@ -346,7 +402,7 @@ export class BookingService {
   /** [Provider] One handover action covers ready → pickedup → active, since the frontend has no separate "mark ready" step. */
   async confirmHandover(bookingId: string, actingUserId: string): Promise<Booking> {
     const booking = await this.assertStage(bookingId, [BookingStage.RESERVED, BookingStage.READY]);
-    return this.dataSource.transaction((manager) =>
+    const result = await this.dataSource.transaction((manager) =>
       this.runSteps(
         manager,
         booking,
@@ -358,6 +414,8 @@ export class BookingService {
         actingUserId,
       ),
     );
+    await this.emitBookingEvent(DomainEvents.BookingHandedOver, result, result.renterId);
+    return result;
   }
 
   async scheduleReturn(bookingId: string, actingUserId: string): Promise<Booking> {
@@ -377,7 +435,7 @@ export class BookingService {
       BookingStage.RETURNSCHED,
       BookingStage.ACTIVE,
     ]);
-    return this.dataSource.transaction((manager) =>
+    const result = await this.dataSource.transaction((manager) =>
       this.runSteps(
         manager,
         booking,
@@ -385,6 +443,8 @@ export class BookingService {
         actingUserId,
       ),
     );
+    await this.emitBookingEvent(DomainEvents.BookingReturned, result, result.renterId);
+    return result;
   }
 
   /**
@@ -402,7 +462,7 @@ export class BookingService {
     const booking = await this.assertStage(bookingId, [BookingStage.RETURNED]);
 
     if (!dto.damageFound) {
-      return this.dataSource.transaction(async (manager) => {
+      const result = await this.dataSource.transaction(async (manager) => {
         if (booking.depositMinor > 0) {
           await this.paymentPort.release({ bookingId: booking.id, amountMinor: booking.depositMinor });
         }
@@ -427,9 +487,11 @@ export class BookingService {
         await this.markListingCompletedBooking(booking.listingId);
         return completed;
       });
+      await this.emitBookingEvent(DomainEvents.BookingDepositReleased, result, result.renterId);
+      return result;
     }
 
-    return this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       const inspected = await this.runSteps(
         manager,
         booking,
@@ -453,6 +515,10 @@ export class BookingService {
       await manager.getRepository(Dispute).save(dispute);
       return disputed;
     });
+    await this.emitBookingEvent(DomainEvents.BookingDisputed, result, result.renterId, {
+      reason: dto.description,
+    });
+    return result;
   }
 
   /** Backward-compatible alias — a plain "no damage" inspection. */
@@ -505,6 +571,20 @@ export class BookingService {
     return completed;
   }
 
+  /**
+   * [DisputeService] Called after ITS OWN transaction resolves (finalizeDispute
+   * above runs inside that same transaction, alongside an audit-log write that
+   * comes after it -- emitting there would fire a notification for a dispute
+   * resolution that could still roll back). Kept as a separate public method
+   * so DisputeService, which has no ListingsService of its own, can still
+   * reuse this service's listing-title lookup for the notification payload.
+   */
+  async emitDisputeResolvedEvent(booking: Booking, finalDeductionMinor: number): Promise<void> {
+    await this.emitBookingEvent(DomainEvents.BookingDisputeResolved, booking, booking.renterId, {
+      finalDeductionMinor,
+    });
+  }
+
   private async markListingCompletedBooking(listingId: string): Promise<void> {
     const listing = await this.listingsService.findByIdOrFail(listingId);
     await this.providerProfileService.incrementCompletedBookings(listing.providerId);
@@ -548,7 +628,18 @@ export class BookingService {
       additionalRentalFeeMinor: quote.rentalFeeMinor,
       additionalServiceFeeMinor: quote.serviceFeeMinor,
     });
-    return this.extensionRequestRepository.save(request);
+    const saved = await this.extensionRequestRepository.save(request);
+
+    const providerUserId = await this.providerProfileService
+      .getById(listing.providerId)
+      .then((p) => p.userId)
+      .catch(() => null);
+    if (providerUserId) {
+      await this.emitBookingEvent(DomainEvents.BookingExtensionRequested, booking, providerUserId, {
+        requestedEndsAt: newEndsAt.toISOString(),
+      });
+    }
+    return saved;
   }
 
   /** [Provider] Charges the additional fee, then extends the booking's endsAt/during in place. */
@@ -572,7 +663,7 @@ export class BookingService {
     const additionalMinor = (request.additionalRentalFeeMinor ?? 0) + (request.additionalServiceFeeMinor ?? 0);
     const charge = await this.paymentPort.charge({ bookingId: booking.id, amountMinor: additionalMinor });
 
-    return this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       booking.endsAt = request.requestedEndsAt;
       booking.during = toTstzRangeLiteral(booking.startsAt, request.requestedEndsAt);
       booking.rentalFeeMinor += request.additionalRentalFeeMinor ?? 0;
@@ -600,6 +691,10 @@ export class BookingService {
 
       return saved;
     });
+    await this.emitBookingEvent(DomainEvents.BookingExtensionApproved, result, result.renterId, {
+      requestedEndsAt: request.requestedEndsAt.toISOString(),
+    });
+    return result;
   }
 
   async declineExtension(
@@ -618,7 +713,13 @@ export class BookingService {
     request.decidedBy = providerUserId;
     request.decidedAt = new Date();
     request.declineReason = reason ?? null;
-    return this.extensionRequestRepository.save(request);
+    const saved = await this.extensionRequestRepository.save(request);
+
+    const booking = await this.findByIdOrFail(request.bookingId).catch(() => null);
+    if (booking) {
+      await this.emitBookingEvent(DomainEvents.BookingExtensionDeclined, booking, request.requestedBy, { reason });
+    }
+    return saved;
   }
 
   async cancelExtensionRequest(extensionRequestId: string, renterId: string): Promise<BookingExtensionRequest> {
@@ -633,7 +734,16 @@ export class BookingService {
       throw DomainException.forbidden(ErrorCode.FORBIDDEN, "You can't cancel someone else's request.");
     }
     request.status = ExtensionRequestStatus.CANCELLED;
-    return this.extensionRequestRepository.save(request);
+    const saved = await this.extensionRequestRepository.save(request);
+
+    const booking = await this.findByIdOrFail(request.bookingId).catch(() => null);
+    if (booking) {
+      const providerUserId = await this.getProviderUserId(booking.listingId).catch(() => null);
+      if (providerUserId) {
+        await this.emitBookingEvent(DomainEvents.BookingExtensionCancelled, booking, providerUserId);
+      }
+    }
+    return saved;
   }
 
   async listExtensionRequestsForBooking(bookingId: string): Promise<BookingExtensionRequest[]> {

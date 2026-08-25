@@ -18,6 +18,7 @@ import {
   PriceUnit,
 } from '@modules/catalog/enums/listing.enums';
 import { PaymentPort } from './payment.port';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 /**
  * Unit-level, same shape as auth.service.spec.ts: every collaborator
@@ -42,8 +43,9 @@ describe('BookingService', () => {
   let listingsService: Record<'findByIdOrFail' | 'getQuote', jest.Mock>;
   let availabilityService: Record<'isBlocked', jest.Mock>;
   let assetsService: Record<'getActiveForListing', jest.Mock>;
-  let providerProfileService: Record<'incrementCompletedBookings', jest.Mock>;
+  let providerProfileService: Record<'incrementCompletedBookings' | 'getById', jest.Mock>;
   let paymentPort: Record<'charge' | 'refund' | 'release', jest.Mock>;
+  let eventEmitter: Record<'emit', jest.Mock>;
   let dataSource: { transaction: jest.Mock };
 
   const liveListing = {
@@ -99,12 +101,14 @@ describe('BookingService', () => {
     };
     providerProfileService = {
       incrementCompletedBookings: jest.fn(async () => undefined),
+      getById: jest.fn(async () => ({ id: 'provider-1', userId: 'provider-user-1' })),
     };
     paymentPort = {
       charge: jest.fn(async () => ({ providerReference: 'MOCK-REF' })),
       refund: jest.fn(async () => undefined),
       release: jest.fn(async () => undefined),
     };
+    eventEmitter = { emit: jest.fn() };
 
     const bookingManagerRepo = fakeRepo();
     const historyManagerRepo = fakeRepo();
@@ -133,6 +137,7 @@ describe('BookingService', () => {
       assetsService as unknown as AssetsService,
       providerProfileService as unknown as ProviderProfileService,
       paymentPort as unknown as PaymentPort,
+      eventEmitter as unknown as EventEmitter2,
     );
   });
 

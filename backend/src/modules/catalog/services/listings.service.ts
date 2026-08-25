@@ -1,9 +1,11 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DomainException } from '@common/errors/domain.exception';
 import { ErrorCode } from '@common/errors/error-codes.enum';
 import { CursorPage } from '@common/dto/cursor-pagination.dto';
 import { AuditLogService } from '@common/audit/audit-log.service';
 import { AuditActorType } from '@common/audit/audit-actor-type.enum';
+import { DomainEvents } from '@common/events/domain-events';
 import { ListingRepository } from '../repositories/listing.repository';
 import { ListingPhotoRepository } from '../repositories/listing-photo.repository';
 import { Listing } from '../entities/listing.entity';
@@ -14,6 +16,7 @@ import { QueryListingsDto } from '../dto/query-listings.dto';
 import { QuoteResult } from '../dto/quote-result.interface';
 import { CategoriesService } from './categories.service';
 import { ListingAttributeValidatorService } from './listing-attribute-validator.service';
+import { ProviderProfileService } from '@modules/identity/services/provider-profile.service';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const LIVE_STATUSES = [ListingStatus.LIVE];
@@ -27,6 +30,8 @@ export class ListingsService {
     private readonly categoriesService: CategoriesService,
     private readonly attributeValidator: ListingAttributeValidatorService,
     private readonly auditLogService: AuditLogService,
+    private readonly eventEmitter: EventEmitter2,
+    private readonly providerProfileService: ProviderProfileService,
   ) {}
 
   async create(providerId: string, dto: CreateListingDto): Promise<Listing> {
@@ -159,6 +164,14 @@ export class ListingsService {
       before,
       after: { status: saved.status },
     });
+    const providerUserId = await this.providerProfileService.getById(saved.providerId).then((p) => p.userId).catch(() => null);
+    if (providerUserId) {
+      this.eventEmitter.emit(DomainEvents.ListingApproved, {
+        recipientId: providerUserId,
+        listingId: saved.id,
+        listingTitle: saved.title,
+      });
+    }
     return saved;
   }
 
@@ -176,6 +189,14 @@ export class ListingsService {
       before,
       after: { status: saved.status },
     });
+    const providerUserId = await this.providerProfileService.getById(saved.providerId).then((p) => p.userId).catch(() => null);
+    if (providerUserId) {
+      this.eventEmitter.emit(DomainEvents.ListingRejected, {
+        recipientId: providerUserId,
+        listingId: saved.id,
+        listingTitle: saved.title,
+      });
+    }
     return saved;
   }
 

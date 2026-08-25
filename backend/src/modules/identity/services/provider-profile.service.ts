@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DomainException } from '@common/errors/domain.exception';
 import { ErrorCode } from '@common/errors/error-codes.enum';
 import { AuditLogService } from '@common/audit/audit-log.service';
 import { AuditActorType } from '@common/audit/audit-actor-type.enum';
+import { DomainEvents } from '@common/events/domain-events';
 import { ProviderProfileRepository } from '../repositories/provider-profile.repository';
 import { UserRepository } from '../repositories/user.repository';
 import { CreateProviderProfileDto } from '../dto/create-provider-profile.dto';
@@ -16,6 +18,7 @@ export class ProviderProfileService {
     private readonly providerRepository: ProviderProfileRepository,
     private readonly userRepository: UserRepository,
     private readonly auditLogService: AuditLogService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /** PRD FR1.1/§11.2 step 1 — a user "upgrades" to Provider without losing their Renter identity. */
@@ -116,6 +119,10 @@ export class ProviderProfileService {
       before,
       after: { verificationStatus: saved.verificationStatus },
     });
+    this.eventEmitter.emit(DomainEvents.ProviderVerified, {
+      recipientId: saved.userId,
+      businessName: saved.businessName ?? null,
+    });
     return saved;
   }
 
@@ -137,6 +144,11 @@ export class ProviderProfileService {
       entityId: providerId,
       before,
       after: { verificationStatus: saved.verificationStatus, reason },
+    });
+    this.eventEmitter.emit(DomainEvents.ProviderRejected, {
+      recipientId: saved.userId,
+      businessName: saved.businessName ?? null,
+      reason,
     });
     return saved;
   }

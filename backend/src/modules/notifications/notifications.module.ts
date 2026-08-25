@@ -6,6 +6,7 @@ import { Notification } from './entities/notification.entity';
 import { NotificationRepository } from './repositories/notification.repository';
 import { NotificationsService } from './services/notifications.service';
 import { NotificationsController } from './controllers/notifications.controller';
+import { DomainEventsListener } from './listeners/domain-events.listener';
 
 /**
  * Listens (via @OnEvent, added alongside the emitting call sites) to domain
@@ -17,7 +18,7 @@ import { NotificationsController } from './controllers/notifications.controller'
 @Module({
   imports: [TypeOrmModule.forFeature([Notification]), IdentityModule, CatalogModule],
   controllers: [NotificationsController],
-  providers: [NotificationRepository, NotificationsService],
+  providers: [NotificationRepository, NotificationsService, DomainEventsListener],
   exports: [NotificationsService],
 })
 export class NotificationsModule {}

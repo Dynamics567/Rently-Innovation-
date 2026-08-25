@@ -6,6 +6,7 @@ import { ErrorCode } from '@common/errors/error-codes.enum';
 import { AuditLogService } from '@common/audit/audit-log.service';
 import { AuditActorType } from '@common/audit/audit-actor-type.enum';
 import { Dispute } from '../entities/dispute.entity';
+import { Booking } from '../entities/booking.entity';
 import { DisputeRepository } from '../repositories/dispute.repository';
 import { DisputeStatus } from '../enums/dispute-status.enum';
 import { DisputeResolution } from '../enums/dispute-resolution.enum';
@@ -93,22 +94,27 @@ export class DisputeService {
       return this.disputeRepository.save(dispute);
     }
 
-    return this.dataSource.transaction(async (manager) => {
+    let finalizedBooking: Booking | null = null;
+    const saved = await this.dataSource.transaction(async (manager) => {
       dispute.status = DisputeStatus.RESOLVED;
       dispute.resolution = DisputeResolution.AGREED;
       dispute.finalDeductionMinor = dispute.proposedDeductionMinor;
       dispute.resolvedBy = renterUserId;
       dispute.resolvedAt = new Date();
       dispute.resolutionNote = note ?? null;
-      const saved = await manager.getRepository(Dispute).save(dispute);
-      await this.bookingService.finalizeDispute(
+      const savedDispute = await manager.getRepository(Dispute).save(dispute);
+      finalizedBooking = await this.bookingService.finalizeDispute(
         manager,
         dispute.bookingId,
-        saved.finalDeductionMinor ?? 0,
+        savedDispute.finalDeductionMinor ?? 0,
         renterUserId,
       );
-      return saved;
+      return savedDispute;
     });
+    if (finalizedBooking) {
+      await this.bookingService.emitDisputeResolvedEvent(finalizedBooking, saved.finalDeductionMinor ?? 0);
+    }
+    return saved;
   }
 
   /** [Admin] Can resolve from any non-resolved state — the backstop when the two parties can't agree. */
@@ -131,15 +137,16 @@ export class DisputeService {
     }
 
     const before = { status: dispute.status, finalDeductionMinor: dispute.finalDeductionMinor };
-    return this.dataSource.transaction(async (manager) => {
+    let finalizedBooking: Booking | null = null;
+    const saved = await this.dataSource.transaction(async (manager) => {
       dispute.status = DisputeStatus.RESOLVED;
       dispute.resolution = DisputeResolution.ADMIN_DECIDED;
       dispute.finalDeductionMinor = finalDeductionMinor;
       dispute.resolvedBy = adminId;
       dispute.resolvedAt = new Date();
       dispute.resolutionNote = note;
-      const saved = await manager.getRepository(Dispute).save(dispute);
-      await this.bookingService.finalizeDispute(manager, dispute.bookingId, finalDeductionMinor, adminId);
+      const savedDispute = await manager.getRepository(Dispute).save(dispute);
+      finalizedBooking = await this.bookingService.finalizeDispute(manager, dispute.bookingId, finalDeductionMinor, adminId);
       await this.auditLogService.record(
         {
           actorId: adminId,
@@ -148,11 +155,15 @@ export class DisputeService {
           entityType: 'Dispute',
           entityId: disputeId,
           before,
-          after: { status: saved.status, finalDeductionMinor: saved.finalDeductionMinor, note },
+          after: { status: savedDispute.status, finalDeductionMinor: savedDispute.finalDeductionMinor, note },
         },
         manager,
       );
-      return saved;
+      return savedDispute;
     });
+    if (finalizedBooking) {
+      await this.bookingService.emitDisputeResolvedEvent(finalizedBooking, finalDeductionMinor);
+    }
+    return saved;
   }
 }

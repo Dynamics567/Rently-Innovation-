@@ -4,6 +4,8 @@ import { ListingPhotoRepository } from '../repositories/listing-photo.repository
 import { CategoriesService } from './categories.service';
 import { ListingAttributeValidatorService } from './listing-attribute-validator.service';
 import { AuditLogService } from '@common/audit/audit-log.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ProviderProfileService } from '@modules/identity/services/provider-profile.service';
 import { ListingCondition, ListingStatus, PriceUnit } from '../enums/listing.enums';
 
 describe('ListingsService', () => {
@@ -13,6 +15,8 @@ describe('ListingsService', () => {
   let categoriesService: Record<'getByIdOrFail' | 'assertActive', jest.Mock>;
   let attributeValidator: Record<'validate', jest.Mock>;
   let auditLogService: Record<'record', jest.Mock>;
+  let eventEmitter: Record<'emit', jest.Mock>;
+  let providerProfileService: Record<'getById', jest.Mock>;
 
   const activeCategory = {
     id: 'cat-1',
@@ -39,6 +43,8 @@ describe('ListingsService', () => {
     };
     attributeValidator = { validate: jest.fn() };
     auditLogService = { record: jest.fn(async () => undefined) };
+    eventEmitter = { emit: jest.fn() };
+    providerProfileService = { getById: jest.fn(async () => ({ userId: 'provider-user-1' })) };
 
     service = new ListingsService(
       listingRepository as unknown as ListingRepository,
@@ -46,6 +52,8 @@ describe('ListingsService', () => {
       categoriesService as unknown as CategoriesService,
       attributeValidator as unknown as ListingAttributeValidatorService,
       auditLogService as unknown as AuditLogService,
+      eventEmitter as unknown as EventEmitter2,
+      providerProfileService as unknown as ProviderProfileService,
     );
   });
 
