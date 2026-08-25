@@ -1,11 +1,19 @@
 import { Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
+import { IsIn, IsOptional } from 'class-validator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { CursorPaginationDto } from '@common/dto/cursor-pagination.dto';
 import { AuthenticatedUser } from '@modules/identity/strategies/jwt.strategy';
 import { NotificationsService } from '../services/notifications.service';
 
+// Needs its own class-validator decorator, not just a type annotation --
+// the global ValidationPipe runs with whitelist:true + forbidNonWhitelisted:true
+// (main.ts), which 400s on any query property class-validator doesn't know
+// about. See AdminAuditLogController's QueryAuditLogDto for the same fix.
 class QueryNotificationsDto extends CursorPaginationDto {
+  @ApiPropertyOptional({ enum: ['true', 'false'] })
+  @IsOptional()
+  @IsIn(['true', 'false'])
   unread?: string;
 }
 
