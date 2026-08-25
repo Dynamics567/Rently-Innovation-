@@ -9,6 +9,7 @@ import { ListingsService } from '@modules/catalog/services/listings.service';
 import { BookingService } from '../services/booking.service';
 import { CreateBookingDto } from '../dto/create-booking.dto';
 import { QueryBookingsDto } from '../dto/query-bookings.dto';
+import { RecordInspectionDto } from '../dto/record-inspection.dto';
 import { IsBookingProviderPolicy } from '../policies/is-booking-provider.policy';
 import { IsBookingPartyPolicy } from '../policies/is-booking-party.policy';
 
@@ -101,6 +102,17 @@ export class BookingsController {
     return this.bookingService.confirmReturn(id, user.id);
   }
 
+  @CheckPolicies(IsBookingProviderPolicy)
+  @Post(':id/inspect')
+  async inspect(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: RecordInspectionDto,
+  ) {
+    return this.bookingService.recordInspection(id, user.id, dto);
+  }
+
+  /** @deprecated Use POST :id/inspect with {damageFound:false} — kept as a backward-compatible alias. */
   @CheckPolicies(IsBookingProviderPolicy)
   @Post(':id/release-deposit')
   async releaseDeposit(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {

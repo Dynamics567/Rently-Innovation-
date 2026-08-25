@@ -12,15 +12,20 @@ import { ListingStatus, BookingMode } from '@modules/catalog/enums/listing.enums
 import { Booking } from '../entities/booking.entity';
 import { BookingStatusHistory } from '../entities/booking-status-history.entity';
 import { BookingExtensionRequest } from '../entities/booking-extension-request.entity';
+import { Dispute } from '../entities/dispute.entity';
 import { BookingRepository } from '../repositories/booking.repository';
 import { BookingStatusHistoryRepository } from '../repositories/booking-status-history.repository';
 import { BookingExtensionRequestRepository } from '../repositories/booking-extension-request.repository';
+import { DisputeRepository } from '../repositories/dispute.repository';
 import { BOOKING_STAGE_ORDER, BookingStage, BookingStatus } from '../enums/booking.enums';
 import { ExtensionRequestStatus } from '../enums/extension-request-status.enum';
+import { DisputeStatus } from '../enums/dispute-status.enum';
 import { CreateBookingDto } from '../dto/create-booking.dto';
 import { QueryBookingsDto } from '../dto/query-bookings.dto';
+import { RecordInspectionDto } from '../dto/record-inspection.dto';
 import { PAYMENT_PORT, PaymentPort } from './payment.port';
 import { computeCancellationRefund, CancellationRefund } from './cancellation-refund.util';
+import { ProviderProfileService } from '@modules/identity/services/provider-profile.service';
 
 interface StageStep {
   stage: BookingStage;
@@ -34,9 +39,11 @@ export class BookingService {
     private readonly bookingRepository: BookingRepository,
     private readonly historyRepository: BookingStatusHistoryRepository,
     private readonly extensionRequestRepository: BookingExtensionRequestRepository,
+    private readonly disputeRepository: DisputeRepository,
     private readonly listingsService: ListingsService,
     private readonly availabilityService: AvailabilityService,
     private readonly assetsService: AssetsService,
+    private readonly providerProfileService: ProviderProfileService,
     @Inject(PAYMENT_PORT) private readonly paymentPort: PaymentPort,
   ) {}
 
@@ -381,38 +388,126 @@ export class BookingService {
   }
 
   /**
-   * Inspection + deposit release + completion, as one action — Phase 1 has
-   * no separate "hold pending inspection review" step (no damage-dispute
-   * flow yet; see the Phase 1 plan's roadmap for Trust & Safety).
+   * [Provider] The real inspection step — replaces the old all-in-one
+   * releaseDeposit() (kept below as a backward-compatible alias). No
+   * damage: same three-stage advance as before, full deposit released.
+   * Damage found: the booking moves to DISPUTED and stays at INSPECTED
+   * (parked) until the dispute resolves — see DisputeService.
    */
-  async releaseDeposit(bookingId: string, actingUserId: string): Promise<Booking> {
+  async recordInspection(
+    bookingId: string,
+    actingUserId: string,
+    dto: RecordInspectionDto,
+  ): Promise<Booking> {
     const booking = await this.assertStage(bookingId, [BookingStage.RETURNED]);
+
+    if (!dto.damageFound) {
+      return this.dataSource.transaction(async (manager) => {
+        if (booking.depositMinor > 0) {
+          await this.paymentPort.release({ bookingId: booking.id, amountMinor: booking.depositMinor });
+        }
+        const inspected = await this.runSteps(
+          manager,
+          booking,
+          [{ stage: BookingStage.INSPECTED, status: BookingStatus.CONFIRMED }],
+          actingUserId,
+        );
+        const released = await this.runSteps(
+          manager,
+          inspected,
+          [{ stage: BookingStage.DEPOSITRELEASED, status: BookingStatus.CONFIRMED }],
+          actingUserId,
+        );
+        const completed = await this.runSteps(
+          manager,
+          released,
+          [{ stage: BookingStage.COMPLETED, status: BookingStatus.COMPLETED }],
+          actingUserId,
+        );
+        await this.markListingCompletedBooking(booking.listingId);
+        return completed;
+      });
+    }
+
     return this.dataSource.transaction(async (manager) => {
-      if (booking.depositMinor > 0) {
-        await this.paymentPort.release({
-          bookingId: booking.id,
-          amountMinor: booking.depositMinor,
-        });
-      }
       const inspected = await this.runSteps(
         manager,
         booking,
         [{ stage: BookingStage.INSPECTED, status: BookingStatus.CONFIRMED }],
         actingUserId,
       );
-      const released = await this.runSteps(
+      const disputed = await this.setStatusOnly(
         manager,
         inspected,
-        [{ stage: BookingStage.DEPOSITRELEASED, status: BookingStatus.CONFIRMED }],
+        BookingStatus.DISPUTED,
         actingUserId,
+        dto.description,
       );
-      return this.runSteps(
-        manager,
-        released,
-        [{ stage: BookingStage.COMPLETED, status: BookingStatus.COMPLETED }],
-        actingUserId,
-      );
+      const dispute = manager.getRepository(Dispute).create({
+        bookingId: booking.id,
+        openedBy: actingUserId,
+        description: dto.description!,
+        evidenceKeys: dto.evidenceKeys ?? [],
+        status: DisputeStatus.OPEN,
+      });
+      await manager.getRepository(Dispute).save(dispute);
+      return disputed;
     });
+  }
+
+  /** Backward-compatible alias — a plain "no damage" inspection. */
+  async releaseDeposit(bookingId: string, actingUserId: string): Promise<Booking> {
+    return this.recordInspection(bookingId, actingUserId, { damageFound: false });
+  }
+
+  /**
+   * [DisputeService] Finalizes a resolved dispute: releases
+   * `depositMinor - finalDeductionMinor` and advances the booking through
+   * to completion. Takes DisputeService's own transaction manager so the
+   * dispute-row update and this booking finalization commit atomically —
+   * BookingService stays the sole writer of Booking rows either way.
+   * Only releases the renter's undisputed portion — actually paying the
+   * deducted amount *to* the provider needs a real payment provider's
+   * split-payout capability, which arrives with real Payments (flagged
+   * gap, not a bug: MockPaymentAdapter has no such capability yet).
+   */
+  async finalizeDispute(
+    manager: EntityManager,
+    bookingId: string,
+    finalDeductionMinor: number,
+    actingUserId: string,
+  ): Promise<Booking> {
+    const booking = await this.findByIdOrFail(bookingId);
+    const releaseMinor = Math.max(0, booking.depositMinor - finalDeductionMinor);
+    if (releaseMinor > 0) {
+      await this.paymentPort.release({ bookingId: booking.id, amountMinor: releaseMinor });
+    }
+    const undisputed = await this.setStatusOnly(
+      manager,
+      booking,
+      BookingStatus.CONFIRMED,
+      actingUserId,
+      `Dispute resolved — ${finalDeductionMinor > 0 ? `₦${(finalDeductionMinor / 100).toLocaleString()} deducted` : 'no deduction'}`,
+    );
+    const released = await this.runSteps(
+      manager,
+      undisputed,
+      [{ stage: BookingStage.DEPOSITRELEASED, status: BookingStatus.CONFIRMED }],
+      actingUserId,
+    );
+    const completed = await this.runSteps(
+      manager,
+      released,
+      [{ stage: BookingStage.COMPLETED, status: BookingStatus.COMPLETED }],
+      actingUserId,
+    );
+    await this.markListingCompletedBooking(booking.listingId);
+    return completed;
+  }
+
+  private async markListingCompletedBooking(listingId: string): Promise<void> {
+    const listing = await this.listingsService.findByIdOrFail(listingId);
+    await this.providerProfileService.incrementCompletedBookings(listing.providerId);
   }
 
   /**

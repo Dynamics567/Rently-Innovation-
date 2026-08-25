@@ -4,10 +4,13 @@ import { BookingStatusHistoryRepository } from '../repositories/booking-status-h
 import { BookingExtensionRequestRepository } from '../repositories/booking-extension-request.repository';
 import { Booking } from '../entities/booking.entity';
 import { BookingStatusHistory } from '../entities/booking-status-history.entity';
+import { Dispute } from '../entities/dispute.entity';
 import { BookingStage, BookingStatus } from '../enums/booking.enums';
 import { ListingsService } from '@modules/catalog/services/listings.service';
 import { AvailabilityService } from '@modules/catalog/services/availability.service';
 import { AssetsService } from '@modules/catalog/services/assets.service';
+import { ProviderProfileService } from '@modules/identity/services/provider-profile.service';
+import { DisputeRepository } from '../repositories/dispute.repository';
 import {
   BookingMode,
   CancellationPolicy,
@@ -39,6 +42,7 @@ describe('BookingService', () => {
   let listingsService: Record<'findByIdOrFail' | 'getQuote', jest.Mock>;
   let availabilityService: Record<'isBlocked', jest.Mock>;
   let assetsService: Record<'getActiveForListing', jest.Mock>;
+  let providerProfileService: Record<'incrementCompletedBookings', jest.Mock>;
   let paymentPort: Record<'charge' | 'refund' | 'release', jest.Mock>;
   let dataSource: { transaction: jest.Mock };
 
@@ -93,6 +97,9 @@ describe('BookingService', () => {
     assetsService = {
       getActiveForListing: jest.fn(async () => []),
     };
+    providerProfileService = {
+      incrementCompletedBookings: jest.fn(async () => undefined),
+    };
     paymentPort = {
       charge: jest.fn(async () => ({ providerReference: 'MOCK-REF' })),
       refund: jest.fn(async () => undefined),
@@ -101,11 +108,14 @@ describe('BookingService', () => {
 
     const bookingManagerRepo = fakeRepo();
     const historyManagerRepo = fakeRepo();
+    const disputeManagerRepo = fakeRepo();
     const manager = {
       getRepository: jest.fn((entity: unknown) =>
         entity === Booking
           ? bookingManagerRepo
-          : entity === BookingStatusHistory
+          : entity === Dispute
+            ? disputeManagerRepo
+            : entity === BookingStatusHistory
             ? historyManagerRepo
             : undefined,
       ),
@@ -117,9 +127,11 @@ describe('BookingService', () => {
       bookingRepository as unknown as BookingRepository,
       historyRepository as unknown as BookingStatusHistoryRepository,
       {} as unknown as BookingExtensionRequestRepository,
+      {} as unknown as DisputeRepository,
       listingsService as unknown as ListingsService,
       availabilityService as unknown as AvailabilityService,
       assetsService as unknown as AssetsService,
+      providerProfileService as unknown as ProviderProfileService,
       paymentPort as unknown as PaymentPort,
     );
   });
@@ -363,6 +375,26 @@ describe('BookingService', () => {
       await service.releaseDeposit('booking-1', 'provider-user-1');
 
       expect(paymentPort.release).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('recordInspection', () => {
+    it('parks the booking as DISPUTED and opens a dispute when damage is found, without releasing the deposit', async () => {
+      bookingRepository.findByIdOrFail.mockResolvedValue({
+        id: 'booking-1',
+        stage: BookingStage.RETURNED,
+        status: BookingStatus.CONFIRMED,
+        depositMinor: 15000,
+      });
+
+      const result: any = await service.recordInspection('booking-1', 'provider-user-1', {
+        damageFound: true,
+        description: 'Scratched the paint on pickup',
+      });
+
+      expect(paymentPort.release).not.toHaveBeenCalled();
+      expect(result.status).toBe(BookingStatus.DISPUTED);
+      expect(result.stage).toBe(BookingStage.INSPECTED);
     });
   });
 });
