@@ -3,6 +3,8 @@ import { randomUUID } from 'crypto';
 import { DomainException } from '@common/errors/domain.exception';
 import { ErrorCode } from '@common/errors/error-codes.enum';
 import { STORAGE_PORT, StoragePort } from '@common/storage/storage.port';
+import { AuditLogService } from '@common/audit/audit-log.service';
+import { AuditActorType } from '@common/audit/audit-actor-type.enum';
 import { VerificationDocumentRepository } from '../repositories/verification-document.repository';
 import { VerificationDocument } from '../entities/verification-document.entity';
 import { VerificationDocumentStatus, VerificationDocumentType } from '../enums/verification-status.enum';
@@ -19,6 +21,7 @@ export class VerificationDocumentsService {
   constructor(
     private readonly documentRepository: VerificationDocumentRepository,
     @Inject(STORAGE_PORT) private readonly storage: StoragePort,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   async upload(
@@ -57,7 +60,17 @@ export class VerificationDocumentsService {
     document.reviewedBy = adminId;
     document.reviewedAt = new Date();
     document.reviewNotes = note ?? null;
-    return this.documentRepository.save(document);
+    const saved = await this.documentRepository.save(document);
+    await this.auditLogService.record({
+      actorId: adminId,
+      actorType: AuditActorType.ADMIN,
+      action: 'verification_document.approve',
+      entityType: 'VerificationDocument',
+      entityId: documentId,
+      before: { status: VerificationDocumentStatus.PENDING },
+      after: { status: saved.status, reviewNotes: saved.reviewNotes },
+    });
+    return saved;
   }
 
   async reject(documentId: string, adminId: string, reason: string): Promise<VerificationDocument> {
@@ -66,7 +79,17 @@ export class VerificationDocumentsService {
     document.reviewedBy = adminId;
     document.reviewedAt = new Date();
     document.reviewNotes = reason;
-    return this.documentRepository.save(document);
+    const saved = await this.documentRepository.save(document);
+    await this.auditLogService.record({
+      actorId: adminId,
+      actorType: AuditActorType.ADMIN,
+      action: 'verification_document.reject',
+      entityType: 'VerificationDocument',
+      entityId: documentId,
+      before: { status: VerificationDocumentStatus.PENDING },
+      after: { status: saved.status, reviewNotes: saved.reviewNotes },
+    });
+    return saved;
   }
 
   private async findReviewableOrFail(documentId: string): Promise<VerificationDocument> {

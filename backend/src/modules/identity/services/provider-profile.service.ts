@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { DomainException } from '@common/errors/domain.exception';
 import { ErrorCode } from '@common/errors/error-codes.enum';
+import { AuditLogService } from '@common/audit/audit-log.service';
+import { AuditActorType } from '@common/audit/audit-actor-type.enum';
 import { ProviderProfileRepository } from '../repositories/provider-profile.repository';
 import { UserRepository } from '../repositories/user.repository';
 import { CreateProviderProfileDto } from '../dto/create-provider-profile.dto';
@@ -13,6 +15,7 @@ export class ProviderProfileService {
   constructor(
     private readonly providerRepository: ProviderProfileRepository,
     private readonly userRepository: UserRepository,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   /** PRD FR1.1/§11.2 step 1 — a user "upgrades" to Provider without losing their Renter identity. */
@@ -97,29 +100,45 @@ export class ProviderProfileService {
     await this.providerRepository.incrementCompletedBookings(profileId);
   }
 
-  /**
-   * Admin action — PRD FR9.1. `_adminId` isn't stored on the entity itself;
-   * it's captured by the Postgres audit-log trigger (docs/DATABASE_SCHEMA.md
-   * `audit_log`) alongside before/after state, which is the actual system of
-   * record for "who approved this" — not an application-level field that a
-   * bug could skip writing.
-   */
-  async approveVerification(providerId: string, _adminId: string): Promise<ProviderProfile> {
+  /** Admin action — PRD FR9.1. `adminId` is captured on AuditLog.actorId, the actual system of record for "who approved this." */
+  async approveVerification(providerId: string, adminId: string): Promise<ProviderProfile> {
     const profile = await this.providerRepository.findByIdOrFail(providerId, 'Provider profile');
+    const before = { verificationStatus: profile.verificationStatus };
     profile.verificationStatus = ProviderVerificationStatus.VERIFIED;
     profile.verificationNotes = null;
-    return this.providerRepository.save(profile);
+    const saved = await this.providerRepository.save(profile);
+    await this.auditLogService.record({
+      actorId: adminId,
+      actorType: AuditActorType.ADMIN,
+      action: 'provider_profile.approve_verification',
+      entityType: 'ProviderProfile',
+      entityId: providerId,
+      before,
+      after: { verificationStatus: saved.verificationStatus },
+    });
+    return saved;
   }
 
   async rejectVerification(
     providerId: string,
-    _adminId: string,
+    adminId: string,
     reason: string,
   ): Promise<ProviderProfile> {
     const profile = await this.providerRepository.findByIdOrFail(providerId, 'Provider profile');
+    const before = { verificationStatus: profile.verificationStatus };
     profile.verificationStatus = ProviderVerificationStatus.REJECTED;
     profile.verificationNotes = reason;
-    return this.providerRepository.save(profile);
+    const saved = await this.providerRepository.save(profile);
+    await this.auditLogService.record({
+      actorId: adminId,
+      actorType: AuditActorType.ADMIN,
+      action: 'provider_profile.reject_verification',
+      entityType: 'ProviderProfile',
+      entityId: providerId,
+      before,
+      after: { verificationStatus: saved.verificationStatus, reason },
+    });
+    return saved;
   }
 
   assertVerified(profile: ProviderProfile): void {

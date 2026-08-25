@@ -3,6 +3,8 @@ import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { DomainException } from '@common/errors/domain.exception';
 import { ErrorCode } from '@common/errors/error-codes.enum';
+import { AuditLogService } from '@common/audit/audit-log.service';
+import { AuditActorType } from '@common/audit/audit-actor-type.enum';
 import { Dispute } from '../entities/dispute.entity';
 import { DisputeRepository } from '../repositories/dispute.repository';
 import { DisputeStatus } from '../enums/dispute-status.enum';
@@ -21,6 +23,7 @@ export class DisputeService {
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly disputeRepository: DisputeRepository,
     private readonly bookingService: BookingService,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   async findByIdOrFail(id: string): Promise<Dispute> {
@@ -127,6 +130,7 @@ export class DisputeService {
       );
     }
 
+    const before = { status: dispute.status, finalDeductionMinor: dispute.finalDeductionMinor };
     return this.dataSource.transaction(async (manager) => {
       dispute.status = DisputeStatus.RESOLVED;
       dispute.resolution = DisputeResolution.ADMIN_DECIDED;
@@ -136,6 +140,18 @@ export class DisputeService {
       dispute.resolutionNote = note;
       const saved = await manager.getRepository(Dispute).save(dispute);
       await this.bookingService.finalizeDispute(manager, dispute.bookingId, finalDeductionMinor, adminId);
+      await this.auditLogService.record(
+        {
+          actorId: adminId,
+          actorType: AuditActorType.ADMIN,
+          action: 'dispute.admin_resolve',
+          entityType: 'Dispute',
+          entityId: disputeId,
+          before,
+          after: { status: saved.status, finalDeductionMinor: saved.finalDeductionMinor, note },
+        },
+        manager,
+      );
       return saved;
     });
   }

@@ -5,6 +5,7 @@ import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthConfig, EmailConfig } from '@config/configuration';
 import { StorageModule } from '@common/storage/storage.module';
+import { AuditLogModule } from '@common/audit/audit-log.module';
 
 import { User } from './entities/user.entity';
 import { ProviderProfile } from './entities/provider-profile.entity';
@@ -54,6 +55,7 @@ import { IsSelfOrAdminPolicy } from './policies/is-self-or-admin.policy';
       PasswordResetToken,
     ]),
     StorageModule,
+    AuditLogModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

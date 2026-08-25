@@ -1,7 +1,9 @@
 import { Controller, Get, Param, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '@common/decorators/roles.decorator';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { UserRole } from '@modules/identity/enums/user-role.enum';
+import { AuthenticatedUser } from '@modules/identity/strategies/jwt.strategy';
 import { ListingsService } from '../services/listings.service';
 
 /**
@@ -25,12 +27,12 @@ export class AdminListingsController {
   }
 
   @Post(':id/approve')
-  async approve(@Param('id') id: string) {
-    return this.listingsService.approve(id);
+  async approve(@Param('id') id: string, @CurrentUser() admin: AuthenticatedUser) {
+    return this.listingsService.approve(id, admin.id);
   }
 
   @Post(':id/reject')
-  async reject(@Param('id') id: string) {
-    return this.listingsService.reject(id);
+  async reject(@Param('id') id: string, @CurrentUser() admin: AuthenticatedUser) {
+    return this.listingsService.reject(id, admin.id);
   }
 }

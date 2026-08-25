@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { StorageModule } from '@common/storage/storage.module';
+import { AuditLogModule } from '@common/audit/audit-log.module';
 import { IdentityModule } from '@modules/identity/identity.module';
 
 import { Category } from './entities/category.entity';
@@ -38,6 +39,7 @@ import { IsListingOwnerPolicy } from './policies/is-listing-owner.policy';
   imports: [
     TypeOrmModule.forFeature([Category, Listing, ListingPhoto, AvailabilityBlock, Asset]),
     StorageModule,
+    AuditLogModule,
     IdentityModule,
   ],
   controllers: [CategoriesController, ListingsController, AdminListingsController],

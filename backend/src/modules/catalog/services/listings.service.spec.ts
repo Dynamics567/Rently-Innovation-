@@ -3,6 +3,7 @@ import { ListingRepository } from '../repositories/listing.repository';
 import { ListingPhotoRepository } from '../repositories/listing-photo.repository';
 import { CategoriesService } from './categories.service';
 import { ListingAttributeValidatorService } from './listing-attribute-validator.service';
+import { AuditLogService } from '@common/audit/audit-log.service';
 import { ListingCondition, ListingStatus, PriceUnit } from '../enums/listing.enums';
 
 describe('ListingsService', () => {
@@ -11,6 +12,7 @@ describe('ListingsService', () => {
   let photoRepository: Record<'countByListing' | 'create' | 'save', jest.Mock>;
   let categoriesService: Record<'getByIdOrFail' | 'assertActive', jest.Mock>;
   let attributeValidator: Record<'validate', jest.Mock>;
+  let auditLogService: Record<'record', jest.Mock>;
 
   const activeCategory = {
     id: 'cat-1',
@@ -36,12 +38,14 @@ describe('ListingsService', () => {
       assertActive: jest.fn(),
     };
     attributeValidator = { validate: jest.fn() };
+    auditLogService = { record: jest.fn(async () => undefined) };
 
     service = new ListingsService(
       listingRepository as unknown as ListingRepository,
       photoRepository as unknown as ListingPhotoRepository,
       categoriesService as unknown as CategoriesService,
       attributeValidator as unknown as ListingAttributeValidatorService,
+      auditLogService as unknown as AuditLogService,
     );
   });
 

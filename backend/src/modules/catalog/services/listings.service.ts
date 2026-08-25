@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { DomainException } from '@common/errors/domain.exception';
 import { ErrorCode } from '@common/errors/error-codes.enum';
 import { CursorPage } from '@common/dto/cursor-pagination.dto';
+import { AuditLogService } from '@common/audit/audit-log.service';
+import { AuditActorType } from '@common/audit/audit-actor-type.enum';
 import { ListingRepository } from '../repositories/listing.repository';
 import { ListingPhotoRepository } from '../repositories/listing-photo.repository';
 import { Listing } from '../entities/listing.entity';
@@ -24,6 +26,7 @@ export class ListingsService {
     private readonly photoRepository: ListingPhotoRepository,
     private readonly categoriesService: CategoriesService,
     private readonly attributeValidator: ListingAttributeValidatorService,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   async create(providerId: string, dto: CreateListingDto): Promise<Listing> {
@@ -136,7 +139,7 @@ export class ListingsService {
   }
 
   /** [Admin] Approves a pending_review listing — see AdminListingsController. */
-  async approve(id: string): Promise<Listing> {
+  async approve(id: string, adminId: string): Promise<Listing> {
     const listing = await this.findByIdOrFail(id);
     if (listing.status !== ListingStatus.PENDING_REVIEW) {
       throw DomainException.conflict(
@@ -144,14 +147,36 @@ export class ListingsService {
         `Only listings pending review can be approved (current status: "${listing.status}").`,
       );
     }
+    const before = { status: listing.status };
     listing.status = ListingStatus.LIVE;
-    return this.listingRepository.save(listing);
+    const saved = await this.listingRepository.save(listing);
+    await this.auditLogService.record({
+      actorId: adminId,
+      actorType: AuditActorType.ADMIN,
+      action: 'listing.approve',
+      entityType: 'Listing',
+      entityId: id,
+      before,
+      after: { status: saved.status },
+    });
+    return saved;
   }
 
-  async reject(id: string): Promise<Listing> {
+  async reject(id: string, adminId: string): Promise<Listing> {
     const listing = await this.findByIdOrFail(id);
+    const before = { status: listing.status };
     listing.status = ListingStatus.REJECTED;
-    return this.listingRepository.save(listing);
+    const saved = await this.listingRepository.save(listing);
+    await this.auditLogService.record({
+      actorId: adminId,
+      actorType: AuditActorType.ADMIN,
+      action: 'listing.reject',
+      entityType: 'Listing',
+      entityId: id,
+      before,
+      after: { status: saved.status },
+    });
+    return saved;
   }
 
   async duplicate(id: string): Promise<Listing> {

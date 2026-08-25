@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { IdentityModule } from '@modules/identity/identity.module';
 import { CatalogModule } from '@modules/catalog/catalog.module';
+import { AuditLogModule } from '@common/audit/audit-log.module';
 
 import { Booking } from './entities/booking.entity';
 import { BookingStatusHistory } from './entities/booking-status-history.entity';
@@ -43,6 +44,7 @@ import { IsDisputePartyPolicy } from './policies/is-dispute-party.policy';
     TypeOrmModule.forFeature([Booking, BookingStatusHistory, BookingExtensionRequest, Dispute]),
     IdentityModule,
     CatalogModule,
+    AuditLogModule,
   ],
   controllers: [
     BookingsController,

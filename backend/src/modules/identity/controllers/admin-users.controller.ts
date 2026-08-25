@@ -2,9 +2,11 @@ import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Query } from '@nest
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsEmail } from 'class-validator';
 import { Roles } from '@common/decorators/roles.decorator';
+import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { UserRole } from '../enums/user-role.enum';
 import { UsersService } from '../services/users.service';
 import { SetUserRolesDto } from '../dto/set-user-roles.dto';
+import { AuthenticatedUser } from '../strategies/jwt.strategy';
 
 class LookupUserQueryDto {
   @IsEmail()
@@ -34,7 +36,11 @@ export class AdminUsersController {
   }
 
   @Patch(':id/roles')
-  async setRoles(@Param('id', ParseUUIDPipe) id: string, @Body() dto: SetUserRolesDto) {
-    return this.usersService.setRoles(id, dto.roles);
+  async setRoles(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetUserRolesDto,
+    @CurrentUser() admin: AuthenticatedUser,
+  ) {
+    return this.usersService.setRoles(id, dto.roles, admin.id);
   }
 }
