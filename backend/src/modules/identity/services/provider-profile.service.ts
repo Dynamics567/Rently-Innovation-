@@ -81,6 +81,22 @@ export class ProviderProfileService {
     return this.providerRepository.findPendingVerification();
   }
 
+  async getById(id: string): Promise<ProviderProfile> {
+    return this.providerRepository.findByIdOrFail(id, 'Provider profile');
+  }
+
+  /** [Trust] Recomputes the denormalized avgRating from a fresh aggregate over Review rows — never written directly by review submission itself. */
+  async recomputeRatingAggregate(profileId: string, avgRating: number): Promise<ProviderProfile> {
+    const profile = await this.providerRepository.findByIdOrFail(profileId, 'Provider profile');
+    profile.avgRating = avgRating;
+    return this.providerRepository.save(profile);
+  }
+
+  /** [Booking] Called once per booking that reaches COMPLETED, independent of whether it's ever reviewed. */
+  async incrementCompletedBookings(profileId: string): Promise<void> {
+    await this.providerRepository.incrementCompletedBookings(profileId);
+  }
+
   /**
    * Admin action — PRD FR9.1. `_adminId` isn't stored on the entity itself;
    * it's captured by the Postgres audit-log trigger (docs/DATABASE_SCHEMA.md

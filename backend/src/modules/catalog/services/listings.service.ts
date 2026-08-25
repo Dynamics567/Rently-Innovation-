@@ -222,4 +222,16 @@ export class ListingsService {
     const category = await this.categoriesService.getByIdOrFail(listing.categoryId);
     return this.computeQuote(listing, from, to, category.commissionRateBps);
   }
+
+  /** [Trust] Recomputes the denormalized avgRating/reviewCount from a fresh aggregate over Review rows — never written directly by review submission itself. */
+  async recomputeRatingAggregate(
+    listingId: string,
+    avgRating: number,
+    reviewCount: number,
+  ): Promise<Listing> {
+    const listing = await this.findByIdOrFail(listingId);
+    listing.avgRating = avgRating;
+    listing.reviewCount = reviewCount;
+    return this.listingRepository.save(listing);
+  }
 }

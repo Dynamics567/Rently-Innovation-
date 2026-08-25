@@ -28,4 +28,14 @@ export class ProviderProfileRepository extends BaseRepository<ProviderProfile> {
       order: { createdAt: 'ASC' },
     });
   }
+
+  /** Atomic increment — avoids a read-modify-write race between two bookings completing for the same provider at once. */
+  async incrementCompletedBookings(id: string): Promise<void> {
+    await this.repository
+      .createQueryBuilder()
+      .update(ProviderProfile)
+      .set({ totalCompletedBookings: () => '"total_completed_bookings" + 1' })
+      .where('id = :id', { id })
+      .execute();
+  }
 }
