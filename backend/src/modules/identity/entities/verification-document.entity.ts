@@ -42,4 +42,7 @@ export class VerificationDocument extends BaseEntity {
 
   @Column({ name: 'reviewed_at', type: 'timestamptz', nullable: true })
   reviewedAt?: Date | null;
+
+  @Column({ name: 'review_notes', type: 'text', nullable: true })
+  reviewNotes?: string | null;
 }

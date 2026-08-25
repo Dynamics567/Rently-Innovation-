@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthConfig, EmailConfig } from '@config/configuration';
+import { StorageModule } from '@common/storage/storage.module';
 
 import { User } from './entities/user.entity';
 import { ProviderProfile } from './entities/provider-profile.entity';
@@ -13,6 +14,7 @@ import { PasswordResetToken } from './entities/password-reset-token.entity';
 
 import { UserRepository } from './repositories/user.repository';
 import { ProviderProfileRepository } from './repositories/provider-profile.repository';
+import { VerificationDocumentRepository } from './repositories/verification-document.repository';
 import { PasswordResetTokenRepository } from './repositories/password-reset-token.repository';
 
 import { AuthService } from './services/auth.service';
@@ -20,6 +22,7 @@ import { TokenService } from './services/token.service';
 import { OtpService } from './services/otp.service';
 import { UsersService } from './services/users.service';
 import { ProviderProfileService } from './services/provider-profile.service';
+import { VerificationDocumentsService } from './services/verification-documents.service';
 import { ConsoleSmsSender, SMS_SENDER } from './services/sms-sender.port';
 import { ConsoleEmailSender, EMAIL_SENDER } from './services/email-sender.port';
 import { ResendEmailSender } from './services/resend-email-sender';
@@ -50,6 +53,7 @@ import { IsSelfOrAdminPolicy } from './policies/is-self-or-admin.policy';
       RefreshToken,
       PasswordResetToken,
     ]),
+    StorageModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -70,12 +74,14 @@ import { IsSelfOrAdminPolicy } from './policies/is-self-or-admin.policy';
   providers: [
     UserRepository,
     ProviderProfileRepository,
+    VerificationDocumentRepository,
     PasswordResetTokenRepository,
     AuthService,
     TokenService,
     OtpService,
     UsersService,
     ProviderProfileService,
+    VerificationDocumentsService,
     JwtStrategy,
     IsSelfOrAdminPolicy,
     { provide: SMS_SENDER, useClass: ConsoleSmsSender },

@@ -1,13 +1,26 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { IsString, MinLength } from 'class-validator';
+import { IsOptional, IsString, MinLength } from 'class-validator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { UserRole } from '../enums/user-role.enum';
 import { ProviderProfileService } from '../services/provider-profile.service';
+import { VerificationDocumentsService } from '../services/verification-documents.service';
 import { AuthenticatedUser } from '../strategies/jwt.strategy';
 
 class RejectVerificationDto {
+  @IsString()
+  @MinLength(5)
+  reason: string;
+}
+
+class ApproveVerificationDocumentDto {
+  @IsOptional()
+  @IsString()
+  note?: string;
+}
+
+class RejectVerificationDocumentDto {
   @IsString()
   @MinLength(5)
   reason: string;
@@ -26,7 +39,10 @@ class RejectVerificationDto {
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
 @Controller('admin/providers')
 export class AdminProvidersController {
-  constructor(private readonly providerService: ProviderProfileService) {}
+  constructor(
+    private readonly providerService: ProviderProfileService,
+    private readonly verificationDocumentsService: VerificationDocumentsService,
+  ) {}
 
   @Get('verification-queue')
   async verificationQueue() {
@@ -45,5 +61,28 @@ export class AdminProvidersController {
     @CurrentUser() admin: AuthenticatedUser,
   ) {
     return this.providerService.rejectVerification(id, admin.id, dto.reason);
+  }
+
+  @Get(':id/verification-documents')
+  async listVerificationDocuments(@Param('id', ParseUUIDPipe) id: string) {
+    return this.verificationDocumentsService.listForProvider(id);
+  }
+
+  @Post('verification-documents/:documentId/approve')
+  async approveVerificationDocument(
+    @Param('documentId', ParseUUIDPipe) documentId: string,
+    @Body() dto: ApproveVerificationDocumentDto,
+    @CurrentUser() admin: AuthenticatedUser,
+  ) {
+    return this.verificationDocumentsService.approve(documentId, admin.id, dto.note);
+  }
+
+  @Post('verification-documents/:documentId/reject')
+  async rejectVerificationDocument(
+    @Param('documentId', ParseUUIDPipe) documentId: string,
+    @Body() dto: RejectVerificationDocumentDto,
+    @CurrentUser() admin: AuthenticatedUser,
+  ) {
+    return this.verificationDocumentsService.reject(documentId, admin.id, dto.reason);
   }
 }
