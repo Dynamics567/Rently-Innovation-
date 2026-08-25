@@ -28,6 +28,7 @@ import { CatalogModule } from '@modules/catalog/catalog.module';
 import { BookingModule } from '@modules/booking/booking.module';
 import { NotificationsModule } from '@modules/notifications/notifications.module';
 import { TrustModule } from '@modules/trust/trust.module';
+import { MessagingModule } from '@modules/messaging/messaging.module';
 import { HealthModule } from './health/health.module';
 
 /**
@@ -70,7 +71,8 @@ import { HealthModule } from './health/health.module';
     BookingModule,
     NotificationsModule,
     TrustModule,
-    // PaymentsModule, SearchModule, MessagingModule — registered here as each is built.
+    MessagingModule,
+    // PaymentsModule, SearchModule — registered here as each is built.
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
