@@ -40,10 +40,14 @@ export class VerificationDocumentsService {
   async listForProvider(providerId: string): Promise<Array<VerificationDocument & { url: string }>> {
     const documents = await this.documentRepository.findByProvider(providerId);
     return Promise.all(
-      documents.map(async (document) => ({
-        ...document,
-        url: await this.storage.getUrl(document.storageKey),
-      })),
+      documents.map(async (document) => {
+        // Object.assign (not a `{...document}` spread) keeps the VerificationDocument
+        // prototype intact, so ClassSerializerInterceptor's @Exclude() on storageKey
+        // still applies -- a spread here silently turns this into a plain object and
+        // leaks the private storage key to the client.
+        const url = await this.storage.getUrl(document.storageKey);
+        return Object.assign(document, { url });
+      }),
     );
   }
 
