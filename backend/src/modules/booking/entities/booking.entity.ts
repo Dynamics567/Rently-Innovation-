@@ -26,6 +26,13 @@ export class Booking extends BaseEntity {
   @Column({ name: 'listing_id' })
   listingId: string;
 
+  // Which physical unit this booking is against, for a multi-asset listing —
+  // null for a single-unit listing (the vast majority). Bare column, no
+  // relation: Booking doesn't import Catalog's Asset entity directly
+  // (module-boundary rule), same as listingId itself.
+  @Column({ name: 'asset_id', type: 'uuid', nullable: true })
+  assetId?: string | null;
+
   @Column({ name: 'renter_id' })
   renterId: string;
 

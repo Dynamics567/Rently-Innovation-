@@ -30,3 +30,17 @@ export enum ListingStatus {
   PAUSED = 'paused',
   REJECTED = 'rejected',
 }
+
+/**
+ * Provider-controlled availability toggle for one physical unit of a
+ * listing (see Asset entity). Deliberately does NOT track "is this unit
+ * out on rental right now" — that's derived at query time from its
+ * bookings, never stored here, so it can't drift from the real booking
+ * state (same "ledger over balance" philosophy as everything else
+ * money/state-adjacent in this codebase).
+ */
+export enum AssetProviderStatus {
+  ACTIVE = 'active',
+  MAINTENANCE = 'maintenance',
+  RETIRED = 'retired',
+}

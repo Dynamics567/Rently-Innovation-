@@ -61,6 +61,29 @@ export class BookingRepository extends BaseRepository<Booking> {
     return count > 0;
   }
 
+  /** Same as hasOverlapWithBuffer, scoped to one specific asset rather than the whole listing — for multi-asset listings, where other assets' bookings must not block this one. */
+  async hasOverlapForAssetWithBuffer(
+    assetId: string,
+    from: Date,
+    to: Date,
+    bufferMinutes: number,
+    excludeBookingId?: string,
+  ): Promise<boolean> {
+    const qb = this.repository
+      .createQueryBuilder('booking')
+      .where('booking.assetId = :assetId', { assetId })
+      .andWhere("booking.status IN ('pending','confirmed')")
+      .andWhere(
+        "booking.during && tstzrange(:from::timestamptz - (:buffer || ' minutes')::interval, :to::timestamptz + (:buffer || ' minutes')::interval)",
+        { from: from.toISOString(), to: to.toISOString(), buffer: bufferMinutes },
+      );
+    if (excludeBookingId) {
+      qb.andWhere('booking.id != :excludeBookingId', { excludeBookingId });
+    }
+    const count = await qb.getCount();
+    return count > 0;
+  }
+
   /**
    * `role` picks which column to filter by: a renter sees bookings they
    * made, a provider sees bookings against their listings. `listingIds` is

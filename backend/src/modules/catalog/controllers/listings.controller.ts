@@ -23,10 +23,13 @@ import { ProviderProfileService } from '@modules/identity/services/provider-prof
 import { UserRole } from '@modules/identity/enums/user-role.enum';
 import { ListingsService } from '../services/listings.service';
 import { AvailabilityService } from '../services/availability.service';
+import { AssetsService } from '../services/assets.service';
 import { CreateListingDto } from '../dto/create-listing.dto';
 import { UpdateListingDto } from '../dto/update-listing.dto';
 import { QueryListingsDto } from '../dto/query-listings.dto';
 import { CreateAvailabilityBlockDto } from '../dto/create-availability-block.dto';
+import { CreateAssetDto } from '../dto/create-asset.dto';
+import { UpdateAssetDto } from '../dto/update-asset.dto';
 import { DateRangeQueryDto } from '../dto/date-range-query.dto';
 import { IsListingOwnerPolicy } from '../policies/is-listing-owner.policy';
 
@@ -36,6 +39,7 @@ export class ListingsController {
   constructor(
     private readonly listingsService: ListingsService,
     private readonly availabilityService: AvailabilityService,
+    private readonly assetsService: AssetsService,
     private readonly providerProfileService: ProviderProfileService,
     @Inject(STORAGE_PORT) private readonly storage: StoragePort,
   ) {}
@@ -121,7 +125,7 @@ export class ListingsController {
   @Public()
   @Get(':id/availability')
   async availability(@Param('id') id: string, @Query() range: DateRangeQueryDto) {
-    return this.availabilityService.getBlocksInRange(id, new Date(range.from), new Date(range.to));
+    return this.availabilityService.getAvailabilitySummary(id, new Date(range.from), new Date(range.to));
   }
 
   @CheckPolicies(IsListingOwnerPolicy)
@@ -134,5 +138,26 @@ export class ListingsController {
       new Date(dto.to),
       dto.reason,
     );
+  }
+
+  @CheckPolicies(IsListingOwnerPolicy)
+  @ApiBearerAuth()
+  @Post(':id/assets')
+  async addAsset(@Param('id') id: string, @Body() dto: CreateAssetDto) {
+    return this.assetsService.create(id, dto);
+  }
+
+  @CheckPolicies(IsListingOwnerPolicy)
+  @ApiBearerAuth()
+  @Get(':id/assets')
+  async listAssets(@Param('id') id: string) {
+    return this.assetsService.listForListing(id);
+  }
+
+  @CheckPolicies(IsListingOwnerPolicy)
+  @ApiBearerAuth()
+  @Patch(':id/assets/:assetId')
+  async updateAsset(@Param('assetId') assetId: string, @Body() dto: UpdateAssetDto) {
+    return this.assetsService.update(assetId, dto);
   }
 }

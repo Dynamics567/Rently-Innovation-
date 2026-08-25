@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { toTstzRangeLiteral } from '@common/utils/tstzrange.util';
 import { AvailabilityBlockRepository } from '../repositories/availability-block.repository';
 import { AvailabilityBlock } from '../entities/availability-block.entity';
+import { AssetRepository } from '../repositories/asset.repository';
 
 /**
  * Owns provider-set manual availability blocks (maintenance, personal use)
@@ -15,10 +16,33 @@ import { AvailabilityBlock } from '../entities/availability-block.entity';
  */
 @Injectable()
 export class AvailabilityService {
-  constructor(private readonly blockRepository: AvailabilityBlockRepository) {}
+  constructor(
+    private readonly blockRepository: AvailabilityBlockRepository,
+    private readonly assetRepository: AssetRepository,
+  ) {}
 
   async getBlocksInRange(listingId: string, from: Date, to: Date): Promise<AvailabilityBlock[]> {
     return this.blockRepository.findByListingInRange(listingId, from, to);
+  }
+
+  /**
+   * `totalUnits` is real Catalog-owned data (count of active Asset rows, or
+   * 1 for a listing with none). Whether a *specific* date range is fully
+   * booked across all units needs Booking's data, which Catalog can't read
+   * (module-boundary rule) — that's surfaced instead via the real
+   * BOOKING_DATES_UNAVAILABLE error at booking-creation time, same
+   * "composes client-side" gap already documented on getBlocksInRange.
+   */
+  async getAvailabilitySummary(
+    listingId: string,
+    from: Date,
+    to: Date,
+  ): Promise<{ blocks: AvailabilityBlock[]; totalUnits: number }> {
+    const [blocks, activeAssetCount] = await Promise.all([
+      this.getBlocksInRange(listingId, from, to),
+      this.assetRepository.countActiveByListing(listingId),
+    ]);
+    return { blocks, totalUnits: Math.max(1, activeAssetCount) };
   }
 
   async createBlock(

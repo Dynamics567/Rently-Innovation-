@@ -7,6 +7,7 @@ import { BookingStatusHistory } from '../entities/booking-status-history.entity'
 import { BookingStage, BookingStatus } from '../enums/booking.enums';
 import { ListingsService } from '@modules/catalog/services/listings.service';
 import { AvailabilityService } from '@modules/catalog/services/availability.service';
+import { AssetsService } from '@modules/catalog/services/assets.service';
 import {
   BookingMode,
   CancellationPolicy,
@@ -27,12 +28,17 @@ import { PaymentPort } from './payment.port';
 describe('BookingService', () => {
   let service: BookingService;
   let bookingRepository: Record<
-    'findByIdOrFail' | 'findByIdempotencyKey' | 'search' | 'hasOverlapWithBuffer',
+    | 'findByIdOrFail'
+    | 'findByIdempotencyKey'
+    | 'search'
+    | 'hasOverlapWithBuffer'
+    | 'hasOverlapForAssetWithBuffer',
     jest.Mock
   >;
   let historyRepository: Record<'findByBooking', jest.Mock>;
   let listingsService: Record<'findByIdOrFail' | 'getQuote', jest.Mock>;
   let availabilityService: Record<'isBlocked', jest.Mock>;
+  let assetsService: Record<'getActiveForListing', jest.Mock>;
   let paymentPort: Record<'charge' | 'refund' | 'release', jest.Mock>;
   let dataSource: { transaction: jest.Mock };
 
@@ -74,6 +80,7 @@ describe('BookingService', () => {
       findByIdempotencyKey: jest.fn(async () => null),
       search: jest.fn(),
       hasOverlapWithBuffer: jest.fn(async () => false),
+      hasOverlapForAssetWithBuffer: jest.fn(async () => false),
     };
     historyRepository = { findByBooking: jest.fn() };
     listingsService = {
@@ -82,6 +89,9 @@ describe('BookingService', () => {
     };
     availabilityService = {
       isBlocked: jest.fn(async () => false),
+    };
+    assetsService = {
+      getActiveForListing: jest.fn(async () => []),
     };
     paymentPort = {
       charge: jest.fn(async () => ({ providerReference: 'MOCK-REF' })),
@@ -109,6 +119,7 @@ describe('BookingService', () => {
       {} as unknown as BookingExtensionRequestRepository,
       listingsService as unknown as ListingsService,
       availabilityService as unknown as AvailabilityService,
+      assetsService as unknown as AssetsService,
       paymentPort as unknown as PaymentPort,
     );
   });
@@ -173,6 +184,40 @@ describe('BookingService', () => {
       expect(result.serviceFeeMinor).toBe(quote.serviceFeeMinor);
       expect(result.depositMinor).toBe(quote.depositMinor);
       expect(result.totalMinor).toBe(quote.totalMinor);
+    });
+
+    it('assigns the first available asset when the listing has per-unit inventory, leaving the other units untouched', async () => {
+      assetsService.getActiveForListing.mockResolvedValue([{ id: 'asset-1' }, { id: 'asset-2' }]);
+      bookingRepository.hasOverlapForAssetWithBuffer = jest.fn(
+        async (assetId: string) => assetId === 'asset-1', // asset-1 busy, asset-2 free
+      );
+
+      const result: any = await service.create('renter-1', dto);
+
+      expect(result.assetId).toBe('asset-2');
+      expect(bookingRepository.hasOverlapWithBuffer).not.toHaveBeenCalled(); // listing-level check skipped once assets exist
+    });
+
+    it('rejects the booking once every unit of a multi-asset listing is busy for the requested window', async () => {
+      assetsService.getActiveForListing.mockResolvedValue([{ id: 'asset-1' }, { id: 'asset-2' }]);
+      bookingRepository.hasOverlapForAssetWithBuffer = jest.fn(async () => true); // every asset conflicts
+
+      await expect(service.create('renter-1', dto)).rejects.toMatchObject({
+        code: 'BOOKING_DATES_UNAVAILABLE',
+      });
+      expect(dataSource.transaction).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the listing-level buffer check when the listing has no assets at all', async () => {
+      const result: any = await service.create('renter-1', dto);
+
+      expect(result.assetId).toBeNull();
+      expect(bookingRepository.hasOverlapWithBuffer).toHaveBeenCalledWith(
+        'listing-1',
+        expect.any(Date),
+        expect.any(Date),
+        liveListing.turnaroundBufferMinutes,
+      );
     });
   });
 

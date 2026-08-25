@@ -7,6 +7,7 @@ import { CursorPage } from '@common/dto/cursor-pagination.dto';
 import { toTstzRangeLiteral } from '@common/utils/tstzrange.util';
 import { ListingsService } from '@modules/catalog/services/listings.service';
 import { AvailabilityService } from '@modules/catalog/services/availability.service';
+import { AssetsService } from '@modules/catalog/services/assets.service';
 import { ListingStatus, BookingMode } from '@modules/catalog/enums/listing.enums';
 import { Booking } from '../entities/booking.entity';
 import { BookingStatusHistory } from '../entities/booking-status-history.entity';
@@ -35,6 +36,7 @@ export class BookingService {
     private readonly extensionRequestRepository: BookingExtensionRequestRepository,
     private readonly listingsService: ListingsService,
     private readonly availabilityService: AvailabilityService,
+    private readonly assetsService: AssetsService,
     @Inject(PAYMENT_PORT) private readonly paymentPort: PaymentPort,
   ) {}
 
@@ -115,17 +117,44 @@ export class BookingService {
         'These dates fall within a period the provider has blocked.',
       );
     }
-    const bufferConflict = await this.bookingRepository.hasOverlapWithBuffer(
-      dto.listingId,
-      from,
-      to,
-      listing.turnaroundBufferMinutes,
-    );
-    if (bufferConflict) {
-      throw DomainException.conflict(
-        ErrorCode.BOOKING_DATES_UNAVAILABLE,
-        `This provider needs ${listing.turnaroundBufferMinutes} minutes between rentals — these dates are too close to another booking.`,
+    // A listing with active Asset rows has more than one physical unit —
+    // pick the first one free for this window instead of a single
+    // listing-wide buffer check. A listing with zero Asset rows (the vast
+    // majority) falls through to the original single-unit check unchanged.
+    const activeAssets = await this.assetsService.getActiveForListing(dto.listingId);
+    let assetId: string | null = null;
+    if (activeAssets.length > 0) {
+      for (const asset of activeAssets) {
+        const conflict = await this.bookingRepository.hasOverlapForAssetWithBuffer(
+          asset.id,
+          from,
+          to,
+          listing.turnaroundBufferMinutes,
+        );
+        if (!conflict) {
+          assetId = asset.id;
+          break;
+        }
+      }
+      if (!assetId) {
+        throw DomainException.conflict(
+          ErrorCode.BOOKING_DATES_UNAVAILABLE,
+          'Every unit of this listing is already booked for these dates.',
+        );
+      }
+    } else {
+      const bufferConflict = await this.bookingRepository.hasOverlapWithBuffer(
+        dto.listingId,
+        from,
+        to,
+        listing.turnaroundBufferMinutes,
       );
+      if (bufferConflict) {
+        throw DomainException.conflict(
+          ErrorCode.BOOKING_DATES_UNAVAILABLE,
+          `This provider needs ${listing.turnaroundBufferMinutes} minutes between rentals — these dates are too close to another booking.`,
+        );
+      }
     }
 
     const quote = await this.listingsService.getQuote(dto.listingId, from, to);
@@ -133,6 +162,7 @@ export class BookingService {
     return this.dataSource.transaction(async (manager) => {
       const booking = manager.getRepository(Booking).create({
         listingId: dto.listingId,
+        assetId,
         renterId,
         during: toTstzRangeLiteral(from, to),
         startsAt: from,
@@ -531,13 +561,24 @@ export class BookingService {
         'The provider has blocked part of the time you asked to extend into.',
       );
     }
-    const conflict = await this.bookingRepository.hasOverlapWithBuffer(
-      booking.listingId,
-      booking.endsAt,
-      newEndsAt,
-      bufferMinutes,
-      booking.id,
-    );
+    // If this booking is against a specific asset (multi-unit listing), the
+    // extension only needs to avoid conflicting with THAT asset's other
+    // bookings — a different unit being busy is irrelevant here.
+    const conflict = booking.assetId
+      ? await this.bookingRepository.hasOverlapForAssetWithBuffer(
+          booking.assetId,
+          booking.endsAt,
+          newEndsAt,
+          bufferMinutes,
+          booking.id,
+        )
+      : await this.bookingRepository.hasOverlapWithBuffer(
+          booking.listingId,
+          booking.endsAt,
+          newEndsAt,
+          bufferMinutes,
+          booking.id,
+        );
     if (conflict) {
       throw DomainException.conflict(
         ErrorCode.BOOKING_DATES_UNAVAILABLE,

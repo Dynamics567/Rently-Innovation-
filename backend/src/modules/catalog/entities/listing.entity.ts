@@ -3,6 +3,7 @@ import { BaseEntity } from '@common/base/base.entity';
 import { BigIntNumberTransformer } from '@common/transformers/bigint-number.transformer';
 import { Category } from './category.entity';
 import { ListingPhoto } from './listing-photo.entity';
+import { Asset } from './asset.entity';
 import {
   BookingMode,
   CancellationPolicy,
@@ -106,6 +107,9 @@ export class Listing extends BaseEntity {
 
   @OneToMany(() => ListingPhoto, (photo) => photo.listing)
   photos: ListingPhoto[];
+
+  @OneToMany(() => Asset, (asset) => asset.listing)
+  assets: Asset[];
 
   isLive(): boolean {
     return this.status === ListingStatus.LIVE;

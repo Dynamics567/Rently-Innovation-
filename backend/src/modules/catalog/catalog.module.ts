@@ -7,15 +7,18 @@ import { Category } from './entities/category.entity';
 import { Listing } from './entities/listing.entity';
 import { ListingPhoto } from './entities/listing-photo.entity';
 import { AvailabilityBlock } from './entities/availability-block.entity';
+import { Asset } from './entities/asset.entity';
 
 import { CategoryRepository } from './repositories/category.repository';
 import { ListingRepository } from './repositories/listing.repository';
 import { ListingPhotoRepository } from './repositories/listing-photo.repository';
 import { AvailabilityBlockRepository } from './repositories/availability-block.repository';
+import { AssetRepository } from './repositories/asset.repository';
 
 import { CategoriesService } from './services/categories.service';
 import { ListingsService } from './services/listings.service';
 import { AvailabilityService } from './services/availability.service';
+import { AssetsService } from './services/assets.service';
 import { ListingAttributeValidatorService } from './services/listing-attribute-validator.service';
 
 import { CategoriesController } from './controllers/categories.controller';
@@ -33,7 +36,7 @@ import { IsListingOwnerPolicy } from './policies/is-listing-owner.policy';
  */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Category, Listing, ListingPhoto, AvailabilityBlock]),
+    TypeOrmModule.forFeature([Category, Listing, ListingPhoto, AvailabilityBlock, Asset]),
     StorageModule,
     IdentityModule,
   ],
@@ -43,12 +46,14 @@ import { IsListingOwnerPolicy } from './policies/is-listing-owner.policy';
     ListingRepository,
     ListingPhotoRepository,
     AvailabilityBlockRepository,
+    AssetRepository,
     CategoriesService,
     ListingsService,
     AvailabilityService,
+    AssetsService,
     ListingAttributeValidatorService,
     IsListingOwnerPolicy,
   ],
-  exports: [CategoriesService, ListingsService, AvailabilityService],
+  exports: [CategoriesService, ListingsService, AvailabilityService, AssetsService],
 })
 export class CatalogModule {}
