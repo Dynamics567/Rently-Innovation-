@@ -10,9 +10,12 @@ import { AvailabilityService } from '@modules/catalog/services/availability.serv
 import { ListingStatus, BookingMode } from '@modules/catalog/enums/listing.enums';
 import { Booking } from '../entities/booking.entity';
 import { BookingStatusHistory } from '../entities/booking-status-history.entity';
+import { BookingExtensionRequest } from '../entities/booking-extension-request.entity';
 import { BookingRepository } from '../repositories/booking.repository';
 import { BookingStatusHistoryRepository } from '../repositories/booking-status-history.repository';
+import { BookingExtensionRequestRepository } from '../repositories/booking-extension-request.repository';
 import { BOOKING_STAGE_ORDER, BookingStage, BookingStatus } from '../enums/booking.enums';
+import { ExtensionRequestStatus } from '../enums/extension-request-status.enum';
 import { CreateBookingDto } from '../dto/create-booking.dto';
 import { QueryBookingsDto } from '../dto/query-bookings.dto';
 import { PAYMENT_PORT, PaymentPort } from './payment.port';
@@ -29,6 +32,7 @@ export class BookingService {
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly bookingRepository: BookingRepository,
     private readonly historyRepository: BookingStatusHistoryRepository,
+    private readonly extensionRequestRepository: BookingExtensionRequestRepository,
     private readonly listingsService: ListingsService,
     private readonly availabilityService: AvailabilityService,
     @Inject(PAYMENT_PORT) private readonly paymentPort: PaymentPort,
@@ -379,6 +383,167 @@ export class BookingService {
         actingUserId,
       );
     });
+  }
+
+  /**
+   * [Renter] Ask to push a rental's end date out while it's ACTIVE — does
+   * not touch the main pickup→return progression at all, it's a parallel
+   * request that either gets approved (mutating the booking's endsAt in
+   * place) or declined/cancelled with no effect on the booking itself.
+   * Deposit is not re-quoted — an extension only adds rental+service fee
+   * for the extra time, a deliberate simplicity call.
+   */
+  async requestExtension(
+    bookingId: string,
+    renterId: string,
+    newEndsAt: Date,
+  ): Promise<BookingExtensionRequest> {
+    const booking = await this.assertStage(bookingId, [BookingStage.ACTIVE]);
+    if (booking.renterId !== renterId) {
+      throw DomainException.forbidden(ErrorCode.FORBIDDEN, 'Only the renter can request an extension.');
+    }
+    if (newEndsAt.getTime() <= booking.endsAt.getTime()) {
+      throw DomainException.unprocessable(
+        ErrorCode.BOOKING_DATE_RANGE_INVALID,
+        'The new end date must be after the current end date.',
+      );
+    }
+
+    const listing = await this.listingsService.findByIdOrFail(booking.listingId);
+    await this.assertExtensionWindowAvailable(booking, listing.turnaroundBufferMinutes, newEndsAt);
+
+    const quote = await this.listingsService.getQuote(booking.listingId, booking.endsAt, newEndsAt);
+
+    const request = this.extensionRequestRepository.create({
+      bookingId: booking.id,
+      requestedBy: renterId,
+      currentEndsAt: booking.endsAt,
+      requestedEndsAt: newEndsAt,
+      status: ExtensionRequestStatus.PENDING,
+      additionalRentalFeeMinor: quote.rentalFeeMinor,
+      additionalServiceFeeMinor: quote.serviceFeeMinor,
+    });
+    return this.extensionRequestRepository.save(request);
+  }
+
+  /** [Provider] Charges the additional fee, then extends the booking's endsAt/during in place. */
+  async approveExtension(extensionRequestId: string, providerUserId: string): Promise<Booking> {
+    const request = await this.findExtensionRequestOrFail(extensionRequestId);
+    if (request.status !== ExtensionRequestStatus.PENDING) {
+      throw DomainException.conflict(
+        ErrorCode.EXTENSION_REQUEST_INVALID_STATE,
+        'Only a pending extension request can be approved.',
+      );
+    }
+    const booking = await this.findByIdOrFail(request.bookingId);
+    const listing = await this.listingsService.findByIdOrFail(booking.listingId);
+    // Re-check availability — time has passed since the request was made.
+    await this.assertExtensionWindowAvailable(
+      booking,
+      listing.turnaroundBufferMinutes,
+      request.requestedEndsAt,
+    );
+
+    const additionalMinor = (request.additionalRentalFeeMinor ?? 0) + (request.additionalServiceFeeMinor ?? 0);
+    const charge = await this.paymentPort.charge({ bookingId: booking.id, amountMinor: additionalMinor });
+
+    return this.dataSource.transaction(async (manager) => {
+      booking.endsAt = request.requestedEndsAt;
+      booking.during = toTstzRangeLiteral(booking.startsAt, request.requestedEndsAt);
+      booking.rentalFeeMinor += request.additionalRentalFeeMinor ?? 0;
+      booking.serviceFeeMinor += request.additionalServiceFeeMinor ?? 0;
+      booking.totalMinor += additionalMinor;
+      booking.paymentReference = charge.providerReference;
+      const saved = await manager.getRepository(Booking).save(booking);
+      // Recorded as a same-stage transition purely for the audit trail — the
+      // booking doesn't move stages, but the timeline should show this happened.
+      await this.recordTransition(
+        manager,
+        saved,
+        saved.status,
+        BookingStage.ACTIVE,
+        saved.status,
+        BookingStage.ACTIVE,
+        providerUserId,
+        `Extended to ${request.requestedEndsAt.toISOString()}`,
+      );
+
+      request.status = ExtensionRequestStatus.APPROVED;
+      request.decidedBy = providerUserId;
+      request.decidedAt = new Date();
+      await manager.getRepository(BookingExtensionRequest).save(request);
+
+      return saved;
+    });
+  }
+
+  async declineExtension(
+    extensionRequestId: string,
+    providerUserId: string,
+    reason?: string,
+  ): Promise<BookingExtensionRequest> {
+    const request = await this.findExtensionRequestOrFail(extensionRequestId);
+    if (request.status !== ExtensionRequestStatus.PENDING) {
+      throw DomainException.conflict(
+        ErrorCode.EXTENSION_REQUEST_INVALID_STATE,
+        'Only a pending extension request can be declined.',
+      );
+    }
+    request.status = ExtensionRequestStatus.DECLINED;
+    request.decidedBy = providerUserId;
+    request.decidedAt = new Date();
+    request.declineReason = reason ?? null;
+    return this.extensionRequestRepository.save(request);
+  }
+
+  async cancelExtensionRequest(extensionRequestId: string, renterId: string): Promise<BookingExtensionRequest> {
+    const request = await this.findExtensionRequestOrFail(extensionRequestId);
+    if (request.status !== ExtensionRequestStatus.PENDING) {
+      throw DomainException.conflict(
+        ErrorCode.EXTENSION_REQUEST_INVALID_STATE,
+        'Only a pending extension request can be cancelled.',
+      );
+    }
+    if (request.requestedBy !== renterId) {
+      throw DomainException.forbidden(ErrorCode.FORBIDDEN, "You can't cancel someone else's request.");
+    }
+    request.status = ExtensionRequestStatus.CANCELLED;
+    return this.extensionRequestRepository.save(request);
+  }
+
+  async listExtensionRequestsForBooking(bookingId: string): Promise<BookingExtensionRequest[]> {
+    return this.extensionRequestRepository.findByBooking(bookingId);
+  }
+
+  async findExtensionRequestOrFail(id: string): Promise<BookingExtensionRequest> {
+    return this.extensionRequestRepository.findByIdOrFail(id, 'Extension request');
+  }
+
+  private async assertExtensionWindowAvailable(
+    booking: Booking,
+    bufferMinutes: number,
+    newEndsAt: Date,
+  ): Promise<void> {
+    const blocked = await this.availabilityService.isBlocked(booking.listingId, booking.endsAt, newEndsAt);
+    if (blocked) {
+      throw DomainException.conflict(
+        ErrorCode.BOOKING_DATES_UNAVAILABLE,
+        'The provider has blocked part of the time you asked to extend into.',
+      );
+    }
+    const conflict = await this.bookingRepository.hasOverlapWithBuffer(
+      booking.listingId,
+      booking.endsAt,
+      newEndsAt,
+      bufferMinutes,
+      booking.id,
+    );
+    if (conflict) {
+      throw DomainException.conflict(
+        ErrorCode.BOOKING_DATES_UNAVAILABLE,
+        'Another booking is too close to the time you asked to extend into.',
+      );
+    }
   }
 
   private async assertStage(bookingId: string, allowed: BookingStage[]): Promise<Booking> {

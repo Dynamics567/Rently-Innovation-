@@ -1,6 +1,7 @@
 import { BookingService } from './booking.service';
 import { BookingRepository } from '../repositories/booking.repository';
 import { BookingStatusHistoryRepository } from '../repositories/booking-status-history.repository';
+import { BookingExtensionRequestRepository } from '../repositories/booking-extension-request.repository';
 import { Booking } from '../entities/booking.entity';
 import { BookingStatusHistory } from '../entities/booking-status-history.entity';
 import { BookingStage, BookingStatus } from '../enums/booking.enums';
@@ -105,6 +106,7 @@ describe('BookingService', () => {
       dataSource as any,
       bookingRepository as unknown as BookingRepository,
       historyRepository as unknown as BookingStatusHistoryRepository,
+      {} as unknown as BookingExtensionRequestRepository,
       listingsService as unknown as ListingsService,
       availabilityService as unknown as AvailabilityService,
       paymentPort as unknown as PaymentPort,
