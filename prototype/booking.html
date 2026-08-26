@@ -59,8 +59,19 @@ body{padding-top:0;}
 .timer-card .lbl{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.55);margin-bottom:6px;}
 .timer-card .val{font-family:var(--serif);font-size:28px;}
 .timer-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
-.gps-banner{display:flex;gap:10px;align-items:flex-start;padding:14px 16px;border-radius:12px;background:var(--blue-soft);color:var(--blue-dark);font-size:12.5px;line-height:1.6;margin-bottom:20px;}
-.gps-banner svg{flex-shrink:0;margin-top:1px;}
+
+.empty-photos{padding:26px 20px;text-align:center;color:var(--ink-faint);font-size:13px;background:var(--bg-alt);border-radius:12px;}
+
+.thread-wrap{display:flex;flex-direction:column;height:52vh;max-height:460px;}
+.thread-msgs{flex:1;overflow-y:auto;padding:4px 4px 4px 0;display:flex;flex-direction:column;gap:10px;}
+.thread-empty{margin:auto;color:var(--ink-faint);font-size:13px;text-align:center;}
+.msg-bubble{max-width:78%;padding:10px 14px;border-radius:16px;font-size:13.5px;line-height:1.5;}
+.msg-bubble.mine{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px;}
+.msg-bubble.theirs{align-self:flex-start;background:var(--bg-alt);color:var(--ink);border-bottom-left-radius:4px;}
+.msg-bubble .tm{font-size:10.5px;opacity:.7;margin-top:4px;}
+.thread-form{display:flex;gap:10px;margin-top:14px;flex-shrink:0;}
+.thread-form textarea{flex:1;border:1.5px solid var(--line-strong);border-radius:14px;padding:11px 14px;font-size:13.5px;font-family:inherit;resize:none;min-height:44px;max-height:100px;}
+.thread-form textarea:focus{outline:none;border-color:var(--blue);}
 
 .photo-compare{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
 .photo-compare .grp h5{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);margin-bottom:10px;}
@@ -195,7 +206,6 @@ body{padding-top:0;}
           <div><div class="lbl">Time remaining on this rental</div><div class="val" id="timerVal">—</div></div>
           <span class="badge instant" id="activeBadge"></span>
         </div>
-        <div class="gps-banner" id="gpsBanner" style="display:none;"></div>
         <div class="timer-actions">
           <button class="pill-btn ghost sm" id="extendBtn"></button>
           <button class="pill-btn ghost sm" id="messageBtn"></button>
@@ -236,6 +246,23 @@ body{padding-top:0;}
         </div>
       </div>
 
+      <!-- ===== GROUP G: disputed ===== -->
+      <div class="stage-panel" data-group="disputed">
+        <div class="panel-card">
+          <h3 id="disputeTitle">Dispute opened</h3>
+          <p class="lede" id="disputeLede"></p>
+          <div id="disputeProposal" style="display:none;">
+            <div class="receipt-row"><span>Proposed deduction</span><span id="disputeAmt"></span></div>
+            <p class="lede" id="disputeNote" style="margin:10px 0 18px;"></p>
+            <div id="disputeError" class="banner danger" style="display:none;margin-bottom:14px;"></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <button class="pill-btn green sm" id="disputeAcceptBtn">Accept</button>
+              <button class="pill-btn ghost sm" id="disputeRejectBtn">Reject — ask an admin to review</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ===== GROUP F: deposit released / completed ===== -->
       <div class="stage-panel" data-group="done">
         <div class="deposit-banner">
@@ -252,9 +279,44 @@ body{padding-top:0;}
         <div class="panel-card">
           <h3 style="font-size:14px;" id="reviewTitle">Rate your experience</h3>
           <div class="review-stars" id="reviewStars"></div>
-          <textarea placeholder="What went well? Anything the provider could improve?" style="width:100%;border:1.5px solid var(--line-strong);border-radius:12px;padding:12px 14px;font-size:13.5px;min-height:80px;margin-bottom:14px;font-family:inherit;"></textarea>
+          <div id="reviewError" class="banner danger" style="display:none;margin-bottom:14px;font-size:12.5px;padding:10px 14px;"></div>
+          <textarea id="reviewComment" placeholder="What went well? Anything the provider could improve?" style="width:100%;border:1.5px solid var(--line-strong);border-radius:12px;padding:12px 14px;font-size:13.5px;min-height:80px;margin-bottom:14px;font-family:inherit;"></textarea>
           <button class="pill-btn blue sm" id="submitReviewBtn">Submit review</button>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ REQUEST EXTENSION MODAL ============ -->
+<div class="overlay" id="extensionOverlay">
+  <div class="modal">
+    <button class="modal-close" id="closeExtension"></button>
+    <h3 style="font-size:20px;margin-bottom:6px;">Request an extension</h3>
+    <p class="lede" style="margin-bottom:20px;">Push your return date out. The provider needs to approve it, and you'll be charged for the extra time.</p>
+    <div id="extensionError" class="banner danger" style="display:none;margin-bottom:16px;"></div>
+    <div id="extensionPendingNotice" class="banner info" style="display:none;margin-bottom:16px;"></div>
+    <div class="field" id="fieldExtensionDate">
+      <label>New end date</label>
+      <input type="date" id="extensionDateInput" />
+      <div class="err-msg"></div>
+    </div>
+    <div id="extensionQuote" style="margin-bottom:18px;"></div>
+    <button class="pill-btn blue block" id="submitExtensionBtn">Send request</button>
+  </div>
+</div>
+
+<!-- ============ MESSAGE THREAD MODAL ============ -->
+<div class="overlay" id="threadOverlay">
+  <div class="modal" style="max-width:520px;">
+    <button class="modal-close" id="closeThread"></button>
+    <h3 style="font-size:18px;margin-bottom:16px;" id="threadTitle">Messages</h3>
+    <div class="thread-wrap">
+      <div class="thread-msgs" id="threadMsgs"></div>
+      <div id="threadError" class="banner danger" style="display:none;margin:10px 0 0;"></div>
+      <div class="thread-form">
+        <textarea id="threadInput" placeholder="Write a message…"></textarea>
+        <button class="pill-btn blue sm" id="threadSendBtn" style="align-self:flex-end;">Send</button>
       </div>
     </div>
   </div>
@@ -300,7 +362,7 @@ function pseudoQR(seed,cells=9){
   return html;
 }
 
-let booking=null, listing=null, provider=null, history=[];
+let booking=null, listing=null, provider=null, history=[], dispute=null;
 const fmt=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 
 async function loadBooking(){
@@ -318,6 +380,12 @@ async function loadBooking(){
     listing = {title:'This listing', cat:'spaces', img:undefined, price:0, unit:'day', loc:'—', providerId:null};
     provider = {name:'the provider', avatar:'PR', verified:false, rating:0};
   }
+  // Fetched regardless of current status, not just while status==='disputed' --
+  // once a dispute resolves the booking moves straight to 'completed' with no
+  // trace of it left on the booking row itself (depositMinor is never reduced
+  // there, only the actual payment release amount is), so the "done" panel
+  // below needs this to show the real amount released, not the original deposit.
+  dispute = await apiFetch(`/bookings/${booking.id}/dispute`).then(r=>r.data).catch(()=>null);
 }
 
 (async function init(){
@@ -369,9 +437,15 @@ function render(){
 
   const dFrom=new Date(booking.dateFrom+'T10:00:00'), dTo=new Date(booking.dateTo+'T17:00:00');
   document.getElementById('timelineWrap').innerHTML = renderStageTimeline(booking,currentStage,history);
-  const [badgeCls,badgeLbl]=STATUS_BADGE[currentStage];
-  document.getElementById('bkStatusBadge').className='badge '+badgeCls;
-  document.getElementById('bkStatusBadge').textContent=badgeLbl;
+  const isDisputed = booking.status==='disputed';
+  if(isDisputed){
+    document.getElementById('bkStatusBadge').className='badge disputed';
+    document.getElementById('bkStatusBadge').textContent='Disputed';
+  }else{
+    const [badgeCls,badgeLbl]=STATUS_BADGE[currentStage];
+    document.getElementById('bkStatusBadge').className='badge '+badgeCls;
+    document.getElementById('bkStatusBadge').textContent=badgeLbl;
+  }
 
   const groups={
     admin: ['requested','accepted','payment','reserved'],
@@ -382,8 +456,11 @@ function render(){
     done: ['depositreleased','completed'],
   };
   document.querySelectorAll('.stage-panel').forEach(p=>{
-    p.classList.toggle('show', groups[p.dataset.group].includes(currentStage));
+    if(p.dataset.group==='disputed'){ p.classList.toggle('show', isDisputed); return; }
+    p.classList.toggle('show', !isDisputed && groups[p.dataset.group].includes(currentStage));
   });
+
+  if(isDisputed) renderDisputePanel();
 
   // ---- Group A: admin ----
   if(groups.admin.includes(currentStage)){
@@ -423,25 +500,20 @@ function render(){
     document.getElementById('extendBtn').innerHTML = icon('clock',{size:14})+' Request extension';
     document.getElementById('messageBtn').innerHTML = icon('message',{size:14})+' Message '+provider.name.split(' ')[0];
     document.getElementById('issueBtn').innerHTML = icon('alert',{size:14})+' Report an issue';
-    const gps=document.getElementById('gpsBanner');
-    if(listing.cat==='vehicle'){
-      gps.style.display='flex';
-      gps.innerHTML = icon('map',{size:15})+`<span><b>Live GPS tracking is on</b> for this vehicle — both you and ${provider.name} can see its location for the duration of the rental.</span>`;
-    } else { gps.style.display='none'; }
-    document.getElementById('pickupPhotos').innerHTML = [0,1,2,3].map(i=>`<div class="thumb">${artDiv(listing.img||listing.cat,110,.18)}</div>`).join('');
+    document.getElementById('pickupPhotos').innerHTML = `<div class="empty-photos" style="grid-column:1/-1;">No photos on file for this pickup.</div>`;
   }
 
   // ---- Group D: return scheduled ----
   if(currentStage==='returnsched'){
     document.getElementById('qrReturn').innerHTML = pseudoQR(booking.id+'-return',8);
-    document.getElementById('returnLede').textContent = `Drop-off arranged for ${fmt(dTo)} at ${provider.name}'s address. Running late? Reschedule below before your window closes.`;
-    document.getElementById('rescheduleBtn').innerHTML = icon('calendar',{size:14})+' Reschedule return';
+    document.getElementById('returnLede').textContent = `Drop-off arranged for ${fmt(dTo)} at ${provider.name}'s address. Running late? Get in touch below before your window closes.`;
+    document.getElementById('rescheduleBtn').innerHTML = icon('message',{size:14})+' Contact '+provider.name.split(' ')[0]+' about rescheduling';
   }
 
   // ---- Group E: inspection ----
   if(groups.inspection.includes(currentStage)){
-    document.getElementById('cmpBefore').innerHTML = [0,1].map(()=>`<div class="thumb">${artDiv(listing.img||listing.cat,110,.18)}</div>`).join('');
-    document.getElementById('cmpAfter').innerHTML = [0,1].map(()=>`<div class="thumb">${artDiv(listing.img||listing.cat,110,.18)}</div>`).join('');
+    document.getElementById('cmpBefore').innerHTML = `<div class="empty-photos">No photos on file.</div>`;
+    document.getElementById('cmpAfter').innerHTML = `<div class="empty-photos">No photos on file.</div>`;
     const inspected = currentStage==='inspected';
     ['chkNoDamage','chkAccessories','chkOnTime'].forEach(id=>{
       const el=document.getElementById(id);
@@ -455,29 +527,282 @@ function render(){
   // ---- Group F: done ----
   if(groups.done.includes(currentStage)){
     const released = currentStage==='depositreleased' || currentStage==='completed';
-    document.getElementById('depositDesc').textContent = released
-      ? `Refunded to your original payment method on ${fmt(new Date(dTo.getTime()+0.9*86400000))}.`
-      : 'Will be refunded once the provider confirms no damage was found.';
-    document.getElementById('depositAmt').textContent = money(booking.deposit);
+    const wasDisputed = dispute && dispute.status==='resolved';
+    const deductionMinor = wasDisputed ? (dispute.finalDeductionMinor||0) : 0;
+    const releasedAmt = booking.deposit - Math.round(deductionMinor/100);
+    document.getElementById('depositDesc').textContent = !released
+      ? 'Will be refunded once the provider confirms no damage was found.'
+      : wasDisputed
+        ? (deductionMinor>0
+            ? `₦${Math.round(deductionMinor/100).toLocaleString()} was deducted following a dispute resolution — the remainder was refunded to your original payment method.`
+            : 'The dispute over this rental was resolved with no deduction — refunded in full to your original payment method.')
+        : `Refunded to your original payment method on ${fmt(new Date(dTo.getTime()+0.9*86400000))}.`;
+    document.getElementById('depositAmt').textContent = money(released ? releasedAmt : booking.deposit);
     const nights=Math.max(1,Math.round((dTo-dFrom)/86400000));
     const rental=listing.price*nights, fee=Math.round(rental*0.06);
     document.getElementById('rSumLabel').textContent = `${money(listing.price)} × ${nights} ${listing.unit}${nights>1?'s':''}`;
     document.getElementById('rSumAmt').textContent = money(rental);
     document.getElementById('rSumFee').textContent = money(fee);
     document.getElementById('rSumTotal').textContent = money(rental+fee);
-    document.getElementById('invoiceBtn').innerHTML = icon('download',{size:14})+' Download invoice (PDF)';
+    document.getElementById('invoiceBtn').innerHTML = icon('download',{size:14})+' View invoice';
     document.getElementById('reviewTitle').textContent = `Rate your experience with ${provider.name}`;
+    renderReviewSection();
   }
 }
 
+/* ---------------- DISPUTE PANEL ---------------- */
+function renderDisputePanel(){
+  const proposalEl=document.getElementById('disputeProposal');
+  if(!dispute){
+    document.getElementById('disputeLede').textContent = `${provider.name} reported an issue with this rental. Details will appear here shortly.`;
+    proposalEl.style.display='none';
+    return;
+  }
+  if(dispute.status==='proposed'){
+    document.getElementById('disputeTitle').textContent = 'The provider proposed a deduction';
+    document.getElementById('disputeLede').textContent = dispute.description || `${provider.name} reported an issue with this rental.`;
+    document.getElementById('disputeAmt').textContent = money((dispute.proposedDeductionMinor||0)/100);
+    document.getElementById('disputeNote').textContent = dispute.proposalNote || '';
+    proposalEl.style.display='block';
+  }else if(dispute.status==='contested'){
+    document.getElementById('disputeTitle').textContent = 'Under admin review';
+    document.getElementById('disputeLede').textContent = "You rejected the provider's proposed deduction. An admin will review the evidence and make a final call — you'll be notified once it's resolved.";
+    proposalEl.style.display='none';
+  }else if(dispute.status==='resolved'){
+    document.getElementById('disputeTitle').textContent = 'Dispute resolved';
+    const deduction=(dispute.finalDeductionMinor||0)/100;
+    document.getElementById('disputeLede').textContent = deduction>0
+      ? `This dispute has been resolved. ${money(deduction)} was deducted from your deposit.`
+      : 'This dispute has been resolved with no deduction — your full deposit was released.';
+    proposalEl.style.display='none';
+  }else{
+    document.getElementById('disputeTitle').textContent = 'Dispute opened';
+    document.getElementById('disputeLede').textContent = dispute.description || `${provider.name} reported an issue with this rental. They'll propose a resolution shortly.`;
+    proposalEl.style.display='none';
+  }
+}
+document.getElementById('disputeAcceptBtn').addEventListener('click', async ()=>{
+  const btn=document.getElementById('disputeAcceptBtn'), errEl=document.getElementById('disputeError');
+  errEl.style.display='none'; btn.disabled=true; const original=btn.textContent; btn.textContent='Accepting…';
+  try{
+    await apiFetch(`/disputes/${dispute.id}/respond`,{method:'POST',body:{decision:'accept'}});
+    await loadBooking(); render();
+  }catch(e){
+    errEl.innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(e)}</div>`; errEl.style.display='flex';
+  }finally{
+    // Reset even on success, defensively -- accepting normally moves the
+    // whole booking past 'disputed' so this panel (and button) end up
+    // hidden by render() anyway, but a stuck disabled button is a bad
+    // fallback state if that assumption is ever wrong.
+    btn.disabled=false; btn.textContent=original;
+  }
+});
+document.getElementById('disputeRejectBtn').addEventListener('click', async ()=>{
+  const btn=document.getElementById('disputeRejectBtn'), errEl=document.getElementById('disputeError');
+  errEl.style.display='none'; btn.disabled=true; const original=btn.textContent; btn.textContent='Sending…';
+  try{
+    await apiFetch(`/disputes/${dispute.id}/respond`,{method:'POST',body:{decision:'reject'}});
+    await loadBooking(); render();
+  }catch(e){
+    errEl.innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(e)}</div>`; errEl.style.display='flex';
+  }finally{
+    btn.disabled=false; btn.textContent=original;
+  }
+});
+
+/* ---------------- REVIEW ---------------- */
+let reviewRating=0, reviewSubmitted=false, myReview=null;
 document.getElementById('reviewStars').innerHTML = [1,2,3,4,5].map(n=>`<button data-n="${n}">${icon('star',{size:22,fill:true})}</button>`).join('');
 document.querySelectorAll('#reviewStars button').forEach(btn=>btn.addEventListener('click',()=>{
-  const n=+btn.dataset.n;
-  document.querySelectorAll('#reviewStars button').forEach(b=>b.classList.toggle('on', +b.dataset.n<=n));
+  if(reviewSubmitted) return;
+  reviewRating=+btn.dataset.n;
+  document.querySelectorAll('#reviewStars button').forEach(b=>b.classList.toggle('on', +b.dataset.n<=reviewRating));
 }));
-document.getElementById('submitReviewBtn').addEventListener('click',()=>{
-  document.getElementById('submitReviewBtn').textContent='Thanks for your review!';
-  document.getElementById('submitReviewBtn').disabled=true;
+async function renderReviewSection(){
+  if(myReview!==null) return; // already loaded/rendered once — avoid refetching on every render() call
+  try{
+    const {data}=await apiFetch(`/listings/${booking.listingId}/reviews`,{auth:false});
+    const rows=data.data||data||[];
+    myReview = rows.find(r=>r.direction==='renter_to_provider' && r.authorId===session.user.id) || false;
+  }catch(e){ myReview=false; }
+  if(myReview){
+    reviewSubmitted=true;
+    reviewRating=myReview.rating;
+    document.querySelectorAll('#reviewStars button').forEach(b=>b.classList.toggle('on', +b.dataset.n<=reviewRating));
+    document.getElementById('reviewComment').value = myReview.comment||'';
+    document.getElementById('reviewComment').disabled=true;
+    document.getElementById('submitReviewBtn').textContent='Review submitted';
+    document.getElementById('submitReviewBtn').disabled=true;
+  }
+}
+document.getElementById('submitReviewBtn').addEventListener('click', async ()=>{
+  if(reviewSubmitted) return;
+  const btn=document.getElementById('submitReviewBtn'), errEl=document.getElementById('reviewError');
+  if(!reviewRating){ errEl.textContent='Pick a star rating first.'; errEl.style.display='block'; return; }
+  errEl.style.display='none'; btn.disabled=true; const original=btn.textContent; btn.textContent='Submitting…';
+  try{
+    await apiFetch(`/bookings/${booking.id}/reviews`,{method:'POST',body:{rating:reviewRating,comment:document.getElementById('reviewComment').value||undefined}});
+    reviewSubmitted=true;
+    document.getElementById('reviewComment').disabled=true;
+    btn.textContent='Review submitted';
+  }catch(e){
+    errEl.textContent=apiErrorMessage(e); errEl.style.display='block';
+    btn.disabled=false; btn.textContent=original;
+  }
+});
+
+/* ---------------- EXTENSION REQUEST MODAL ---------------- */
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.getElementById('closeExtension').innerHTML = icon('close',{size:15});
+document.getElementById('closeExtension').addEventListener('click',()=>closeModal('extensionOverlay'));
+document.getElementById('extensionOverlay').addEventListener('click',(e)=>{ if(e.target.id==='extensionOverlay') closeModal('extensionOverlay'); });
+
+async function refreshExtensionQuote(){
+  const dateInput=document.getElementById('extensionDateInput');
+  const quoteEl=document.getElementById('extensionQuote');
+  if(!dateInput.value){ quoteEl.innerHTML=''; return; }
+  const currentEndsAt=new Date(booking.dateTo+'T17:00:00');
+  const newEndsAt=new Date(dateInput.value+'T17:00:00');
+  try{
+    const {data:q}=await apiFetch(`/listings/${booking.listingId}/quote?from=${encodeURIComponent(currentEndsAt.toISOString())}&to=${encodeURIComponent(newEndsAt.toISOString())}`,{auth:false});
+    quoteEl.innerHTML=`<div class="receipt-row total"><span>Additional cost</span><span>${money((q.rentalFeeMinor+q.serviceFeeMinor)/100)}</span></div>`;
+  }catch(e){ quoteEl.innerHTML=''; }
+}
+document.getElementById('extensionDateInput').addEventListener('change',refreshExtensionQuote);
+document.getElementById('extendBtn').addEventListener('click', async ()=>{
+  openModal('extensionOverlay');
+  const errEl=document.getElementById('extensionError'); errEl.style.display='none';
+  const pendingEl=document.getElementById('extensionPendingNotice'); pendingEl.style.display='none';
+  const dateInput=document.getElementById('extensionDateInput');
+  const minDate=new Date(booking.dateTo); minDate.setDate(minDate.getDate()+1);
+  dateInput.min=minDate.toISOString().slice(0,10);
+  dateInput.value=minDate.toISOString().slice(0,10);
+  refreshExtensionQuote();
+  const submitBtn=document.getElementById('submitExtensionBtn');
+  try{
+    const {data}=await apiFetch(`/bookings/${booking.id}/extension-requests`);
+    const rows=data.data||data||[];
+    const pending=rows.find(r=>r.status==='pending');
+    if(pending){
+      pendingEl.innerHTML=icon('clock',{size:14})+`<div>You already have a pending extension request to ${fmt(new Date(pending.requestedEndsAt))}. Waiting on ${provider.name}.</div>`;
+      pendingEl.style.display='flex';
+      submitBtn.style.display='none';
+    }else{
+      submitBtn.style.display='';
+    }
+  }catch(e){ /* if the lookup fails, just let them try submitting */ }
+});
+document.getElementById('submitExtensionBtn').addEventListener('click', async ()=>{
+  const btn=document.getElementById('submitExtensionBtn'), errEl=document.getElementById('extensionError');
+  const dateInput=document.getElementById('extensionDateInput');
+  errEl.style.display='none';
+  if(!dateInput.value){ errEl.innerHTML=icon('alert',{size:15})+'<div>Pick a new end date.</div>'; errEl.style.display='flex'; return; }
+  btn.disabled=true; const original=btn.textContent; btn.textContent='Sending…';
+  try{
+    await apiFetch(`/bookings/${booking.id}/extension-requests`,{method:'POST',body:{newEndsAt:new Date(dateInput.value+'T17:00:00').toISOString()}});
+    closeModal('extensionOverlay');
+    btn.disabled=false; btn.textContent=original;
+  }catch(e){
+    errEl.innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(e)}</div>`; errEl.style.display='flex';
+    btn.disabled=false; btn.textContent=original;
+  }
+});
+
+/* ---------------- MESSAGE THREAD MODAL ---------------- */
+let threadPollTimer=null;
+function renderThread(messages){
+  const wrap=document.getElementById('threadMsgs');
+  if(!messages.length){ wrap.innerHTML='<div class="thread-empty">No messages yet — say hello.</div>'; return; }
+  const wasAtBottom = wrap.scrollTop+wrap.clientHeight >= wrap.scrollHeight-20;
+  wrap.innerHTML = messages.map(m=>{
+    const mine = m.senderId===session.user.id;
+    const time = new Date(m.createdAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    return `<div class="msg-bubble ${mine?'mine':'theirs'}"><div>${m.body.replace(/</g,'&lt;')}</div><div class="tm">${time}</div></div>`;
+  }).join('');
+  if(wasAtBottom || messages.length<=3) wrap.scrollTop=wrap.scrollHeight;
+}
+async function loadThread(){
+  try{
+    const {data}=await apiFetch(`/bookings/${booking.id}/messages`);
+    renderThread(data.data||data||[]);
+    apiFetch(`/bookings/${booking.id}/messages/read`,{method:'POST'}).catch(()=>{});
+  }catch(e){
+    document.getElementById('threadError').innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(e)}</div>`;
+    document.getElementById('threadError').style.display='flex';
+  }
+}
+function openThread(title){
+  document.getElementById('threadTitle').textContent=title;
+  document.getElementById('threadError').style.display='none';
+  document.getElementById('threadMsgs').innerHTML='';
+  document.getElementById('threadInput').value='';
+  openModal('threadOverlay');
+  loadThread();
+  clearInterval(threadPollTimer);
+  threadPollTimer=setInterval(loadThread,10000);
+}
+function closeThread(){
+  closeModal('threadOverlay');
+  clearInterval(threadPollTimer);
+}
+document.getElementById('closeThread').innerHTML=icon('close',{size:15});
+document.getElementById('closeThread').addEventListener('click',closeThread);
+document.getElementById('threadOverlay').addEventListener('click',(e)=>{ if(e.target.id==='threadOverlay') closeThread(); });
+document.getElementById('messageBtn').addEventListener('click',()=>openThread('Message '+provider.name));
+document.getElementById('issueBtn').addEventListener('click',()=>{
+  openThread('Report an issue to '+provider.name);
+  document.getElementById('threadInput').value="I'd like to report an issue with this rental: ";
+});
+document.getElementById('rescheduleBtn').addEventListener('click',()=>{
+  openThread('Contact '+provider.name);
+  document.getElementById('threadInput').value='Hi, could we reschedule the return time for this booking? ';
+});
+async function sendThreadMessage(){
+  const input=document.getElementById('threadInput');
+  const body=input.value.trim();
+  if(!body) return;
+  const btn=document.getElementById('threadSendBtn');
+  btn.disabled=true;
+  try{
+    await apiFetch(`/bookings/${booking.id}/messages`,{method:'POST',body:{body}});
+    input.value='';
+    await loadThread();
+  }catch(e){
+    document.getElementById('threadError').innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(e)}</div>`;
+    document.getElementById('threadError').style.display='flex';
+  }
+  btn.disabled=false;
+}
+document.getElementById('threadSendBtn').addEventListener('click',sendThreadMessage);
+document.getElementById('threadInput').addEventListener('keydown',(e)=>{
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendThreadMessage(); }
+});
+
+/* ---------------- INVOICE ---------------- */
+document.getElementById('invoiceBtn').addEventListener('click',()=>{
+  const dFrom=new Date(booking.dateFrom+'T10:00:00'), dTo=new Date(booking.dateTo+'T17:00:00');
+  const nights=Math.max(1,Math.round((dTo-dFrom)/86400000));
+  const rental=listing.price*nights, fee=Math.round(rental*0.06);
+  const win=window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Invoice — RNT-${booking.id.slice(0,8).toUpperCase()}</title>
+    <style>body{font-family:Arial,sans-serif;color:#151310;max-width:620px;margin:40px auto;padding:0 20px;}
+    h1{font-size:20px;margin-bottom:4px;} .muted{color:#8a8478;font-size:13px;margin-bottom:28px;}
+    table{width:100%;border-collapse:collapse;margin-top:20px;} td{padding:10px 0;font-size:14px;border-bottom:1px solid #eee;}
+    td:last-child{text-align:right;} tr.total td{font-weight:700;font-size:16px;border-top:2px solid #151310;border-bottom:none;}</style>
+    </head><body>
+    <h1>Rently Invoice</h1>
+    <div class="muted">Reference RNT-${booking.id.slice(0,8).toUpperCase()} · ${fmt(dFrom)} – ${fmt(dTo)}</div>
+    <div><b>${listing.title}</b><br>${provider.name} · ${listing.loc||''}</div>
+    <table>
+      <tr><td>${money(listing.price)} × ${nights} ${listing.unit}${nights>1?'s':''}</td><td>${money(rental)}</td></tr>
+      <tr><td>Service fee</td><td>${money(fee)}</td></tr>
+      <tr class="total"><td>Total paid</td><td>${money(rental+fee)}</td></tr>
+    </table>
+    </body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>win.print(),300);
 });
 </script>
 </body>

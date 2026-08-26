@@ -302,14 +302,13 @@ let listing=null, provider=null;
   document.getElementById('provBio').style.display='none';
   document.getElementById('contactProviderBtn').innerHTML = icon('message',{size:15})+' Message '+provider.name.split(' ')[0];
   document.getElementById('contactProviderBtn').disabled=true;
-  document.getElementById('contactProviderBtn').title='Messaging is coming soon.';
+  document.getElementById('contactProviderBtn').title='You can message the provider once you have a booking with them.';
 
-  /* ---- reviews — no reviews backend yet, honest empty state ---- */
+  /* ---- reviews: real GET /listings/:id/reviews, no more hardcoded empty state ---- */
   document.getElementById('rsScore').textContent=listing.rating||'—';
   document.getElementById('rsStars').innerHTML=starIcon(13).repeat(5);
-  document.getElementById('rsOf').textContent=listing.reviews+' reviews';
-  document.getElementById('rsBars').innerHTML='';
-  document.getElementById('reviewList').innerHTML = `<p style="color:var(--ink-faint);padding:12px 0;">No reviews yet — be the first to book and leave one.</p>`;
+  document.getElementById('rsOf').textContent=listing.reviews+' review'+(listing.reviews===1?'':'s');
+  loadReviews();
 
   /* ---- location ---- */
   document.getElementById('lLocFull').textContent = `${listing.loc} — exact address shared after booking is confirmed, for the safety of both parties.`;
@@ -387,6 +386,49 @@ function initBookingWidget(){
     const q=new URLSearchParams({id:listing.id, from:bStart.toISOString(), to:bEnd.toISOString()});
     window.location.href='checkout?'+q.toString();
   });
+}
+
+/* ================================================================
+   REVIEWS — real GET /listings/:id/reviews (public), one direction
+   only (renter_to_provider — see ReviewRepository.searchForListing).
+   Author names resolved per review via getUserCached since a review
+   only carries a bare authorId, never a joined user object.
+   ================================================================ */
+async function loadReviews(){
+  let reviews=[];
+  try{
+    const {data}=await apiFetch(`/listings/${listing.id}/reviews?limit=20`,{auth:false});
+    reviews = data.data||data||[];
+  }catch(e){ /* leave empty — an honest empty state is the fallback either way */ }
+
+  if(!reviews.length){
+    document.getElementById('rsBars').innerHTML='';
+    document.getElementById('reviewList').innerHTML = `<p style="color:var(--ink-faint);padding:12px 0;">No reviews yet — be the first to book and leave one.</p>`;
+    return;
+  }
+
+  const counts=[0,0,0,0,0]; // index 0 = 5-star, ... index 4 = 1-star
+  reviews.forEach(r=>counts[5-r.rating]++);
+  document.getElementById('rsBars').innerHTML = counts.map((c,i)=>{
+    const stars=5-i;
+    const pct = Math.round((c/reviews.length)*100);
+    return `<div class="rs-bar-row"><span>${stars}★</span><div class="track"><div class="fill" style="width:${pct}%"></div></div><span>${c}</span></div>`;
+  }).join('');
+
+  const authors = await Promise.all(reviews.map(r=>getUserCached(r.authorId)));
+  document.getElementById('reviewList').innerHTML = reviews.map((r,i)=>{
+    const when=new Date(r.createdAt).toLocaleDateString('en-US',{month:'short',year:'numeric'});
+    return `<div class="review">
+      <div class="p-avatar">${initials(authors[i].fullName)}</div>
+      <div>
+        <div class="name">${authors[i].fullName}</div>
+        <div class="when">${when}</div>
+        <div class="stars">${starIcon(12).repeat(r.rating)}</div>
+        ${r.comment ? `<p>${r.comment.replace(/</g,'&lt;')}</p>` : ''}
+        ${r.providerResponse ? `<p style="margin-top:6px;padding:10px 12px;background:var(--bg-alt);border-radius:10px;"><b>${provider.name}:</b> ${r.providerResponse.replace(/</g,'&lt;')}</p>` : ''}
+      </div>
+    </div>`;
+  }).join('');
 }
 </script>
 </body>

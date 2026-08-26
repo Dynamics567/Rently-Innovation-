@@ -406,35 +406,104 @@ function initAvatarMenu(btnId='avatarBtn',ddId='avatarDropdown'){
   document.addEventListener('click',(e)=>{ if(!e.target.closest(`#${ddId}`) && !e.target.closest(`#${btnId}`)) dd.classList.remove('open'); });
 }
 
-/* ---------------- NOTIFICATION CENTER (bell dropdown, app nav) ---------------- */
-const NOTIFICATIONS=[
-  {icon:'check',type:'success',title:'Booking accepted',body:'EventCraft NG approved your request for Premium Event Tent & Décor Package.',time:'2h ago',unread:true},
-  {icon:'wallet',type:'info',title:'Payment received',body:'Your payment of ₦79,500 was captured and held in escrow.',time:'2h ago',unread:true},
-  {icon:'check',type:'success',title:'Item ready for pickup',body:'Your 10KVA Soundproof Generator is ready — show your QR code at pickup.',time:'1d ago',unread:true},
-  {icon:'clock',type:'warning',title:'Pickup reminder',body:'Pickup for your Furnished 2-Bed Shortlet Apartment is tomorrow at 10:00 AM.',time:'1d ago',unread:false},
-  {icon:'check',type:'success',title:'Rental started',body:'Handover confirmed for 10KVA Soundproof Generator — enjoy!',time:'2d ago',unread:false},
-  {icon:'clock',type:'warning',title:'Return reminder',body:'Your Canopy, Chairs & Tables Package is due back in 24 hours.',time:'3d ago',unread:false},
-  {icon:'alert',type:'danger',title:'Late return warning',body:'Heavy-Duty Scaffolding Set was due back yesterday — a late fee may apply.',time:'4d ago',unread:false},
-  {icon:'wallet',type:'success',title:'Deposit released',body:'Your ₦50,000 deposit for DJI Mavic 3 Pro Drone Kit has been refunded.',time:'1w ago',unread:false},
-  {icon:'star',type:'info',title:'Review request',body:'How was your experience with Canon Pro Rentals? Leave a review.',time:'1w ago',unread:false},
-];
+/* ---------------- NOTIFICATION CENTER (bell dropdown, app nav) ----------------
+   Backed by the real GET /notifications, POST /notifications/:id/read and
+   POST /notifications/read-all endpoints. The API stores structured
+   {type, payload} rows, not pre-rendered text, so NOTIF_COPY mirrors (in
+   miniature) the subject/body judgment calls the backend's own
+   DomainEventsListener makes for emails — same event vocabulary, rendered
+   for the bell instead of an inbox. */
+const NOTIF_ICON={
+  booking_created:'calendar', booking_approved:'check', booking_declined:'close', booking_cancelled:'close',
+  booking_handed_over:'check', booking_returned:'check', booking_deposit_released:'wallet', booking_disputed:'alert',
+  booking_extension_requested:'clock', booking_extension_resolved:'clock', provider_verified:'shield',
+  provider_rejected:'alert', listing_approved:'check', listing_rejected:'alert',
+  verification_document_reviewed:'shield', message_received:'message',
+};
+const NOTIF_TONE={
+  booking_declined:'danger', booking_cancelled:'danger', booking_disputed:'danger', provider_rejected:'danger', listing_rejected:'danger',
+  booking_extension_requested:'warning', verification_document_reviewed:'warning',
+};
+const NOTIF_COPY={
+  booking_created:p=>`New booking request for "${p.listingTitle}".`,
+  booking_approved:p=>`Your booking for "${p.listingTitle}" was approved.`,
+  booking_declined:p=>`Your request for "${p.listingTitle}" was declined.${p.reason?' Reason: '+p.reason:''}`,
+  booking_cancelled:p=>`The booking for "${p.listingTitle}" was cancelled.${p.reason?' Reason: '+p.reason:''}`,
+  booking_handed_over:p=>`Handover confirmed for "${p.listingTitle}".`,
+  booking_returned:p=>`"${p.listingTitle}" has been returned.`,
+  booking_deposit_released:p=>`Your deposit for "${p.listingTitle}" was released.`,
+  booking_disputed:p=>p.finalDeductionMinor!==undefined ? `The dispute over "${p.listingTitle}" was resolved.` : `A dispute was opened for "${p.listingTitle}".`,
+  booking_extension_requested:p=>`A renter asked to extend "${p.listingTitle}".`,
+  booking_extension_resolved:p=>`Your extension request for "${p.listingTitle}" was updated.`,
+  provider_verified:()=>`Your provider account has been verified.`,
+  provider_rejected:p=>`Provider verification wasn't approved.${p.reason?' Reason: '+p.reason:''}`,
+  listing_approved:p=>`"${p.listingTitle}" is now live.`,
+  listing_rejected:p=>`"${p.listingTitle}" was not approved.`,
+  verification_document_reviewed:p=>`Your ${(p.docType||'').replace(/_/g,' ')} was ${p.status}.`,
+  message_received:()=>`You have a new message.`,
+};
+const NOTIF_TITLE={
+  booking_created:'New booking request', booking_approved:'Booking approved', booking_declined:'Booking declined',
+  booking_cancelled:'Booking cancelled', booking_handed_over:'Rental started', booking_returned:'Item returned',
+  booking_deposit_released:'Deposit released', booking_disputed:'Dispute update',
+  booking_extension_requested:'Extension requested', booking_extension_resolved:'Extension update',
+  provider_verified:'Provider verified', provider_rejected:'Verification update', listing_approved:'Listing approved',
+  listing_rejected:'Listing rejected', verification_document_reviewed:'Document reviewed', message_received:'New message',
+};
+function timeAgo(iso){
+  const ms=Date.now()-new Date(iso).getTime();
+  const mins=Math.floor(ms/60000);
+  if(mins<1) return 'just now';
+  if(mins<60) return mins+'m ago';
+  const hrs=Math.floor(mins/60);
+  if(hrs<24) return hrs+'h ago';
+  const days=Math.floor(hrs/24);
+  if(days<7) return days+'d ago';
+  return Math.floor(days/7)+'w ago';
+}
+function notifHref(n){
+  const p=n.payload||{};
+  if(p.bookingId) return `booking?id=${p.bookingId}`;
+  return null;
+}
+let _notifCache=[];
 function renderNotifDropdown(){
   const list=document.getElementById('notifList');
   if(!list) return;
-  list.innerHTML = NOTIFICATIONS.length ? NOTIFICATIONS.map(n=>`
-    <div class="notif-item ${n.unread?'unread':''}">
-      <div class="ic ${n.type}">${icon(n.icon,{size:15})}</div>
-      <div><div class="t">${n.title}</div><div class="b">${n.body}</div><div class="tm">${n.time}</div></div>
-    </div>`).join('') : `<div class="notif-empty">You're all caught up.</div>`;
+  list.innerHTML = _notifCache.length ? _notifCache.map(n=>{
+    const href=notifHref(n);
+    const tag=href?'a':'div';
+    const body=(NOTIF_COPY[n.type]||(()=>'You have a new update.'))(n.payload||{});
+    return `<${tag} class="notif-item ${n.readAt?'':'unread'}" ${href?`href="${href}"`:''} data-id="${n.id}">
+      <div class="ic ${NOTIF_TONE[n.type]||'success'}">${icon(NOTIF_ICON[n.type]||'bell',{size:15})}</div>
+      <div><div class="t">${NOTIF_TITLE[n.type]||'Notification'}</div><div class="b">${body}</div><div class="tm">${timeAgo(n.createdAt)}</div></div>
+    </${tag}>`;
+  }).join('') : `<div class="notif-empty">You're all caught up.</div>`;
+  list.querySelectorAll('.notif-item.unread').forEach(el=>{
+    el.addEventListener('click',()=>{ apiFetch(`/notifications/${el.dataset.id}/read`,{method:'POST'}).catch(()=>{}); }, {once:true});
+  });
   const bellDot=document.querySelector('#bellBtn .dot');
-  if(bellDot) bellDot.style.display = NOTIFICATIONS.some(n=>n.unread) ? 'block' : 'none';
+  if(bellDot) bellDot.style.display = _notifCache.some(n=>!n.readAt) ? 'block' : 'none';
+}
+async function loadNotifications(){
+  try{
+    const {data}=await apiFetch('/notifications?limit=15');
+    _notifCache = data.data || data || [];
+  }catch(e){
+    _notifCache = [];
+  }
+  renderNotifDropdown();
 }
 function initNotifDropdown(){
   const btn=document.getElementById('bellBtn'), dd=document.getElementById('notifDropdown');
   if(!btn||!dd) return;
-  renderNotifDropdown();
+  loadNotifications();
+  setInterval(loadNotifications, 30000);
   btn.addEventListener('click',(e)=>{e.stopPropagation();dd.classList.toggle('open');});
-  document.getElementById('markAllReadBtn')?.addEventListener('click',()=>{ NOTIFICATIONS.forEach(n=>n.unread=false); renderNotifDropdown(); });
+  document.getElementById('markAllReadBtn')?.addEventListener('click', async ()=>{
+    try{ await apiFetch('/notifications/read-all',{method:'POST'}); }catch(e){}
+    await loadNotifications();
+  });
   document.addEventListener('click',(e)=>{ if(!e.target.closest('#notifDropdown') && !e.target.closest('#bellBtn')) dd.classList.remove('open'); });
 }
 

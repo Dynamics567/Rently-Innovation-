@@ -124,9 +124,15 @@ async function apiFetch(path, { method = 'GET', body, auth = true, idempotencyKe
   if (auth && session) headers.Authorization = `Bearer ${session.access}`;
   if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
 
+  // The API sends ETag but no Cache-Control on JSON responses, so without
+  // an explicit cache mode the browser can serve a stale GET from its HTTP
+  // cache instead of hitting the network -- caught live via a booking whose
+  // dispute had just been resolved still showing the pre-resolution dispute
+  // on a same-page refetch immediately after.
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers,
+    cache: 'no-store',
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
