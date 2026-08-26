@@ -7,6 +7,7 @@ import { AuthenticatedUser } from '@modules/identity/strategies/jwt.strategy';
 import { ProviderProfileService } from '@modules/identity/services/provider-profile.service';
 import { ListingsService } from '@modules/catalog/services/listings.service';
 import { BookingService } from '../services/booking.service';
+import { DisputeService } from '../services/dispute.service';
 import { CreateBookingDto } from '../dto/create-booking.dto';
 import { QueryBookingsDto } from '../dto/query-bookings.dto';
 import { RecordInspectionDto } from '../dto/record-inspection.dto';
@@ -19,6 +20,7 @@ import { IsBookingPartyPolicy } from '../policies/is-booking-party.policy';
 export class BookingsController {
   constructor(
     private readonly bookingService: BookingService,
+    private readonly disputeService: DisputeService,
     private readonly listingsService: ListingsService,
     private readonly providerProfileService: ProviderProfileService,
   ) {}
@@ -117,5 +119,17 @@ export class BookingsController {
   @Post(':id/release-deposit')
   async releaseDeposit(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.bookingService.releaseDeposit(id, user.id);
+  }
+
+  /**
+   * Lets a renter/provider look up the dispute on their own booking without
+   * already knowing its id — DisputesController's routes are all keyed by
+   * dispute id, which a renter has no way to discover otherwise (there's no
+   * "my disputes" list endpoint, and the admin list is admin-only).
+   */
+  @CheckPolicies(IsBookingPartyPolicy)
+  @Get(':id/dispute')
+  async getDispute(@Param('id') id: string) {
+    return this.disputeService.findByBooking(id);
   }
 }
