@@ -166,6 +166,102 @@ function renderBarChart(container, dataPoints, opts = {}) {
   }
 }
 
+/* ---------------- LINE / TREND CHART ----------------
+   For "over time" analytics (bookings, spend) alongside renderBarChart's
+   categorical comparisons — a single hue per series, 2px line, gradient
+   area fill, and a hover crosshair+tooltip that snaps to the nearest
+   point (see dataviz skill: ship the hover layer by default, never a
+   second y-axis). Plain inline SVG, no chart library. */
+function renderLineChart(container, dataPoints, opts = {}) {
+  const el = typeof container === 'string' ? document.getElementById(container) : container;
+  if (!el) return;
+  const { formatValue = (v) => v, color = 'var(--blue)', height = 180 } = opts;
+  if (!dataPoints.length) {
+    el.className = '';
+    el.innerHTML = '<div class="lc-empty">Not enough data yet.</div>';
+    return;
+  }
+  const w = 600, h = height, padX = 6, padY = 14;
+  const max = Math.max(...dataPoints.map((p) => p.value), 1);
+  const stepX = dataPoints.length > 1 ? (w - padX * 2) / (dataPoints.length - 1) : 0;
+  const points = dataPoints.map((p, i) => ({
+    ...p,
+    x: dataPoints.length > 1 ? padX + i * stepX : w / 2,
+    y: h - padY - (p.value / max) * (h - padY * 2),
+  }));
+  const linePath = points.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+  const areaPath = `${linePath} L${points[points.length - 1].x.toFixed(1)},${h - padY} L${points[0].x.toFixed(1)},${h - padY} Z`;
+  const gradId = 'lg' + Math.random().toString(36).slice(2, 9);
+
+  el.className = 'line-chart-wrap';
+  el.innerHTML = `
+    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:${h}px;display:block;">
+      <defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${color}" stop-opacity="0.24"/>
+        <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+      </linearGradient></defs>
+      <path d="${areaPath}" fill="url(#${gradId})" stroke="none"/>
+      <path d="${linePath}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      ${points.map((p) => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="${color}"/>`).join('')}
+      <circle class="lc-hover-dot" r="5" fill="${color}" stroke="#fff" stroke-width="2" style="opacity:0;"/>
+      <line class="lc-crosshair" y1="0" y2="${h - padY}" stroke="var(--line-strong)" stroke-width="1" style="opacity:0;"/>
+      <rect class="lc-capture" x="0" y="0" width="${w}" height="${h}" fill="transparent" style="cursor:crosshair;"/>
+    </svg>
+    <div class="lc-tooltip" style="display:none;"></div>
+    <div class="lc-labels">${points.map((p) => `<span>${p.label}</span>`).join('')}</div>
+  `;
+
+  const svg = el.querySelector('svg');
+  const tooltip = el.querySelector('.lc-tooltip');
+  const hoverDot = el.querySelector('.lc-hover-dot');
+  const crosshair = el.querySelector('.lc-crosshair');
+  const capture = el.querySelector('.lc-capture');
+  function showAt(clientX) {
+    const rect = svg.getBoundingClientRect();
+    const relX = ((clientX - rect.left) / rect.width) * w;
+    let nearest = 0, nearestDist = Infinity;
+    points.forEach((p, i) => { const d = Math.abs(p.x - relX); if (d < nearestDist) { nearestDist = d; nearest = i; } });
+    const p = points[nearest];
+    hoverDot.setAttribute('cx', p.x); hoverDot.setAttribute('cy', p.y); hoverDot.style.opacity = '1';
+    crosshair.setAttribute('x1', p.x); crosshair.setAttribute('x2', p.x); crosshair.style.opacity = '1';
+    tooltip.style.display = 'block';
+    tooltip.innerHTML = `<b>${formatValue(p.value)}</b><span>${p.label}</span>`;
+    tooltip.style.left = (p.x / w) * 100 + '%';
+    tooltip.style.top = (p.y / h) * 100 + '%';
+  }
+  capture.addEventListener('mousemove', (e) => showAt(e.clientX));
+  capture.addEventListener('touchstart', (e) => { if (e.touches[0]) showAt(e.touches[0].clientX); }, { passive: true });
+  capture.addEventListener('mouseleave', () => { hoverDot.style.opacity = '0'; crosshair.style.opacity = '0'; tooltip.style.display = 'none'; });
+  // Land on the most recent point by default so the headline number is visible without a hover.
+  showAt(svg.getBoundingClientRect().left + svg.getBoundingClientRect().width);
+}
+
+/* ---------------- KPI / STAT CARD ----------------
+   `accent` picks the icon-chip color (green/blue/amber/red, matching the
+   role palette in rently.css); pass `delta` (see setKpiDelta) once the
+   caller can compute a real trailing-period comparison — never a
+   fabricated one, so most cards simply omit it. */
+function kpiCard(id, label, opts = {}) {
+  const { icon: iconName, accent } = opts;
+  return `<div class="kpi ${accent ? 'accent-' + accent : ''}">
+    ${iconName ? `<div class="ic">${icon(iconName, { size: 16 })}</div>` : ''}
+    <div class="lbl">${label}</div>
+    <div class="val" id="${id}">—</div>
+    <div class="delta" id="${id}Delta"></div>
+  </div>`;
+}
+/** deltaPct: signed % change vs. the prior period; null/undefined/non-finite hides the row (e.g. no prior-period data to compare against). */
+function setKpiDelta(id, deltaPct, opts = {}) {
+  const el = document.getElementById(id + 'Delta');
+  if (!el) return;
+  if (deltaPct === null || deltaPct === undefined || !isFinite(deltaPct)) { el.style.display = 'none'; return; }
+  const up = deltaPct >= 0;
+  const suffix = opts.suffix || 'vs last month';
+  el.className = 'delta ' + (up ? 'up' : 'down');
+  el.innerHTML = icon('arrowUpRight', { size: 11, cls: up ? '' : 'rot-down' }) + ` ${up ? '+' : ''}${Math.round(deltaPct)}% ${suffix}`;
+  el.style.display = 'flex';
+}
+
 /* ---------------- MOCK DATA ---------------- */
 const CATEGORIES=[
   {key:'event',name:'Event & Party',count:1240,size:'c-large'},

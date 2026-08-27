@@ -31,6 +31,17 @@ body{padding-top:0;}
 .role-check{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--ink-soft);margin-bottom:12px;cursor:pointer;}
 .role-check:last-child{margin-bottom:0;}
 .role-check input{accent-color:var(--ink);width:16px;height:16px;}
+
+@media(max-width:680px){
+  .queue-row{flex-wrap:wrap;}
+  .queue-row .q-main{min-width:100%;order:1;margin-bottom:10px;}
+  .queue-row .q-actions{order:2;}
+}
+.team-search-row{display:flex;gap:10px;align-items:flex-end;}
+@media(max-width:520px){
+  .team-search-row{flex-direction:column;align-items:stretch;}
+  .team-search-row .pill-btn{margin-bottom:0;}
+}
 </style>
 </head>
 <body class="no-grain">
@@ -71,13 +82,9 @@ body{padding-top:0;}
     <div class="d-view active" id="view-overview">
       <div class="app-head"><div><h1 id="overviewGreeting">Platform overview</h1><p id="overviewSubtitle">Rently-wide health, at a glance — not scoped to any one provider.</p></div></div>
 
-      <div class="kpi-row" style="margin-bottom:24px;">
-        <div class="kpi"><div class="lbl">Pending listings</div><div class="val" id="statListings">—</div></div>
-        <div class="kpi"><div class="lbl">Pending verifications</div><div class="val" id="statVerif">—</div></div>
-        <div class="kpi"><div class="lbl">Waiting &gt;24h</div><div class="val" id="statOverdue">—</div></div>
-      </div>
+      <div class="kpi-row" style="margin-bottom:24px;" id="overviewKpiRow"></div>
 
-      <div class="banner info" style="margin-bottom:40px;"><div><div class="t">Not available yet</div><div class="d">Total bookings, GMV and open disputes need the Admin analytics and Trust &amp; Safety modules, which haven't been built yet.</div></div></div>
+      <div class="banner info" style="margin-bottom:40px;"><div><div class="t">Not available yet</div><div class="d">A platform-wide bookings/GMV view needs an admin-scoped bookings endpoint, which hasn't been built yet.</div></div></div>
 
       <div class="section-block">
         <div class="sb-head"><h3>Queue composition</h3></div>
@@ -89,6 +96,10 @@ body{padding-top:0;}
           <div style="flex:1;min-width:220px;">
             <div style="font-size:12px;color:var(--ink-faint);font-weight:600;margin-bottom:12px;">Listings by category</div>
             <div id="listingCatChart"></div>
+          </div>
+          <div style="flex:1;min-width:220px;">
+            <div style="font-size:12px;color:var(--ink-faint);font-weight:600;margin-bottom:12px;">Disputes by status</div>
+            <div id="disputeStatusChart"></div>
           </div>
         </div>
       </div>
@@ -123,8 +134,9 @@ body{padding-top:0;}
 
     <!-- ============ DISPUTES ============ -->
     <div class="d-view" id="view-disputes">
-      <div class="app-head"><div><h1>Disputes</h1><p>Damage claims, late-return disagreements and payment issues flagged by either side.</p></div></div>
-      <div class="banner info"><div><div class="t">Not available yet</div><div class="d">Dispute handling needs the Trust &amp; Safety module, which hasn't been built yet.</div></div></div>
+      <div class="app-head"><div><h1>Disputes</h1><p>Damage claims flagged by a provider at inspection — resolve from any state, whether or not the two parties have agreed.</p></div></div>
+      <div class="tabs-filter" id="disputeStatusFilter"></div>
+      <div id="disputesList"><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
     </div>
 
     <!-- ============ VERIFICATION ============ -->
@@ -159,13 +171,24 @@ body{padding-top:0;}
           </table>
         </div>
       </div>
+
+      <div class="section-block">
+        <div class="sb-head"><h3>Disputes by status</h3></div>
+        <div id="reportDisputeStatusChart" style="margin-bottom:20px;"></div>
+        <div class="dtable-wrap">
+          <table class="dtable">
+            <thead><tr><th>Status</th><th>Count</th></tr></thead>
+            <tbody id="reportDisputeStatusTbody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- ============ TEAM & ACCESS (super admin only) ============ -->
     <div class="d-view" id="view-team">
       <div class="app-head"><div><h1>Team &amp; access</h1><p>Look up an account by email and grant or remove admin access.</p></div></div>
       <div class="section-block" style="max-width:480px;">
-        <div style="display:flex;gap:10px;align-items:flex-end;">
+        <div class="team-search-row">
           <div class="field" style="flex:1;margin-bottom:0;"><label>Find a person by email</label><input type="email" id="teamEmailInput" placeholder="person@example.com" /></div>
           <button class="pill-btn blue" id="teamSearchBtn" style="margin-bottom:0;">Search</button>
         </div>
@@ -187,6 +210,11 @@ document.getElementById('linkOverview').innerHTML = icon('grid',{size:17})+' Ove
 document.getElementById('linkListings').innerHTML = icon('grid',{size:17})+' Listings';
 document.getElementById('linkBookings').innerHTML = icon('calendar',{size:17})+' All Bookings';
 document.getElementById('linkDisputes').innerHTML = icon('alert',{size:17})+' Disputes';
+document.getElementById('overviewKpiRow').innerHTML =
+  kpiCard('statListings','Pending listings',{icon:'list',accent:'blue'}) +
+  kpiCard('statVerif','Pending verifications',{icon:'shield',accent:'amber'}) +
+  kpiCard('statDisputes','Open disputes',{icon:'alert',accent:'red'}) +
+  kpiCard('statOverdue','Waiting &gt;24h',{icon:'clock'});
 document.getElementById('linkVerification').innerHTML = icon('shield',{size:17})+' Verification';
 document.getElementById('linkReports').innerHTML = icon('filter',{size:17})+' Reports';
 document.getElementById('linkExit').innerHTML = icon('logout',{size:17})+' Exit to site';
@@ -216,6 +244,7 @@ document.querySelectorAll('.side-link[data-view]').forEach(l=>l.addEventListener
 document.querySelectorAll('[data-view-link]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goView(l.dataset.viewLink);}));
 
 /* ---- welcome + personalization (from the real lastLoginAt field) ---- */
+function money2(minor){ return money(Math.round((minor||0)/100)); }
 function daysAgo(dateStr){ return Math.floor((Date.now()-new Date(dateStr).getTime())/86400000); }
 function relativeTime(dateStr){
   if(!dateStr) return '';
@@ -240,14 +269,17 @@ function renderWelcome(){
    submitted, and Reports — all computed client-side from the two real
    queues fetched by renderModeration()/renderVerification() below ---- */
 const pendingCounts = { verification: 0, listings: 0 };
-let moderationQueue=[], verificationQueue=[];
+let moderationQueue=[], verificationQueue=[], disputeQueue=[];
+const DISPUTE_OPEN_STATUSES=['open','proposed','contested'];
 async function renderOverviewExtras(){
   document.getElementById('statListings').textContent = pendingCounts.listings;
   document.getElementById('statVerif').textContent = pendingCounts.verification;
+  document.getElementById('statDisputes').textContent = disputeQueue.filter(d=>DISPUTE_OPEN_STATUSES.includes(d.status)).length;
 
   const overdueListings = moderationQueue.filter(l=>daysAgo(l.createdAt)>=1);
   const overdueVerifs = verificationQueue.filter(v=>daysAgo(v.createdAt)>=1);
-  document.getElementById('statOverdue').textContent = overdueListings.length + overdueVerifs.length;
+  const overdueDisputes = disputeQueue.filter(d=>DISPUTE_OPEN_STATUSES.includes(d.status) && daysAgo(d.createdAt)>=1);
+  document.getElementById('statOverdue').textContent = overdueListings.length + overdueVerifs.length + overdueDisputes.length;
 
   const categoryById = await getCategoryMapById().catch(()=>new Map());
   const catCounts = {};
@@ -261,20 +293,29 @@ async function renderOverviewExtras(){
     {label:'Individual', count:verificationQueue.filter(v=>!v.businessRegistrationNo).length},
   ].filter(r=>r.count>0);
 
+  const disputeStatusLabels={open:'Open',proposed:'Proposed',contested:'Contested',resolved:'Resolved'};
+  const disputeRows=Object.keys(disputeStatusLabels).map(s=>({label:disputeStatusLabels[s],count:disputeQueue.filter(d=>d.status===s).length})).filter(r=>r.count>0);
+
   renderBarChart('listingCatChart', catRows.map(r=>({label:r.label,value:r.count})), {horizontal:true, color:'var(--green)'});
   renderBarChart('verifTypeChart', verifTypeRows.map(r=>({label:r.label,value:r.count})), {horizontal:true, color:'var(--blue)'});
+  renderBarChart('disputeStatusChart', disputeRows.map(r=>({label:r.label,value:r.count})), {horizontal:true, color:'var(--red)'});
   renderBarChart('reportListingCatChart', catRows.map(r=>({label:r.label,value:r.count})), {horizontal:true, color:'var(--green)'});
   renderBarChart('reportVerifTypeChart', verifTypeRows.map(r=>({label:r.label,value:r.count})), {horizontal:true, color:'var(--blue)'});
+  renderBarChart('reportDisputeStatusChart', disputeRows.map(r=>({label:r.label,value:r.count})), {horizontal:true, color:'var(--red)'});
   document.getElementById('reportListingCatTbody').innerHTML = catRows.length ? catRows.map(r=>
     `<tr><td>${r.label}</td><td class="num">${r.count}</td></tr>`
   ).join('') : `<tr><td colspan="2" style="color:var(--ink-faint)">No listings pending review.</td></tr>`;
   document.getElementById('reportVerifTypeTbody').innerHTML = verifTypeRows.length ? verifTypeRows.map(r=>
     `<tr><td>${r.label}</td><td class="num">${r.count}</td></tr>`
   ).join('') : `<tr><td colspan="2" style="color:var(--ink-faint)">No providers pending verification.</td></tr>`;
+  document.getElementById('reportDisputeStatusTbody').innerHTML = disputeRows.length ? disputeRows.map(r=>
+    `<tr><td>${r.label}</td><td class="num">${r.count}</td></tr>`
+  ).join('') : `<tr><td colspan="2" style="color:var(--ink-faint)">No disputes on record.</td></tr>`;
 
   const insights=[];
   if(overdueListings.length) insights.push(`${overdueListings.length} listing${overdueListings.length===1?'':'s'} ${overdueListings.length===1?'has':'have'} waited more than 24 hours for review.`);
   if(overdueVerifs.length) insights.push(`${overdueVerifs.length} provider verification${overdueVerifs.length===1?'':'s'} ${overdueVerifs.length===1?'has':'have'} waited more than 24 hours.`);
+  if(overdueDisputes.length) insights.push(`${overdueDisputes.length} dispute${overdueDisputes.length===1?'':'s'} ${overdueDisputes.length===1?'has':'have'} been open more than 24 hours.`);
   const section=document.getElementById('insightsSection');
   if(!insights.length){ section.style.display='none'; }
   else{
@@ -287,6 +328,8 @@ async function renderOverviewExtras(){
   const actions=[];
   if(moderationQueue.length) actions.push({label:`Review ${moderationQueue.length} pending listing${moderationQueue.length===1?'':'s'}`,ic:'grid',cls:'green',handler:()=>goView('listings')});
   if(verificationQueue.length) actions.push({label:`Review ${verificationQueue.length} pending verification${verificationQueue.length===1?'':'s'}`,ic:'shield',cls:'green',handler:()=>goView('verification')});
+  const openDisputeCount = disputeQueue.filter(d=>DISPUTE_OPEN_STATUSES.includes(d.status)).length;
+  if(openDisputeCount) actions.push({label:`Resolve ${openDisputeCount} open dispute${openDisputeCount===1?'':'s'}`,ic:'alert',cls:'green',handler:()=>goView('disputes')});
   if(session.user.roles.includes('super_admin')) actions.push({label:'Team & Access',ic:'user',cls:'ghost',handler:()=>goView('team')});
   const qa=document.getElementById('quickActions');
   if(!actions.length){
@@ -299,6 +342,7 @@ async function renderOverviewExtras(){
   const submitted = [
     ...moderationQueue.map(l=>({ts:l.createdAt, text:`"${l.title}" submitted for review`})),
     ...verificationQueue.map(v=>({ts:v.createdAt, text:`${v.businessName||(v.user?v.user.fullName:'A provider')} submitted for verification`})),
+    ...disputeQueue.map(d=>({ts:d.createdAt, text:`Dispute opened — ${d.description.slice(0,60)}${d.description.length>60?'…':''}`})),
   ].sort((a,b)=>new Date(b.ts||0)-new Date(a.ts||0)).slice(0,6);
   document.getElementById('recentSubmittedList').innerHTML = submitted.length ? submitted.map(i=>
     `<div class="row-card" style="margin-bottom:10px;"><div class="main"><div class="t">${i.text}</div><div class="s">${relativeTime(i.ts)}</div></div></div>`
@@ -383,6 +427,78 @@ async function renderVerification(){
   }
   renderOverviewExtras();
 }
+
+/* ---- disputes queue (real — GET /admin/disputes, POST .../resolve) ---- */
+const DISPUTE_STATUS_BADGE={open:'pending',proposed:'pending',contested:'cancelled',resolved:'completed'};
+const DISPUTE_STATUS_LABEL={open:'Open',proposed:'Proposed',contested:'Contested',resolved:'Resolved'};
+let disputeStatusFilter='open';
+function disputeFilterTabs(){
+  const tabs=[['open','Needs attention'],['contested','Contested'],['resolved','Resolved'],['all','All']];
+  document.getElementById('disputeStatusFilter').innerHTML = tabs.map(([k,l])=>
+    `<button class="${disputeStatusFilter===k?'on':''}" data-df="${k}">${l}</button>`
+  ).join('');
+  document.querySelectorAll('[data-df]').forEach(b=>b.addEventListener('click',()=>{ disputeStatusFilter=b.dataset.df; disputeFilterTabs(); renderDisputeRows(); }));
+}
+function disputeMatchesFilter(d){
+  if(disputeStatusFilter==='all') return true;
+  if(disputeStatusFilter==='open') return d.status==='open' || d.status==='proposed';
+  return d.status===disputeStatusFilter;
+}
+function renderDisputeRows(){
+  const list=document.getElementById('disputesList');
+  const rows=disputeQueue.filter(disputeMatchesFilter);
+  if(!rows.length){ list.innerHTML=`<p style="color:var(--ink-faint);font-size:13.5px;">Nothing in this view.</p>`; return; }
+  list.innerHTML = rows.map(d=>{
+    const ctx=d._ctx||{};
+    const proposedLine = d.proposedDeductionMinor!=null ? ` · Provider proposed ${money2(d.proposedDeductionMinor)} deduction` : '';
+    const finalLine = d.status==='resolved' ? ` · Resolved: ${money2(d.finalDeductionMinor||0)} deducted (${d.resolution==='agreed'?'both parties agreed':'admin decided'})` : '';
+    return `
+      <div class="queue-row">
+        <div class="q-main">
+          <div class="q-title">${ctx.listingTitle||'A booking'} <span class="badge ${DISPUTE_STATUS_BADGE[d.status]}" style="margin-left:6px;">${DISPUTE_STATUS_LABEL[d.status]}</span></div>
+          <div class="q-sub">${ctx.renterName?`Renter: ${ctx.renterName} · `:''}Opened ${new Date(d.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · "${d.description}"${proposedLine}${finalLine}</div>
+        </div>
+        <div class="q-actions">
+          ${d.status!=='resolved'?`<button class="pill-btn green sm" data-resolve-dispute="${d.id}" data-deposit="${ctx.depositMinor||0}">Resolve</button>`:''}
+        </div>
+      </div>`;
+  }).join('');
+  document.querySelectorAll('[data-resolve-dispute]').forEach(b=>b.addEventListener('click', async ()=>{
+    const depositMinor = +b.dataset.deposit || 0;
+    const amountStr = prompt(`Final deduction from the ₦${(depositMinor/100).toLocaleString()} deposit (in Naira, 0 for no deduction):`);
+    if(amountStr===null) return;
+    const amountNaira = Number(amountStr);
+    if(!Number.isFinite(amountNaira) || amountNaira<0){ alert('Enter a valid, non-negative amount.'); return; }
+    const note = prompt('Note explaining this decision (visible to both parties):');
+    if(!note || note.trim().length<3){ if(note!==null) alert('Please provide a short note.'); return; }
+    b.disabled=true;
+    try{
+      await apiFetch(`/admin/disputes/${b.dataset.resolveDispute}/resolve`,{method:'POST',body:{finalDeductionMinor:Math.round(amountNaira*100),note:note.trim()}});
+      await renderDisputes();
+    }catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
+  }));
+}
+async function renderDisputes(){
+  try{
+    const {data} = await apiFetch('/admin/disputes');
+    disputeQueue = data;
+    await Promise.all(disputeQueue.map(async d=>{
+      try{
+        const {data:b} = await apiFetch(`/bookings/${d.bookingId}`);
+        const [{data:listing},renter] = await Promise.all([
+          apiFetch(`/listings/${b.listingId}`,{auth:false}),
+          getUserCached(b.renterId),
+        ]);
+        d._ctx = {listingTitle:listing.title, renterName:renter.fullName, depositMinor:b.depositMinor};
+      }catch(e){ d._ctx = {}; }
+    }));
+    disputeFilterTabs();
+    renderDisputeRows();
+  }catch(e){
+    document.getElementById('disputesList').innerHTML = `<p style="color:var(--ink-faint)">${apiErrorMessage(e)}</p>`;
+  }
+  renderOverviewExtras();
+}
 /* ---- team & access: look up a user by email, edit their roles (super admin only) ---- */
 const ROLE_OPTIONS = ['provider','provider_staff','admin','super_admin'];
 const ROLE_LABELS = {provider:'Provider',provider_staff:'Provider staff',admin:'Admin',super_admin:'Super admin'};
@@ -444,7 +560,7 @@ document.getElementById('teamSearchBtn').addEventListener('click', async ()=>{
 });
 document.getElementById('teamEmailInput').addEventListener('keydown',(e)=>{ if(e.key==='Enter') document.getElementById('teamSearchBtn').click(); });
 
-if(session){ renderWelcome(); renderVerification(); renderModeration(); }
+if(session){ renderWelcome(); renderVerification(); renderModeration(); renderDisputes(); }
 </script>
 </body>
 </html>

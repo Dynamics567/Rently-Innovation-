@@ -33,6 +33,12 @@ body{padding-top:0;}
 .settings-form{max-width:520px;}
 .settings-avatar-row{display:flex;align-items:center;gap:16px;margin-bottom:28px;}
 .settings-avatar-row .p-avatar{width:64px;height:64px;font-size:20px;border-radius:18px;}
+
+@media(max-width:680px){
+  .app-head{flex-direction:column;align-items:stretch;}
+  .app-head .pill-btn{align-self:flex-start;}
+  .msg-row .m-prev{max-width:180px;}
+}
 </style>
 </head>
 <body class="no-grain">
@@ -95,11 +101,7 @@ body{padding-top:0;}
         <a class="pill-btn blue" href="browse">Book something new</a>
       </div>
 
-      <div class="kpi-row" style="margin-bottom:44px;">
-        <div class="kpi"><div class="lbl">Active</div><div class="val" id="kpiActive">—</div></div>
-        <div class="kpi"><div class="lbl">Upcoming</div><div class="val" id="kpiUpcoming">—</div></div>
-        <div class="kpi"><div class="lbl">Completed</div><div class="val" id="kpiCompleted">—</div></div>
-      </div>
+      <div class="kpi-row" style="margin-bottom:44px;" id="overviewKpiRow"></div>
 
       <div class="section-block">
         <div class="sb-head"><h3>Booking status</h3></div>
@@ -158,14 +160,25 @@ body{padding-top:0;}
       <div class="banner info" style="margin-bottom:28px;"><div><div class="t">Scope note</div><div class="d">Reflects up to 100 most recent bookings.</div></div></div>
 
       <div class="section-block">
-        <div class="sb-head"><h3>Spending by month</h3></div>
-        <div id="spendingChart" style="margin-bottom:20px;"></div>
+        <div class="sb-head"><h3>Spending over time</h3></div>
+        <div class="panel-card">
+          <div class="analytics-head">
+            <div><div class="lbl">Total spent</div><div class="num" id="spendingHeadline">—</div></div>
+            <div class="delta" id="spendingHeadlineDelta" style="margin-top:0;"></div>
+          </div>
+          <div id="spendingChart"></div>
+        </div>
         <div class="dtable-wrap">
           <table class="dtable">
             <thead><tr><th>Month</th><th>Bookings</th><th>Total spent</th></tr></thead>
             <tbody id="spendingReportTbody"></tbody>
           </table>
         </div>
+      </div>
+
+      <div class="section-block">
+        <div class="sb-head"><h3>Spending by category</h3></div>
+        <div id="categoryChart" style="margin-bottom:20px;"></div>
       </div>
 
       <div class="section-block">
@@ -386,10 +399,22 @@ function renderWelcome(){
   document.getElementById('overviewSubtitle').textContent = subtitle;
 }
 
+function trailingPeriodDelta(rows, dateKey, valueKey){
+  const now=Date.now(), day=86400000;
+  const sumInWindow=(minAgeDays,maxAgeDays)=>rows
+    .filter(r=>{ const age=(now-new Date(r[dateKey]).getTime())/day; return age>=minAgeDays && age<maxAgeDays; })
+    .reduce((s,r)=>s+r[valueKey],0);
+  const current = sumInWindow(0,30), prior = sumInWindow(30,60);
+  if(!prior) return null;
+  return ((current-prior)/prior)*100;
+}
 function renderKpis(){
   document.getElementById('kpiActive').textContent = allBookings.filter(b=>tabMatches(b,'active')).length;
   document.getElementById('kpiUpcoming').textContent = allBookings.filter(b=>tabMatches(b,'upcoming')).length;
   document.getElementById('kpiCompleted').textContent = allBookings.filter(b=>b.status==='completed').length;
+  const spend = allBookings.filter(b=>b.status!=='cancelled');
+  document.getElementById('kpiSpent').textContent = money(spend.reduce((s,b)=>s+b.total,0));
+  setKpiDelta('kpiSpent', trailingPeriodDelta(spend.map(b=>({dateFrom:b.dateFrom,total:b.total})), 'dateFrom', 'total'));
 }
 
 function renderStatusBreakdown(){
@@ -443,18 +468,26 @@ function renderRecentActivity(){
 }
 
 function renderReports(){
+  const spend = allBookings.filter(b=>b.status!=='cancelled');
   const byMonth={};
-  allBookings.filter(b=>b.status!=='cancelled').forEach(b=>{
+  spend.forEach(b=>{
     const d=new Date(b.dateFrom);
     const key=d.toLocaleDateString('en-US',{month:'short',year:'2-digit'});
     if(!byMonth[key]) byMonth[key]={count:0,total:0,sortKey:d.getFullYear()*12+d.getMonth()};
     byMonth[key].count++; byMonth[key].total+=b.total;
   });
   const rows=Object.entries(byMonth).map(([label,v])=>({label,...v})).sort((a,b)=>a.sortKey-b.sortKey);
-  renderBarChart('spendingChart', rows.map(r=>({label:r.label,value:r.total})), {formatValue:money, color:'var(--blue)'});
+  document.getElementById('spendingHeadline').textContent = money(spend.reduce((s,b)=>s+b.total,0));
+  setKpiDelta('spendingHeadline', trailingPeriodDelta(spend.map(b=>({dateFrom:b.dateFrom,total:b.total})), 'dateFrom', 'total'));
+  renderLineChart('spendingChart', rows.map(r=>({label:r.label,value:r.total})), {formatValue:money, color:'var(--blue)'});
   document.getElementById('spendingReportTbody').innerHTML = rows.length ? rows.map(r=>
     `<tr><td>${r.label}</td><td class="num">${r.count}</td><td class="num">${money(r.total)}</td></tr>`
   ).join('') : `<tr><td colspan="3" style="color:var(--ink-faint)">No spending yet.</td></tr>`;
+
+  const byCategory={};
+  spend.forEach(b=>{ byCategory[b.listing.catName] = (byCategory[b.listing.catName]||0) + b.total; });
+  const categoryRows = Object.entries(byCategory).map(([label,value])=>({label,value})).sort((a,b)=>b.value-a.value);
+  renderBarChart('categoryChart', categoryRows, {horizontal:true, color:'var(--blue)', formatValue:money});
 
   const buckets = TABS.filter(([k])=>k!=='all');
   const statusRows = buckets.map(([k,label])=>({label,count:allBookings.filter(b=>tabMatches(b,k)).length})).filter(r=>r.count>0);
@@ -495,6 +528,12 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async ()=>{
     btn.disabled=false;
   }
 });
+
+document.getElementById('overviewKpiRow').innerHTML =
+  kpiCard('kpiActive','Active',{icon:'clock',accent:'green'}) +
+  kpiCard('kpiUpcoming','Upcoming',{icon:'calendar',accent:'blue'}) +
+  kpiCard('kpiCompleted','Completed',{icon:'check'}) +
+  kpiCard('kpiSpent','Total spent',{icon:'wallet',accent:'amber'});
 
 (async function init(){
   await loadBookings();

@@ -36,6 +36,15 @@ body{padding-top:0;}
 
 .settings-form{max-width:560px;}
 .payout-fields{border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:24px;}
+
+@media(max-width:680px){
+  .app-head{flex-direction:column;align-items:stretch;}
+  .app-head .pill-btn{align-self:flex-start;}
+  .request-row{flex-wrap:wrap;}
+  .request-row .r-main{min-width:100%;order:1;}
+  .request-row .r-actions{order:2;margin-left:54px;}
+  .request-row .badge{order:2;margin-left:54px;}
+}
 </style>
 </head>
 <body class="no-grain">
@@ -101,12 +110,7 @@ body{padding-top:0;}
 
       <div class="banner warning" id="actionBanner" style="margin-bottom:32px;display:none;"></div>
 
-      <div class="kpi-row" style="margin-bottom:44px;">
-        <div class="kpi"><div class="lbl">Gross bookings value</div><div class="val" id="kpiGross">—</div></div>
-        <div class="kpi"><div class="lbl">Active listings</div><div class="val" id="kpiActiveListings">—</div></div>
-        <div class="kpi"><div class="lbl">Pending requests</div><div class="val" id="kpiPending">—</div></div>
-        <div class="kpi"><div class="lbl">Average rating</div><div class="val" id="kpiRating">—</div></div>
-      </div>
+      <div class="kpi-row" style="margin-bottom:44px;" id="overviewKpiRow"></div>
 
       <div class="section-block">
         <div class="sb-head"><h3>Listing status</h3></div>
@@ -173,9 +177,7 @@ body{padding-top:0;}
     <!-- ============ EARNINGS ============ -->
     <div class="d-view" id="view-earnings">
       <div class="app-head"><div><h1>Earnings</h1><p>Payouts settle 7 days after a rental completes, direct to your linked bank account.</p></div></div>
-      <div class="kpi-row" style="margin-bottom:36px;">
-        <div class="kpi"><div class="lbl">Gross bookings value</div><div class="val" id="kpiGross2">—</div></div>
-      </div>
+      <div class="kpi-row" style="margin-bottom:36px;" id="earningsKpiRow"></div>
       <div class="banner info"><div><div class="t">Payout tracking is coming soon</div><div class="d">Commission and payout schedules will appear here once the Payments module is live — for now, "gross bookings value" reflects the total of your confirmed and completed bookings.</div></div></div>
     </div>
 
@@ -185,14 +187,25 @@ body{padding-top:0;}
       <div class="banner info" style="margin-bottom:28px;"><div><div class="t">Scope note</div><div class="d">These reports reflect up to 100 most recent bookings per status — plenty at your current volume, but a heads-up if that changes.</div></div></div>
 
       <div class="section-block">
-        <div class="sb-head"><h3>Earnings by month</h3></div>
-        <div id="earningsChart" style="margin-bottom:20px;"></div>
+        <div class="sb-head"><h3>Earnings over time</h3></div>
+        <div class="panel-card">
+          <div class="analytics-head">
+            <div><div class="lbl">Total gross bookings value</div><div class="num" id="earningsHeadline">—</div></div>
+            <div class="delta" id="earningsHeadlineDelta" style="margin-top:0;"></div>
+          </div>
+          <div id="earningsChart"></div>
+        </div>
         <div class="dtable-wrap">
           <table class="dtable">
             <thead><tr><th>Month</th><th>Bookings</th><th>Gross value</th></tr></thead>
             <tbody id="earningsReportTbody"></tbody>
           </table>
         </div>
+      </div>
+
+      <div class="section-block">
+        <div class="sb-head"><h3>Bookings by category</h3></div>
+        <div id="categoryChart" style="margin-bottom:20px;"></div>
       </div>
 
       <div class="section-block">
@@ -236,7 +249,7 @@ body{padding-top:0;}
     <p style="font-size:12px;color:var(--ink-faint);margin-bottom:16px;"><span class="req">*</span> Required</p>
     <div class="field" id="fieldTitle"><label>Title <span class="req">*</span></label><input type="text" id="modalTitle" placeholder="e.g. Chiavari Chairs (Set of 100)" /><div class="err-msg"></div></div>
     <div class="field" id="fieldCat"><label>Category <span class="req">*</span></label><select id="modalCatSelect"></select><div class="err-msg"></div></div>
-    <div class="form-2col" style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;">
+    <div class="form-2col">
       <div class="field" id="fieldPrice"><label>Price per day (₦) <span class="req">*</span></label><input type="number" id="modalPrice" placeholder="15000" /><div class="err-msg"></div></div>
       <div class="field"><label>Deposit (₦, optional)</label><input type="number" id="modalDeposit" placeholder="10000" /></div>
     </div>
@@ -430,10 +443,33 @@ async function loadEarnings(){
     const grossStr = money2(earningsBookings.reduce((sum,b)=>sum+b.totalMinor,0));
     document.getElementById('kpiGross').textContent = grossStr;
     document.getElementById('kpiGross2').textContent = grossStr;
+    document.getElementById('earningsHeadline').textContent = grossStr;
+    const delta = trailingPeriodDelta(earningsBookings, 'startsAt', 'totalMinor');
+    setKpiDelta('kpiGross', delta);
+    setKpiDelta('kpiGross2', delta);
+    setKpiDelta('earningsHeadline', delta);
   }catch(e){
     document.getElementById('kpiGross').textContent='—';
     document.getElementById('kpiGross2').textContent='—';
+    document.getElementById('earningsHeadline').textContent='—';
   }
+}
+
+/**
+ * Signed % change between the trailing 30-day window and the 30 days
+ * before that, summed over `valueKey` for rows whose `dateKey` falls in
+ * each window. Returns null (hides the delta) rather than a fabricated
+ * number when there's no prior-period data to compare against — a "+100%"
+ * off a zero baseline is misleading, not informative.
+ */
+function trailingPeriodDelta(rows, dateKey, valueKey){
+  const now=Date.now(), day=86400000;
+  const sumInWindow=(minAgeDays,maxAgeDays)=>rows
+    .filter(r=>{ const age=(now-new Date(r[dateKey]).getTime())/day; return age>=minAgeDays && age<maxAgeDays; })
+    .reduce((s,r)=>s+r[valueKey],0);
+  const current = sumInWindow(0,30), prior = sumInWindow(30,60);
+  if(!prior) return null;
+  return ((current-prior)/prior)*100;
 }
 
 /* ---- personalization, insights, quick actions, activity, reports — all computed
@@ -544,10 +580,19 @@ function renderReports(){
     byMonth[key].count++; byMonth[key].total+=b.totalMinor;
   });
   const monthRows = Object.entries(byMonth).map(([label,v])=>({label,...v})).sort((a,b)=>a.sortKey-b.sortKey);
-  renderBarChart('earningsChart', monthRows.map(m=>({label:m.label,value:m.total})), {formatValue:money2, color:'var(--green)'});
+  renderLineChart('earningsChart', monthRows.map(m=>({label:m.label,value:m.total})), {formatValue:money2, color:'var(--green)'});
   document.getElementById('earningsReportTbody').innerHTML = monthRows.length ? monthRows.map(m=>
     `<tr><td>${m.label}</td><td class="num">${m.count}</td><td class="num">${money2(m.total)}</td></tr>`
   ).join('') : `<tr><td colspan="3" style="color:var(--ink-faint)">No earnings yet.</td></tr>`;
+
+  const catNameById = new Map(myListings.map(l=>[l.id,l.catName]));
+  const byCategory={};
+  earningsBookings.forEach(b=>{
+    const name = catNameById.get(b.listingId) || 'Other';
+    byCategory[name] = (byCategory[name]||0) + b.totalMinor;
+  });
+  const categoryRows = Object.entries(byCategory).map(([label,value])=>({label,value})).sort((a,b)=>b.value-a.value);
+  renderBarChart('categoryChart', categoryRows, {horizontal:true, color:'var(--green)', formatValue:money2});
 
   const buckets=['live','pending_review','paused','draft','rejected'];
   const total = myListings.length || 1;
@@ -623,6 +668,13 @@ document.getElementById('submitListingBtn').addEventListener('click', async ()=>
     btn.disabled=false; btn.textContent=original;
   }
 });
+
+document.getElementById('overviewKpiRow').innerHTML =
+  kpiCard('kpiGross','Gross bookings value',{icon:'wallet',accent:'green'}) +
+  kpiCard('kpiActiveListings','Active listings',{icon:'list',accent:'blue'}) +
+  kpiCard('kpiPending','Pending requests',{icon:'message',accent:'amber'}) +
+  kpiCard('kpiRating','Average rating',{icon:'star'});
+document.getElementById('earningsKpiRow').innerHTML = kpiCard('kpiGross2','Gross bookings value',{icon:'wallet',accent:'green'});
 
 (async function init(){
   if(!session) return;
