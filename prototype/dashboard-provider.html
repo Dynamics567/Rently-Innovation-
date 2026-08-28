@@ -383,37 +383,70 @@ async function loadRequests(){
   }
 }
 
-/* ---- active rentals: confirm handover / schedule return / confirm return / release deposit ---- */
+/* ---- active rentals: confirm handover / schedule return / confirm return / inspect ---- */
 const STAGE_ACTION = {
   ready:{label:'Ready for pickup',cls:'confirmed',action:'Confirm handover',endpoint:'confirm-handover'},
   active:{label:'Out with renter',cls:'confirmed',action:'Schedule return',endpoint:'schedule-return'},
   returnsched:{label:'Return due',cls:'pending',action:'Mark as returned',endpoint:'confirm-return'},
-  returned:{label:'Awaiting inspection',cls:'pending',action:'Release deposit',endpoint:'release-deposit'},
 };
 function activeRentalRow(r){
-  const s=STAGE_ACTION[r.stage];
   const due = r.stage==='returnsched'||r.stage==='returned'
     ? `Due back ${new Date(r.dateTo).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`
     : `${new Date(r.dateFrom).toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${new Date(r.dateTo).toLocaleDateString('en-US',{month:'short',day:'numeric'})}`;
-  return `<div class="request-row">
-    <div class="p-avatar">${initials(r.renterName)}</div>
+  const header = `<div class="p-avatar">${initials(r.renterName)}</div>
     <div class="r-main">
       <div class="r-title">${r.title} <span style="color:var(--ink-faint);font-weight:400">— ${r.renterName}</span></div>
       <div class="r-sub">${due} · Deposit ${money(r.deposit)} held</div>
-    </div>
+    </div>`;
+
+  if(r.disputed){
+    const d=r.dispute;
+    let statusText, actionHtml;
+    if(!d){ statusText='Disputed'; actionHtml=''; }
+    else if(d.status==='open'){ statusText='Disputed — needs your proposal'; actionHtml=`<button class="pill-btn green sm" data-propose="${d.id}" data-deposit="${r.depositMinor}">Propose deduction</button>`; }
+    else if(d.status==='proposed'){ statusText=`Disputed — waiting on ${r.renterName.split(' ')[0]}`; actionHtml=''; }
+    else if(d.status==='contested'){ statusText='Disputed — under admin review'; actionHtml=''; }
+    else{ statusText='Disputed'; actionHtml=''; }
+    return `<div class="request-row">
+      ${header}
+      <span class="badge disputed" style="margin-right:8px;">${statusText}</span>
+      <div class="r-actions">${actionHtml}</div>
+    </div>`;
+  }
+
+  if(r.stage==='returned'){
+    return `<div class="request-row">
+      ${header}
+      <span class="badge pending" style="margin-right:8px;">Awaiting inspection</span>
+      <div class="r-actions">
+        <button class="pill-btn ghost sm" data-report-damage="${r.id}">Report damage</button>
+        <button class="pill-btn green sm" data-no-damage="${r.id}">No damage</button>
+      </div>
+    </div>`;
+  }
+
+  const s=STAGE_ACTION[r.stage];
+  return `<div class="request-row">
+    ${header}
     <span class="badge ${s.cls}" style="margin-right:8px;">${s.label}</span>
     <div class="r-actions"><button class="pill-btn green sm" data-advance="${r.id}" data-endpoint="${s.endpoint}">${s.action}</button></div>
   </div>`;
 }
 async function loadActiveRentals(){
   try{
-    const {data} = await apiFetch('/bookings?role=provider&status=confirmed&limit=100');
-    const relevant = data.filter(b=>['ready','active','returnsched','returned'].includes(b.stage));
-    myActiveRentals = await Promise.all(relevant.map(async b=>{
+    const [{data:confirmed},{data:disputed}] = await Promise.all([
+      apiFetch('/bookings?role=provider&status=confirmed&limit=100'),
+      apiFetch('/bookings?role=provider&status=disputed&limit=100'),
+    ]);
+    const relevant = confirmed.filter(b=>['ready','active','returnsched','returned'].includes(b.stage));
+    const combined = [...relevant.map(b=>({...b,disputed:false})), ...disputed.map(b=>({...b,disputed:true}))];
+    myActiveRentals = await Promise.all(combined.map(async b=>{
       let title='A listing';
       try{ const {data:l}=await apiFetch(`/listings/${b.listingId}`,{auth:false}); title=l.title; }catch(e){}
       const renterUser = await getUserCached(b.renterId);
-      return {id:b.id, stage:b.stage, title, dateFrom:b.startsAt.slice(0,10), dateTo:b.endsAt.slice(0,10), deposit:Math.round((b.depositMinor||0)/100), renterName:renterUser.fullName, updatedAt:b.updatedAt};
+      let dispute=null;
+      if(b.disputed){ dispute = await apiFetch(`/bookings/${b.id}/dispute`).then(r=>r.data).catch(()=>null); }
+      return {id:b.id, stage:b.stage, disputed:b.disputed, dispute, title, dateFrom:b.startsAt.slice(0,10), dateTo:b.endsAt.slice(0,10), deposit:Math.round((b.depositMinor||0)/100), depositMinor:b.depositMinor||0, renterName:renterUser.fullName, updatedAt:b.updatedAt};
     }));
     const list=document.getElementById('activeRentalsList'), empty=document.getElementById('activeRentalsEmpty');
     if(myActiveRentals.length===0){ list.innerHTML=''; empty.style.display='block'; }
@@ -423,6 +456,30 @@ async function loadActiveRentals(){
       document.querySelectorAll('[data-advance]').forEach(b=>b.addEventListener('click', async ()=>{
         b.disabled=true;
         try{ await apiFetch(`/bookings/${b.dataset.advance}/${b.dataset.endpoint}`,{method:'POST'}); await loadActiveRentals(); }
+        catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
+      }));
+      document.querySelectorAll('[data-no-damage]').forEach(b=>b.addEventListener('click', async ()=>{
+        b.disabled=true;
+        try{ await apiFetch(`/bookings/${b.dataset.noDamage}/inspect`,{method:'POST',body:{damageFound:false}}); await loadActiveRentals(); }
+        catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
+      }));
+      document.querySelectorAll('[data-report-damage]').forEach(b=>b.addEventListener('click', async ()=>{
+        const description = prompt('Describe the damage found (visible to the renter and any admin who reviews this):');
+        if(!description || description.trim().length<3){ if(description!==null) alert('Please provide a short description.'); return; }
+        b.disabled=true;
+        try{ await apiFetch(`/bookings/${b.dataset.reportDamage}/inspect`,{method:'POST',body:{damageFound:true,description:description.trim()}}); await loadActiveRentals(); }
+        catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
+      }));
+      document.querySelectorAll('[data-propose]').forEach(b=>b.addEventListener('click', async ()=>{
+        const depositMinor=+b.dataset.deposit||0;
+        const amountStr = prompt(`How much of the ₦${(depositMinor/100).toLocaleString()} deposit should be deducted? (in Naira, 0 for none)`);
+        if(amountStr===null) return;
+        const amountNaira=Number(amountStr);
+        if(!Number.isFinite(amountNaira)||amountNaira<0){ alert('Enter a valid, non-negative amount.'); return; }
+        const note = prompt('Note explaining this deduction (visible to the renter):');
+        if(!note || note.trim().length<3){ if(note!==null) alert('Please provide a short note.'); return; }
+        b.disabled=true;
+        try{ await apiFetch(`/disputes/${b.dataset.propose}/propose`,{method:'POST',body:{amountMinor:Math.round(amountNaira*100),note:note.trim()}}); await loadActiveRentals(); }
         catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
       }));
     }
@@ -563,7 +620,10 @@ function renderRecentActivity(){
   const items=[];
   myListings.forEach(l=>items.push({ts:l.updatedAt, text:`"${l.title}" is ${listingStatusPhrase(l.status)}`}));
   myRequests.forEach(r=>items.push({ts:r.createdAt, text:`New request from ${r.renterName} for "${r.listingTitle}"`}));
-  myActiveRentals.forEach(r=>items.push({ts:r.updatedAt, text:`"${r.title}" — ${(STAGE_ACTION[r.stage]||{}).label||r.stage} (${r.renterName})`}));
+  myActiveRentals.forEach(r=>{
+    const label = r.disputed ? 'Disputed' : r.stage==='returned' ? 'Awaiting inspection' : (STAGE_ACTION[r.stage]||{}).label||r.stage;
+    items.push({ts:r.updatedAt, text:`"${r.title}" — ${label} (${r.renterName})`});
+  });
   items.sort((a,b)=> new Date(b.ts||0) - new Date(a.ts||0));
   const top = items.slice(0,6);
   document.getElementById('recentActivityList').innerHTML = top.length ? top.map(i=>
