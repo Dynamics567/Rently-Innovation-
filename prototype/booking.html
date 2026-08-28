@@ -62,17 +62,6 @@ body{padding-top:0;}
 
 .empty-photos{padding:26px 20px;text-align:center;color:var(--ink-faint);font-size:13px;background:var(--bg-alt);border-radius:12px;}
 
-.thread-wrap{display:flex;flex-direction:column;height:52vh;max-height:460px;}
-.thread-msgs{flex:1;overflow-y:auto;padding:4px 4px 4px 0;display:flex;flex-direction:column;gap:10px;}
-.thread-empty{margin:auto;color:var(--ink-faint);font-size:13px;text-align:center;}
-.msg-bubble{max-width:78%;padding:10px 14px;border-radius:16px;font-size:13.5px;line-height:1.5;}
-.msg-bubble.mine{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px;}
-.msg-bubble.theirs{align-self:flex-start;background:var(--bg-alt);color:var(--ink);border-bottom-left-radius:4px;}
-.msg-bubble .tm{font-size:10.5px;opacity:.7;margin-top:4px;}
-.thread-form{display:flex;gap:10px;margin-top:14px;flex-shrink:0;}
-.thread-form textarea{flex:1;border:1.5px solid var(--line-strong);border-radius:14px;padding:11px 14px;font-size:13.5px;font-family:inherit;resize:none;min-height:44px;max-height:100px;}
-.thread-form textarea:focus{outline:none;border-color:var(--blue);}
-
 .photo-compare{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
 .photo-compare .grp h5{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);margin-bottom:10px;}
 .photo-compare .thumbs{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
@@ -418,6 +407,11 @@ async function loadBooking(){
   });
 
   render();
+
+  // Deep link from the Messages inbox (dashboard-renter.html) straight into this booking's thread.
+  if(new URLSearchParams(window.location.search).get('thread')==='1'){
+    openThread('Message '+provider.name);
+  }
 })();
 
 function render(){

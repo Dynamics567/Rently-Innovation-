@@ -80,6 +80,7 @@ body{padding-top:0;}
   <a class="side-link" data-view="listings" id="mLinkListings"></a>
   <a class="side-link" data-view="requests" id="mLinkRequests"></a>
   <a class="side-link" data-view="active" id="mLinkActive"></a>
+  <a class="side-link" data-view="messages" id="mLinkMessages"></a>
   <a class="side-link" data-view="earnings" id="mLinkEarnings"></a>
   <a class="side-link" data-view="reports" id="mLinkReports"></a>
   <a class="side-link" data-view="settings" id="mLinkSettings"></a>
@@ -93,6 +94,7 @@ body{padding-top:0;}
     <a class="side-link" data-view="listings" id="linkListings"></a>
     <a class="side-link" data-view="requests" id="linkRequests"></a>
     <a class="side-link" data-view="active" id="linkActive"></a>
+    <a class="side-link" data-view="messages" id="linkMessages"></a>
     <a class="side-link" data-view="earnings" id="linkEarnings"></a>
     <a class="side-link" data-view="reports" id="linkReports"></a>
     <a class="side-link" data-view="settings" id="linkSettings"></a>
@@ -172,6 +174,12 @@ body{padding-top:0;}
         <h3>Nothing out right now</h3>
         <p>Rentals will show up here from the moment you accept a request until the deposit is released.</p>
       </div>
+    </div>
+
+    <!-- ============ MESSAGES ============ -->
+    <div class="d-view" id="view-messages">
+      <div class="app-head"><div><h1>Messages</h1><p>Conversations with renters about their bookings.</p></div></div>
+      <div id="msgList" style="display:flex;flex-direction:column;gap:4px;"><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
     </div>
 
     <!-- ============ EARNINGS ============ -->
@@ -265,6 +273,22 @@ body{padding-top:0;}
   </div>
 </div>
 
+<!-- ============ MESSAGE THREAD MODAL ============ -->
+<div class="overlay" id="threadOverlay">
+  <div class="modal" style="max-width:520px;">
+    <button class="modal-close" id="closeThread"></button>
+    <h3 style="font-size:18px;margin-bottom:16px;" id="threadTitle">Messages</h3>
+    <div class="thread-wrap">
+      <div class="thread-msgs" id="threadMsgs"></div>
+      <div id="threadError" class="banner danger" style="display:none;margin:10px 0 0;"></div>
+      <div class="thread-form">
+        <textarea id="threadInput" placeholder="Write a message…"></textarea>
+        <button class="pill-btn blue sm" id="threadSendBtn" style="align-self:flex-end;">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="assets/rently.js"></script>
 <script src="assets/api.js"></script>
 <script>
@@ -279,6 +303,7 @@ document.getElementById('linkOverview').innerHTML = icon('grid',{size:17})+' Ove
 document.getElementById('linkListings').innerHTML = icon('list',{size:17})+' Listings';
 document.getElementById('linkRequests').innerHTML = icon('message',{size:17})+' Requests';
 document.getElementById('linkActive').innerHTML = icon('clock',{size:17})+' Active Rentals';
+document.getElementById('linkMessages').innerHTML = icon('message',{size:17})+' Messages';
 document.getElementById('linkEarnings').innerHTML = icon('wallet',{size:17})+' Earnings';
 document.getElementById('linkReports').innerHTML = icon('filter',{size:17})+' Reports';
 document.getElementById('linkSettings').innerHTML = icon('settings',{size:17})+' Settings';
@@ -287,6 +312,7 @@ document.getElementById('mLinkOverview').innerHTML = icon('grid',{size:16})+' Ov
 document.getElementById('mLinkListings').innerHTML = icon('list',{size:16})+' Listings';
 document.getElementById('mLinkRequests').innerHTML = icon('message',{size:16})+' Requests';
 document.getElementById('mLinkActive').innerHTML = icon('clock',{size:16})+' Active';
+document.getElementById('mLinkMessages').innerHTML = icon('message',{size:16})+' Messages';
 document.getElementById('mLinkEarnings').innerHTML = icon('wallet',{size:16})+' Earnings';
 document.getElementById('mLinkReports').innerHTML = icon('filter',{size:16})+' Reports';
 document.getElementById('mLinkSettings').innerHTML = icon('settings',{size:16})+' Settings';
@@ -580,8 +606,29 @@ function renderStatusBreakdown(){
   document.getElementById('statusBreakdownRow').innerHTML = counts.map(c=>`<div class="kpi"><div class="lbl">${c.label}</div><div class="val">${c.count}</div></div>`).join('');
 }
 
+let myConversations=[];
+/* ---- messages: real, booking-scoped (see loadConversations in rently.js) — spans every booking regardless of status, since a thread can exist on a completed rental too ---- */
+async function loadMessages(){
+  try{
+    const {data} = await apiFetch('/bookings?role=provider&limit=100');
+    const bookingsForInbox = await Promise.all(data.map(async b=>{
+      let title='A listing';
+      try{ const {data:l}=await apiFetch(`/listings/${b.listingId}`,{auth:false}); title=l.title; }catch(e){}
+      const renterUser = await getUserCached(b.renterId);
+      return {id:b.id, title, otherPartyName:renterUser.fullName};
+    }));
+    myConversations = await loadConversations(bookingsForInbox, session.user.id);
+  }catch(e){ myConversations=[]; }
+  renderConversationList('msgList', myConversations, "You'll see a conversation here once you or a renter sends the first message on a booking.");
+  return myConversations;
+}
+
 function renderInsights(){
   const insights=[];
+  const unreadTotal = myConversations.reduce((s,c)=>s+c.unreadCount,0);
+  if(unreadTotal>0){
+    insights.push({icon:'message',cls:'info',text:`You have ${unreadTotal} unread message${unreadTotal===1?'':'s'} across ${myConversations.filter(c=>c.unreadCount>0).length} conversation${myConversations.filter(c=>c.unreadCount>0).length===1?'':'s'}.`});
+  }
   if(myRequests.length){
     const oldest = myRequests.reduce((a,b)=> new Date(a.createdAt) < new Date(b.createdAt) ? a : b);
     const d = daysAgo(oldest.createdAt);
@@ -611,6 +658,8 @@ function renderQuickActions(){
   const actions=[{label:'Add listing',ic:'plus',cls:'green',handler:openModal}];
   if(myRequests.length>0) actions.push({label:`Respond to ${myRequests.length} request${myRequests.length===1?'':'s'}`,ic:'message',cls:'ghost',handler:()=>goView('requests')});
   if(myActiveRentals.length>0) actions.push({label:'Advance an active rental',ic:'clock',cls:'ghost',handler:()=>goView('active')});
+  const unreadTotal = myConversations.reduce((s,c)=>s+c.unreadCount,0);
+  if(unreadTotal>0) actions.push({label:`Read ${unreadTotal} new message${unreadTotal===1?'':'s'}`,ic:'message',cls:'ghost',handler:()=>goView('messages')});
   const el=document.getElementById('quickActions');
   el.innerHTML = actions.map((a,i)=>`<button class="pill-btn ${a.cls}" data-qa="${i}">${icon(a.ic,{size:15})} ${a.label}</button>`).join('');
   el.querySelectorAll('[data-qa]').forEach((b,i)=>b.addEventListener('click',actions[i].handler));
@@ -666,6 +715,80 @@ function renderReports(){
 /* ---- add listing modal ---- */
 function openModal(){ document.getElementById('addListingOverlay').classList.add('open'); clearFieldErrors(); document.getElementById('modalError').style.display='none'; }
 function closeModal(){ document.getElementById('addListingOverlay').classList.remove('open'); }
+
+/* ---- message thread modal — same booking-scoped endpoints as booking.html's,
+   but keyed by an explicit bookingId (this dashboard has no single "current
+   booking" the way the per-booking tracking page does) ---- */
+let threadBookingId=null, threadPollTimer=null;
+function renderThread(messages){
+  const wrap=document.getElementById('threadMsgs');
+  if(!messages.length){ wrap.innerHTML='<div class="thread-empty">No messages yet — say hello.</div>'; return; }
+  const wasAtBottom = wrap.scrollTop+wrap.clientHeight >= wrap.scrollHeight-20;
+  wrap.innerHTML = messages.map(m=>{
+    const mine = m.senderId===session.user.id;
+    const time = new Date(m.createdAt).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    return `<div class="msg-bubble ${mine?'mine':'theirs'}"><div>${m.body.replace(/</g,'&lt;')}</div><div class="tm">${time}</div></div>`;
+  }).join('');
+  if(wasAtBottom || messages.length<=3) wrap.scrollTop=wrap.scrollHeight;
+}
+async function loadThread(){
+  try{
+    const {data}=await apiFetch(`/bookings/${threadBookingId}/messages`);
+    renderThread(data.data||data||[]);
+    apiFetch(`/bookings/${threadBookingId}/messages/read`,{method:'POST'}).catch(()=>{});
+  }catch(e){
+    document.getElementById('threadError').innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(e)}</div>`;
+    document.getElementById('threadError').style.display='flex';
+  }
+}
+function openThread(bookingId,title){
+  threadBookingId=bookingId;
+  document.getElementById('threadTitle').textContent=title;
+  document.getElementById('threadError').style.display='none';
+  document.getElementById('threadMsgs').innerHTML='';
+  document.getElementById('threadInput').value='';
+  document.getElementById('threadOverlay').classList.add('open');
+  loadThread();
+  clearInterval(threadPollTimer);
+  threadPollTimer=setInterval(loadThread,10000);
+}
+function closeThread(){
+  document.getElementById('threadOverlay').classList.remove('open');
+  clearInterval(threadPollTimer);
+  loadMessages(); // refresh the inbox list's unread counts/previews now that this thread may have been read
+}
+document.getElementById('closeThread').innerHTML=icon('close',{size:15});
+document.getElementById('closeThread').addEventListener('click',closeThread);
+document.getElementById('threadOverlay').addEventListener('click',(e)=>{ if(e.target.id==='threadOverlay') closeThread(); });
+document.getElementById('threadSendBtn').addEventListener('click',sendThreadMessage);
+document.getElementById('threadInput').addEventListener('keydown',(e)=>{
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendThreadMessage(); }
+});
+async function sendThreadMessage(){
+  const input=document.getElementById('threadInput');
+  const body=input.value.trim();
+  if(!body) return;
+  const btn=document.getElementById('threadSendBtn');
+  btn.disabled=true;
+  try{
+    await apiFetch(`/bookings/${threadBookingId}/messages`,{method:'POST',body:{body}});
+    input.value='';
+    await loadThread();
+  }catch(e){
+    document.getElementById('threadError').innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(e)}</div>`;
+    document.getElementById('threadError').style.display='flex';
+  }
+  btn.disabled=false;
+}
+document.getElementById('msgList').addEventListener('click',(e)=>{
+  const row=e.target.closest('.msg-row');
+  if(!row) return;
+  e.preventDefault();
+  const url=new URL(row.href);
+  const bookingId=url.searchParams.get('id');
+  const title=row.querySelector('.m-title').textContent.replace(/\d+\s*new$/,'').trim();
+  openThread(bookingId, 'Message about '+title);
+});
 document.getElementById('addListingBtn').addEventListener('click',openModal);
 document.getElementById('addListingBtn2').addEventListener('click',openModal);
 document.getElementById('closeAddListing').addEventListener('click',closeModal);
@@ -766,7 +889,7 @@ document.getElementById('earningsKpiRow').innerHTML = kpiCard('kpiGross2','Gross
     : icon('clock',{size:16})+`<div><div class="t">Verification pending</div><div class="d">An admin will review your account before your listings can go live to renters.</div></div>`;
   document.getElementById('editingComingSoon').innerHTML = icon('info',{size:16})+`<div><div class="t">Profile editing is coming soon</div><div class="d">Business name, bio and payout account setup aren't wired up yet.</div></div>`;
 
-  await Promise.all([loadListings(), loadRequests(), loadActiveRentals(), loadEarnings()]);
+  await Promise.all([loadListings(), loadRequests(), loadActiveRentals(), loadEarnings(), loadMessages()]);
   renderWelcome();
   renderStatusBreakdown();
   renderInsights();

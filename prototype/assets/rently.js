@@ -262,6 +262,46 @@ function setKpiDelta(id, deltaPct, opts = {}) {
   el.style.display = 'flex';
 }
 
+/* ---------------- CONVERSATION INBOX ----------------
+   Messaging is booking-scoped (there's no "list my conversations"
+   endpoint — see MessagingModule), so an inbox is built client-side by
+   checking each booking's own thread. `bookings` is
+   [{id, title, otherPartyName}]; only bookings with at least one real
+   message become a row — an empty thread never existed as far as either
+   party is concerned, so it doesn't clutter the inbox. */
+async function loadConversations(bookings, myUserId){
+  const results = await Promise.all(bookings.map(async (b)=>{
+    try{
+      const {data} = await apiFetch(`/bookings/${b.id}/messages`);
+      const messages = data.data || data || [];
+      if(!messages.length) return null;
+      const last = messages[messages.length-1];
+      const unreadCount = messages.filter(m=>m.senderId!==myUserId && !m.readAt).length;
+      return {bookingId:b.id, title:b.title, otherPartyName:b.otherPartyName, lastMessage:last.body, lastSenderIsMe:last.senderId===myUserId, lastMessageAt:last.createdAt, unreadCount};
+    }catch(e){ return null; }
+  }));
+  return results.filter(Boolean).sort((a,b)=>new Date(b.lastMessageAt)-new Date(a.lastMessageAt));
+}
+function renderConversationList(containerId, conversations, emptyText){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  if(!conversations.length){
+    el.innerHTML = `<div class="empty-state"><div class="ic">${icon('message',{size:22})}</div><h3>No messages yet</h3><p>${emptyText}</p></div>`;
+    return;
+  }
+  el.innerHTML = conversations.map(c=>`
+    <a class="msg-row" href="booking?id=${c.bookingId}&thread=1">
+      <div class="${c.unreadCount?'unread-dot':'unread-spacer'}"></div>
+      <div class="p-avatar">${initials(c.otherPartyName)}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="m-title">${c.title}${c.unreadCount?` <span class="badge info">${c.unreadCount} new</span>`:''}</div>
+        <div class="m-prev">${c.lastSenderIsMe?'You: ':''}${c.lastMessage.replace(/</g,'&lt;')}</div>
+      </div>
+      <div class="m-time">${timeAgo(c.lastMessageAt)}</div>
+    </a>
+  `).join('');
+}
+
 /* ---------------- MOCK DATA ---------------- */
 const CATEGORIES=[
   {key:'event',name:'Event & Party',count:1240,size:'c-large'},
