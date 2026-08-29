@@ -266,8 +266,10 @@ body{padding-top:0;}
       <select id="modalBookingMode"><option value="request">Request to Book</option><option value="instant">Instant Book</option></select>
     </div>
     <div class="field" id="fieldDesc"><label>Description <span class="req">*</span></label><textarea id="modalDesc" placeholder="What's included, condition, delivery options..."></textarea><div class="err-msg"></div></div>
-    <div class="field"><label>Photos <span style="color:var(--ink-faint);font-weight:400">(optional)</span></label>
+    <div class="field" id="fieldPhotos"><label>Photos <span class="req">*</span> <span style="color:var(--ink-faint);font-weight:400">(1–4 images)</span></label>
       <input type="file" id="modalPhotos" accept="image/*" multiple style="font-size:13px;" />
+      <div class="err-msg"></div>
+      <div id="modalPhotoPreview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"></div>
     </div>
     <button class="pill-btn green block lg" id="submitListingBtn">Submit for review</button>
   </div>
@@ -793,8 +795,9 @@ document.getElementById('addListingBtn').addEventListener('click',openModal);
 document.getElementById('addListingBtn2').addEventListener('click',openModal);
 document.getElementById('closeAddListing').addEventListener('click',closeModal);
 document.getElementById('addListingOverlay').addEventListener('click',(e)=>{ if(e.target.id==='addListingOverlay') closeModal(); });
+const MAX_LISTING_PHOTOS=4;
 function clearFieldErrors(){
-  ['fieldTitle','fieldCat','fieldPrice','fieldLocation','fieldDesc'].forEach(id=>{
+  ['fieldTitle','fieldCat','fieldPrice','fieldLocation','fieldDesc','fieldPhotos'].forEach(id=>{
     const el=document.getElementById(id);
     el.classList.remove('error');
     el.querySelector('.err-msg').textContent='';
@@ -805,6 +808,22 @@ function markFieldError(fieldId, message){
   el.classList.add('error');
   el.querySelector('.err-msg').innerHTML = icon('alert',{size:12})+' '+message;
 }
+document.getElementById('modalPhotos').addEventListener('change',(e)=>{
+  const files=[...e.target.files];
+  const preview=document.getElementById('modalPhotoPreview');
+  const errEl=document.getElementById('fieldPhotos').querySelector('.err-msg');
+  if(files.length>MAX_LISTING_PHOTOS){
+    errEl.innerHTML = icon('alert',{size:12})+` You can upload at most ${MAX_LISTING_PHOTOS} photos — the first ${MAX_LISTING_PHOTOS} were kept.`;
+    document.getElementById('fieldPhotos').classList.add('error');
+    const dt=new DataTransfer();
+    files.slice(0,MAX_LISTING_PHOTOS).forEach(f=>dt.items.add(f));
+    e.target.files=dt.files;
+  }else{
+    errEl.textContent='';
+    document.getElementById('fieldPhotos').classList.remove('error');
+  }
+  preview.innerHTML=[...e.target.files].map(f=>`<div style="width:56px;height:56px;border-radius:10px;overflow:hidden;border:1px solid var(--line-strong);"><img src="${URL.createObjectURL(f)}" style="width:100%;height:100%;object-fit:cover;" /></div>`).join('');
+});
 document.getElementById('submitListingBtn').addEventListener('click', async ()=>{
   const errEl=document.getElementById('modalError'); errEl.style.display='none';
   clearFieldErrors();
@@ -815,7 +834,7 @@ document.getElementById('submitListingBtn').addEventListener('click', async ()=>
   const locationText=document.getElementById('modalLocation').value.trim();
   const bookingMode=document.getElementById('modalBookingMode').value;
   const description=document.getElementById('modalDesc').value.trim();
-  const files=document.getElementById('modalPhotos').files;
+  const files=[...document.getElementById('modalPhotos').files];
 
   let firstInvalid=null;
   if(!title){ markFieldError('fieldTitle','Please enter a title.'); firstInvalid=firstInvalid||'modalTitle'; }
@@ -823,6 +842,8 @@ document.getElementById('submitListingBtn').addEventListener('click', async ()=>
   if(!priceNaira){ markFieldError('fieldPrice','Please enter a price per day.'); firstInvalid=firstInvalid||'modalPrice'; }
   if(!locationText){ markFieldError('fieldLocation','Please enter a location.'); firstInvalid=firstInvalid||'modalLocation'; }
   if(!description){ markFieldError('fieldDesc','Please enter a description.'); firstInvalid=firstInvalid||'modalDesc'; }
+  if(!files.length){ markFieldError('fieldPhotos','Add at least one photo.'); firstInvalid=firstInvalid||'modalPhotos'; }
+  else if(files.length>MAX_LISTING_PHOTOS){ markFieldError('fieldPhotos',`You can upload at most ${MAX_LISTING_PHOTOS} photos.`); firstInvalid=firstInvalid||'modalPhotos'; }
   if(firstInvalid){
     errEl.innerHTML=icon('alert',{size:15})+'<div>Please fix the highlighted field(s) below.</div>'; errEl.style.display='flex';
     document.getElementById(firstInvalid).focus();
@@ -830,23 +851,31 @@ document.getElementById('submitListingBtn').addEventListener('click', async ()=>
   }
   const btn=document.getElementById('submitListingBtn');
   btn.disabled=true; const original=btn.textContent; btn.textContent='Submitting…';
+  let listing=null;
   try{
-    const {data:listing} = await apiFetch('/listings',{method:'POST',body:{
+    ({data:listing} = await apiFetch('/listings',{method:'POST',body:{
       categoryId, title, description, priceMinor:Math.round(priceNaira*100), priceUnit:'day',
       depositMinor:Math.round(depositNaira*100), locationText, bookingMode,
-    }});
+    }}));
+    let uploaded=0;
     for(const file of files){
       const fd=new FormData(); fd.append('file',file);
-      await apiUpload(`/listings/${listing.id}/photos`,fd).catch(()=>{});
+      await apiUpload(`/listings/${listing.id}/photos`,fd);
+      uploaded++;
     }
     await apiFetch(`/listings/${listing.id}/publish`,{method:'POST'});
     closeModal();
     ['modalTitle','modalPrice','modalDeposit','modalLocation','modalDesc'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('modalPhotos').value='';
+    document.getElementById('modalPhotoPreview').innerHTML='';
     await loadListings();
     goView('listings');
   }catch(e){
-    errEl.innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(e)}</div>`; errEl.style.display='flex';
+    // The listing itself may already exist as a draft at this point (created
+    // before the failing step) — say so rather than implying nothing happened,
+    // since silently retrying the whole form would create a duplicate.
+    const prefix = listing ? 'Your listing was saved as a draft, but ' : '';
+    errEl.innerHTML=icon('alert',{size:15})+`<div>${prefix}${apiErrorMessage(e)}${listing?' You can find it under Listings and try publishing again once the issue is fixed.':''}</div>`; errEl.style.display='flex';
   }finally{
     btn.disabled=false; btn.textContent=original;
   }
