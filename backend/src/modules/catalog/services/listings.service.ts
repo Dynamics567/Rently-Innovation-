@@ -21,6 +21,9 @@ import { ProviderProfileService } from '@modules/identity/services/provider-prof
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const LIVE_STATUSES = [ListingStatus.LIVE];
 const ALL_STATUSES = Object.values(ListingStatus);
+/** A listing needs at least one photo to look trustworthy enough to book, and a cap keeps the gallery/upload UI predictable. */
+const MIN_LISTING_PHOTOS = 1;
+const MAX_LISTING_PHOTOS = 4;
 
 @Injectable()
 export class ListingsService {
@@ -121,6 +124,13 @@ export class ListingsService {
   /** DRAFT/REJECTED submit for moderation; PAUSED reactivates directly (already approved once). */
   async publish(id: string): Promise<Listing> {
     const listing = await this.findByIdOrFail(id);
+    const photoCount = await this.photoRepository.countByListing(id);
+    if (photoCount < MIN_LISTING_PHOTOS) {
+      throw DomainException.unprocessable(
+        ErrorCode.LISTING_PHOTO_REQUIRED,
+        'Add at least one photo before publishing this listing.',
+      );
+    }
     if (listing.status === ListingStatus.PAUSED) {
       listing.status = ListingStatus.LIVE;
     } else if (
@@ -226,6 +236,12 @@ export class ListingsService {
 
   async addPhoto(listingId: string, storageKey: string): Promise<void> {
     const position = await this.photoRepository.countByListing(listingId);
+    if (position >= MAX_LISTING_PHOTOS) {
+      throw DomainException.unprocessable(
+        ErrorCode.LISTING_PHOTO_LIMIT_EXCEEDED,
+        `A listing can have at most ${MAX_LISTING_PHOTOS} photos.`,
+      );
+    }
     const photo = this.photoRepository.create({ listingId, storageKey, position });
     await this.photoRepository.save(photo);
   }
