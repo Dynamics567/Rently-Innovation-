@@ -234,7 +234,7 @@ body{padding-top:86px;}
       <div><h5>Company</h5><ul><li><a href="#">About</a></li><li><a href="#">Careers</a></li></ul></div>
       <div><h5>Support</h5><ul><li><a href="#">Help Center</a></li><li><a href="#">Disputes</a></li></ul></div>
     </div>
-    <div class="foot-bottom"><span>© 2026 Rently Innovation Hub, a Dynamic Technology Ltd. product.</span><span>Terms · Privacy · NDPR Compliance</span></div>
+    <div class="foot-bottom"><span id="copyrightLine">© 2026 Rently Innovation Hub, a Dynamic Technology Ltd. product.</span><span>Terms · Privacy · NDPR Compliance</span></div>
   </div>
 </footer>
 
@@ -325,6 +325,7 @@ let listing=null, provider=null;
   initBookingWidget();
   initReveal();
 })();
+setCopyrightYear('copyrightLine');
 
 /* ================================================================
    BOOKING WIDGET — price first, mode explicit, itemized + live

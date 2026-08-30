@@ -534,6 +534,39 @@ function initMarketingNav(){
   if(navMini) navMini.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
 }
 
+/* ---------------- SEARCH SEG ACCESSIBILITY (homepage/browse "what/where/when" triggers) ----------------
+   These are plain divs (not <button>/<select>) so the search pill's visual
+   design — pill-shaped segments sharing one continuous background rather
+   than three separate button chrome — didn't have to change; this adds
+   the keyboard/screen-reader semantics a real control would carry for free.
+   toggleSeg()/closePanels() are page-local (homepage.html and browse.html
+   each define their own), so this only owns the parts common to both:
+   role/tabindex/aria-haspopup up front, and Enter/Space activating the
+   same click each page's own toggleSeg() already handles. */
+function initAccessibleSearchSegs(){
+  document.querySelectorAll('.seg[data-panel]').forEach(seg=>{
+    seg.setAttribute('role','button');
+    seg.setAttribute('tabindex','0');
+    seg.setAttribute('aria-haspopup','true');
+    seg.setAttribute('aria-expanded','false');
+    seg.addEventListener('keydown',(e)=>{
+      if(e.key==='Enter'||e.key===' '){ e.preventDefault(); seg.click(); }
+    });
+  });
+}
+/** Call after any code that adds/removes .seg's "active" class, so aria-expanded stays truthful for screen readers. */
+function syncSearchSegAria(){
+  document.querySelectorAll('.seg[data-panel]').forEach(seg=>{
+    seg.setAttribute('aria-expanded', seg.classList.contains('active') ? 'true' : 'false');
+  });
+}
+
+/* ---------------- FOOTER COPYRIGHT YEAR ---------------- */
+function setCopyrightYear(elId){
+  const el=document.getElementById(elId);
+  if(el) el.textContent = el.textContent.replace(/\d{4}/, new Date().getFullYear());
+}
+
 /* ---------------- AVATAR DROPDOWN (app nav) ---------------- */
 function initAvatarMenu(btnId='avatarBtn',ddId='avatarDropdown'){
   const btn=document.getElementById(btnId), dd=document.getElementById(ddId);
@@ -670,8 +703,17 @@ function createDateRangePicker(calEl,onChange){
     }
     html+='</div>';
     calEl.innerHTML=html;
-    calEl.querySelectorAll('.cal-nav').forEach(b=>b.addEventListener('click',()=>{shiftMonth(+b.dataset.dir);}));
-    calEl.querySelectorAll('.cal-day:not(.muted)').forEach(b=>b.addEventListener('click',()=>{
+    // stopPropagation matters here, not just style: render() below replaces
+    // calEl's innerHTML, detaching the very button this click event is
+    // bubbling from. A document-level "click outside .search-pill" listener
+    // (see homepage.html/browse.html) calls e.target.closest('.search-pill')
+    // to decide whether to close the dropdown — closest() on an
+    // already-detached node can't find any ancestor, so the outside-click
+    // handler wrongly concludes the click was "outside" and closes the
+    // panel out from under the calendar the instant a day or month changes.
+    calEl.querySelectorAll('.cal-nav').forEach(b=>b.addEventListener('click',(e)=>{e.stopPropagation();shiftMonth(+b.dataset.dir);}));
+    calEl.querySelectorAll('.cal-day:not(.muted)').forEach(b=>b.addEventListener('click',(e)=>{
+      e.stopPropagation();
       pickDate(+b.dataset.y,+b.dataset.m,+b.dataset.d);
     }));
   }

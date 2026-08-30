@@ -86,7 +86,7 @@ select.sort-select{border:1.5px solid var(--line-strong);border-radius:999px;pad
       <div class="seg" data-panel="what" onclick="toggleSeg(this,'what')"><label>What</label><div class="val" id="valWhat">Anything, anywhere</div></div>
       <div class="seg" data-panel="where" onclick="toggleSeg(this,'where')"><label>Where</label><div class="val" id="valWhere">Search locations</div></div>
       <div class="seg" data-panel="when" onclick="toggleSeg(this,'when')"><label>When</label><div class="val" id="valWhen">Add dates</div></div>
-      <div class="search-go" id="searchGoBtn"></div>
+      <button type="button" class="search-go" id="searchGoBtn" aria-label="Search"></button>
       <div class="search-panel" id="panel-what">
         <div class="panel-h">Browse by category</div>
         <div class="chip-row" id="categorySearchChips"></div>
@@ -344,8 +344,9 @@ function toggleSeg(el,name){
   const isOpen=panel.classList.contains('open');
   closePanels();
   if(!isOpen){panel.classList.add('open');el.classList.add('active');}
+  syncSearchSegAria();
 }
-function closePanels(){document.querySelectorAll('.search-panel').forEach(p=>p.classList.remove('open'));document.querySelectorAll('.seg').forEach(s=>s.classList.remove('active'));}
+function closePanels(){document.querySelectorAll('.search-panel').forEach(p=>p.classList.remove('open'));document.querySelectorAll('.seg').forEach(s=>s.classList.remove('active'));syncSearchSegAria();}
 document.addEventListener('click',(e)=>{if(!e.target.closest('.search-pill')) closePanels();});
 document.getElementById('panel-where').addEventListener('click',e=>e.stopPropagation());
 
@@ -358,6 +359,7 @@ document.getElementById('panel-where').addEventListener('click',e=>e.stopPropaga
   updateWhatDisplay();
   search(true);
 })();
+initAccessibleSearchSegs();
 </script>
 </body>
 </html>

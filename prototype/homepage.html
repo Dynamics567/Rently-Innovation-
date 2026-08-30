@@ -17,8 +17,16 @@
    HERO — one image, one story: full-bleed cinematic photography,
    a single headline, the search as centerpiece, two CTAs.
    ============================================================ */
-.hero{position:relative;min-height:100vh;overflow:hidden;background:var(--dark);}
-.hero-media{position:absolute;inset:0;}
+.hero{position:relative;min-height:100vh;background:var(--dark);}
+/* overflow:hidden scoped to the photo layer alone, not the whole section —
+   it exists only to clip the slight scale(1.045) zoom from heroZoom below.
+   .hero-search-wrap's dropdown panels are a *sibling* of .hero-media (see
+   markup), not a descendant, but overflow:hidden on a shared ancestor
+   clips descendants indiscriminately: with it on .hero itself, the search
+   panels — routinely taller than the space between the search pill and
+   the bottom of the hero — got silently cut off with no way to scroll to
+   the clipped content (recent/popular searches were always invisible). */
+.hero-media{position:absolute;inset:0;overflow:hidden;}
 /* Slider: every slide is stacked full-bleed; only .active is visible,
    crossfading into the next one. One photo at a time — never a grid. */
 .hero-slide{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1.6s ease;}
@@ -177,7 +185,7 @@
 
 <!-- ============ HERO ============ -->
 <section class="hero">
-  <div class="hero-media" id="heroMedia">
+  <div class="hero-media" id="heroMedia" aria-hidden="true">
     <img class="hero-slide active" src="assets/images/generator.jpg" alt="" fetchpriority="high" />
     <img class="hero-slide" src="assets/images/event.jpg" alt="" />
     <img class="hero-slide" src="assets/images/projector.jpg" alt="" />
@@ -214,7 +222,7 @@
             <label>When</label>
             <div class="val" id="valWhen">Add dates</div>
           </div>
-          <div class="search-go" id="searchGoBtn"></div>
+          <button type="button" class="search-go" id="searchGoBtn" aria-label="Search"></button>
 
           <div class="search-panel" id="panel-what">
             <div class="panel-h">Browse by category</div>
@@ -378,7 +386,7 @@
       <div><h5>Support</h5><ul><li><a href="#">Help Center</a></li><li><a href="#">Contact</a></li><li><a href="#">Disputes</a></li></ul></div>
     </div>
     <div class="foot-bottom">
-      <span>© 2026 Rently Innovation Hub, a Dynamic Technology Ltd. product.</span>
+      <span id="copyrightLine">© 2026 Rently Innovation Hub, a Dynamic Technology Ltd. product.</span>
       <span>Terms · Privacy · NDPR Compliance</span>
     </div>
   </div>
@@ -513,10 +521,12 @@ function toggleSeg(el,name){
   const isOpen=panel.classList.contains('open');
   closePanels();
   if(!isOpen){panel.classList.add('open');el.classList.add('active');}
+  syncSearchSegAria();
 }
 function closePanels(){
   document.querySelectorAll('.search-panel').forEach(p=>p.classList.remove('open'));
   document.querySelectorAll('.seg').forEach(s=>s.classList.remove('active'));
+  syncSearchSegAria();
 }
 document.addEventListener('click',(e)=>{
   if(!e.target.closest('.search-pill')) closePanels();
@@ -533,6 +543,8 @@ document.getElementById('searchGoBtn').addEventListener('click',()=>{
 /* ============ NAV + reveal ============ */
 initMarketingNav();
 initReveal();
+initAccessibleSearchSegs();
+setCopyrightYear('copyrightLine');
 </script>
 </body>
 </html>
