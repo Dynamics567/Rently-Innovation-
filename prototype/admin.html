@@ -391,25 +391,52 @@ async function renderModeration(){
 
 /* ---- verification queue (real) ---- */
 function typeOf(v){ return v.businessRegistrationNo ? 'Business' : 'Individual'; }
-function docsOf(v){ return (v.verificationDocuments||[]).length ? v.verificationDocuments.map(d=>d.docType).join(', ') : 'No documents submitted yet'; }
+const DOC_TYPE_LABEL={id_card:'ID card',cac_certificate:'CAC certificate',proof_of_address:'Proof of address',liveness_video:'Liveness video'};
+const DOC_STATUS_BADGE={pending:'pending',approved:'confirmed',rejected:'cancelled'};
+function docRow(providerId, d){
+  const actions = d.status==='pending'
+    ? `<button class="pill-btn ghost sm" data-reject-doc="${d.id}">Reject</button><button class="pill-btn green sm" data-approve-doc="${d.id}">Approve</button>`
+    : '';
+  return `<div class="queue-row" style="margin-bottom:8px;background:var(--bg-alt);border-style:dashed;">
+    <div class="q-main">
+      <div class="q-title">${DOC_TYPE_LABEL[d.docType]||d.docType} <span class="badge ${DOC_STATUS_BADGE[d.status]}" style="margin-left:6px;">${d.status}</span></div>
+      <div class="q-sub">${d.status==='rejected' && d.reviewNotes ? 'Reason: '+d.reviewNotes : new Date(d.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
+    </div>
+    <div class="q-actions"><a href="${d.url}" target="_blank" rel="noopener" class="pill-btn ghost sm">View</a>${actions}</div>
+  </div>`;
+}
 async function renderVerification(){
   try{
     const {data} = await apiFetch('/admin/providers/verification-queue');
     verificationQueue = data;
     pendingCounts.verification = data.length;
+    // The queue's embedded verificationDocuments relation has no signed url
+    // (that only exists on the real per-document listing endpoint), so
+    // documents are fetched again here, per provider, to actually review them.
+    const docsByProvider = {};
+    await Promise.all(data.map(async v=>{
+      try{ const {data:docs}=await apiFetch(`/admin/providers/${v.id}/verification-documents`); docsByProvider[v.id]=docs; }
+      catch(e){ docsByProvider[v.id]=[]; }
+    }));
     document.getElementById('verificationList').innerHTML = data.length===0
       ? `<p style="color:var(--ink-faint);font-size:13.5px;">No providers waiting on verification.</p>`
-      : data.map(v=>`
-      <div class="queue-row">
-        <div class="q-main">
-          <div class="q-title">${v.businessName||(v.user?v.user.fullName:'Provider')} <span class="badge info" style="margin-left:6px;">${typeOf(v)}</span></div>
-          <div class="q-sub">Submitted ${new Date(v.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${docsOf(v)}</div>
+      : data.map(v=>{
+          const docs = docsByProvider[v.id]||[];
+          return `
+      <div class="queue-row" style="flex-direction:column;align-items:stretch;">
+        <div style="display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:${docs.length?'14px':'0'};">
+          <div class="q-main">
+            <div class="q-title">${v.businessName||(v.user?v.user.fullName:'Provider')} <span class="badge info" style="margin-left:6px;">${typeOf(v)}</span></div>
+            <div class="q-sub">Submitted ${new Date(v.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${docs.length} document${docs.length===1?'':'s'}</div>
+          </div>
+          <div class="q-actions">
+            <button class="pill-btn ghost sm" data-reject="${v.id}">Reject profile</button>
+            <button class="pill-btn green sm" data-approve="${v.id}">Approve profile</button>
+          </div>
         </div>
-        <div class="q-actions">
-          <button class="pill-btn ghost sm" data-reject="${v.id}">Reject</button>
-          <button class="pill-btn green sm" data-approve="${v.id}">Approve</button>
-        </div>
-      </div>`).join('');
+        ${docs.length ? `<div style="padding-left:2px;">${docs.map(d=>docRow(v.id,d)).join('')}</div>` : ''}
+      </div>`;
+        }).join('');
     document.querySelectorAll('[data-approve]').forEach(b=>b.addEventListener('click', async ()=>{
       b.disabled=true;
       try{ await apiFetch(`/admin/providers/${b.dataset.approve}/verify`,{method:'POST'}); await renderVerification(); }
@@ -420,6 +447,18 @@ async function renderVerification(){
       if(!reason || reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); return; }
       b.disabled=true;
       try{ await apiFetch(`/admin/providers/${b.dataset.reject}/reject`,{method:'POST',body:{reason:reason.trim()}}); await renderVerification(); }
+      catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
+    }));
+    document.querySelectorAll('[data-approve-doc]').forEach(b=>b.addEventListener('click', async ()=>{
+      b.disabled=true;
+      try{ await apiFetch(`/admin/providers/verification-documents/${b.dataset.approveDoc}/approve`,{method:'POST',body:{}}); await renderVerification(); }
+      catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
+    }));
+    document.querySelectorAll('[data-reject-doc]').forEach(b=>b.addEventListener('click', async ()=>{
+      const reason = prompt('Reason for rejecting this document (visible to the provider):');
+      if(!reason || reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); return; }
+      b.disabled=true;
+      try{ await apiFetch(`/admin/providers/verification-documents/${b.dataset.rejectDoc}/reject`,{method:'POST',body:{reason:reason.trim()}}); await renderVerification(); }
       catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
     }));
   }catch(e){

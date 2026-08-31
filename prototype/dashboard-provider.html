@@ -236,6 +236,23 @@ body{padding-top:0;}
         <div class="field"><label>Business name <span style="color:var(--ink-faint);font-weight:400">(cannot be changed yet)</span></label><input type="text" id="settingsBusinessName" disabled /></div>
         <div class="field"><label>Average rating</label><input type="text" id="settingsRating" disabled /></div>
         <div class="banner info" style="margin-bottom:20px;" id="editingComingSoon"></div>
+
+        <div class="field">
+          <label>Verification documents</label>
+          <div id="verificationDocsList" style="margin-bottom:14px;"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <select id="docTypeSelect" style="flex:1;min-width:180px;">
+              <option value="id_card">ID card</option>
+              <option value="cac_certificate">CAC certificate</option>
+              <option value="proof_of_address">Proof of address</option>
+              <option value="liveness_video">Liveness video</option>
+            </select>
+            <input type="file" id="docFileInput" accept="image/*,video/*" style="flex:1;min-width:180px;font-size:13px;" />
+            <button class="pill-btn ghost sm" id="uploadDocBtn">Upload</button>
+          </div>
+          <div id="docUploadError" class="banner danger" style="display:none;margin-top:12px;"></div>
+        </div>
+
         <div class="field"><label>Notification channels <span style="color:var(--ink-faint);font-weight:400">(coming soon)</span></label>
           <div class="toggle-row"><span>New booking requests</span><div class="switch on" data-key="req"></div></div>
           <div class="toggle-row"><span>Payout &amp; deposit confirmations</span><div class="switch on" data-key="payout"></div></div>
@@ -518,6 +535,45 @@ async function loadActiveRentals(){
 
 /* ---- earnings: honest "gross bookings value" only — no real commission/payout tracking yet ---- */
 let earningsBookings=[]; // {listingId, startsAt, totalMinor} — lifted here so Insights/Reports can reuse it, no extra fetch
+/* ---- verification documents: real GET/POST providers/me/verification-documents ---- */
+const DOC_TYPE_LABEL={id_card:'ID card',cac_certificate:'CAC certificate',proof_of_address:'Proof of address',liveness_video:'Liveness video'};
+const DOC_STATUS_BADGE={pending:'pending',approved:'confirmed',rejected:'cancelled'};
+async function loadVerificationDocs(){
+  const list=document.getElementById('verificationDocsList');
+  try{
+    const {data} = await apiFetch('/providers/me/verification-documents');
+    const docs = data.data || data || [];
+    list.innerHTML = docs.length ? docs.map(d=>`
+      <div class="request-row" style="margin-bottom:8px;">
+        <div class="r-main">
+          <div class="r-title">${DOC_TYPE_LABEL[d.docType]||d.docType} <span class="badge ${DOC_STATUS_BADGE[d.status]}" style="margin-left:6px;">${d.status}</span></div>
+          <div class="r-sub">${d.status==='rejected' && d.reviewNotes ? 'Reason: '+d.reviewNotes : d.status==='pending' ? 'Waiting on admin review' : new Date(d.reviewedAt||d.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
+        </div>
+        <a href="${d.url}" target="_blank" rel="noopener" class="pill-btn ghost sm">View</a>
+      </div>`).join('') : `<p style="color:var(--ink-faint);font-size:13px;">No documents uploaded yet.</p>`;
+  }catch(e){
+    list.innerHTML = `<p style="color:var(--ink-faint);font-size:13px;">${apiErrorMessage(e)}</p>`;
+  }
+}
+document.getElementById('uploadDocBtn').addEventListener('click', async ()=>{
+  const errEl=document.getElementById('docUploadError'); errEl.style.display='none';
+  const docType=document.getElementById('docTypeSelect').value;
+  const file=document.getElementById('docFileInput').files[0];
+  if(!file){ errEl.innerHTML=icon('alert',{size:15})+'<div>Choose a file first.</div>'; errEl.style.display='flex'; return; }
+  const btn=document.getElementById('uploadDocBtn');
+  btn.disabled=true; const original=btn.textContent; btn.textContent='Uploading…';
+  try{
+    const fd=new FormData(); fd.append('docType',docType); fd.append('file',file);
+    await apiUpload('/providers/me/verification-documents',fd);
+    document.getElementById('docFileInput').value='';
+    await loadVerificationDocs();
+  }catch(e){
+    errEl.innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(e)}</div>`; errEl.style.display='flex';
+  }finally{
+    btn.disabled=false; btn.textContent=original;
+  }
+});
+
 async function loadEarnings(){
   try{
     const [{data:confirmed},{data:completed}] = await Promise.all([
@@ -918,7 +974,7 @@ document.getElementById('earningsKpiRow').innerHTML = kpiCard('kpiGross2','Gross
     : icon('clock',{size:16})+`<div><div class="t">Verification pending</div><div class="d">An admin will review your account before your listings can go live to renters.</div></div>`;
   document.getElementById('editingComingSoon').innerHTML = icon('info',{size:16})+`<div><div class="t">Profile editing is coming soon</div><div class="d">Business name, bio and payout account setup aren't wired up yet.</div></div>`;
 
-  await Promise.all([loadListings(), loadRequests(), loadActiveRentals(), loadEarnings(), loadMessages()]);
+  await Promise.all([loadListings(), loadRequests(), loadActiveRentals(), loadEarnings(), loadMessages(), loadVerificationDocs()]);
   renderWelcome();
   renderStatusBreakdown();
   renderInsights();
