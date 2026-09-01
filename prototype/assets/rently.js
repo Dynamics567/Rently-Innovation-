@@ -567,6 +567,57 @@ function setCopyrightYear(elId){
   if(el) el.textContent = el.textContent.replace(/\d{4}/, new Date().getFullYear());
 }
 
+/* ---------------- SWITCH TO PROVIDER (first-time onboarding gate) ----------------
+   Every account already carries the `renter` role from signup (see
+   AuthService.signup()), so "Switch to Renter" is always just a plain nav
+   link — nothing to create. Going the other way needs a real
+   ProviderProfile row first; the *first* time this happens for a given
+   user, this shows a small modal to collect the profile info the backend
+   actually models (CreateProviderProfileDto: businessName,
+   businessRegistrationNo) instead of silently POSTing an empty body and
+   leaving it blank forever (profile editing isn't wired up yet, so a
+   blank business name had no way to ever get fixed). Once the `provider`
+   role exists, every subsequent click is just a normal link — the modal
+   never has to be repeated, since ProviderProfileService.createProfile()
+   returns the existing profile unchanged for a user who already has one.
+   Requires the page to include #becomeProviderOverlay (see
+   dashboard-renter.html for the reference markup) and a `session` var. */
+function initProviderSwitchLinks(ids, session){
+  const overlay=document.getElementById('becomeProviderOverlay');
+  if(!overlay || !session) return; // no session means requireSession() already kicked off a redirect to auth — nothing to wire up
+  function openModal(){ document.getElementById('becomeProviderError').style.display='none'; overlay.classList.add('open'); }
+  function closeModal(){ overlay.classList.remove('open'); }
+  document.getElementById('closeBecomeProvider').addEventListener('click',closeModal);
+  overlay.addEventListener('click',(e)=>{ if(e.target===overlay) closeModal(); });
+  ids.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('click',(e)=>{
+      if(session.user.roles.includes('provider')) return; // already switched before — plain link navigation is fine
+      e.preventDefault();
+      openModal();
+    });
+  });
+  document.getElementById('submitBecomeProviderBtn').addEventListener('click', async ()=>{
+    const errEl=document.getElementById('becomeProviderError'); errEl.style.display='none';
+    const businessName=document.getElementById('bpBusinessName').value.trim();
+    const businessRegistrationNo=document.getElementById('bpRegNo').value.trim();
+    const btn=document.getElementById('submitBecomeProviderBtn');
+    btn.disabled=true; const original=btn.textContent; btn.textContent='Setting up…';
+    try{
+      await apiFetch('/providers/profile',{method:'POST',body:{
+        businessName: businessName||undefined,
+        businessRegistrationNo: businessRegistrationNo||undefined,
+      }});
+      await refreshSession();
+      window.location.href='dashboard-provider';
+    }catch(err){
+      errEl.innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(err)}</div>`; errEl.style.display='flex';
+      btn.disabled=false; btn.textContent=original;
+    }
+  });
+}
+
 /* ---------------- AVATAR DROPDOWN (app nav) ---------------- */
 function initAvatarMenu(btnId='avatarBtn',ddId='avatarDropdown'){
   const btn=document.getElementById(btnId), dd=document.getElementById(ddId);

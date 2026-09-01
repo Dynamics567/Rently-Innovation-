@@ -311,6 +311,19 @@ body{padding-top:0;}
   </div>
 </div>
 
+<!-- ============ BECOME A PROVIDER MODAL ============ -->
+<div class="overlay" id="becomeProviderOverlay">
+  <div class="modal">
+    <button class="modal-close" id="closeBecomeProvider"></button>
+    <h3 style="font-size:20px;margin-bottom:6px;">Set up your provider profile</h3>
+    <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:24px;">Just a couple of details before you start listing — you can add more later.</p>
+    <div id="becomeProviderError" class="banner danger" style="display:none;margin-bottom:16px;"></div>
+    <div class="field"><label>Business name <span style="color:var(--ink-faint);font-weight:400">(optional — leave blank if you're an individual)</span></label><input type="text" id="bpBusinessName" placeholder="e.g. EventCraft NG" /></div>
+    <div class="field"><label>CAC registration number <span style="color:var(--ink-faint);font-weight:400">(optional)</span></label><input type="text" id="bpRegNo" placeholder="RC1234567" /></div>
+    <button class="pill-btn green block lg" id="submitBecomeProviderBtn">Continue to provider dashboard</button>
+  </div>
+</div>
+
 <script src="assets/rently.js"></script>
 <script src="assets/api.js"></script>
 <script>
@@ -321,6 +334,8 @@ document.getElementById('bellBtn').innerHTML = icon('bell',{size:17})+'<span cla
 document.getElementById('ddBookings').innerHTML = icon('calendar',{size:15})+' My bookings';
 document.getElementById('ddSwitch').innerHTML = icon('building',{size:15})+' Switch to Provider';
 document.getElementById('ddLogout').innerHTML = icon('logout',{size:15})+' Log out';
+document.getElementById('closeBecomeProvider').innerHTML = icon('close',{size:15});
+initProviderSwitchLinks(['ddSwitch'], session);
 document.getElementById('avatarBtn').textContent = session ? initials(session.user.fullName) : '';
 document.querySelector('#avatarDropdown .n').textContent = session ? session.user.fullName : '';
 document.querySelector('#avatarDropdown .e').textContent = session ? (session.user.email||'') : '';

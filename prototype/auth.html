@@ -95,6 +95,7 @@ body{min-height:100vh;}
         <div class="field"><label>Email address</label><input type="email" id="emailInput" placeholder="you@example.com" /></div>
         <div class="field"><label>Password</label><input type="password" id="passwordInput" placeholder="••••••••" /></div>
         <div id="providerNote" class="banner info" style="display:none;margin-bottom:20px;"></div>
+        <div id="businessNameField" class="field" style="display:none;"><label>Business name <span style="color:var(--ink-faint);font-weight:400">(optional — leave blank if you're an individual)</span></label><input type="text" id="businessNameInput" placeholder="e.g. EventCraft NG" /></div>
         <div id="authError" class="banner danger" style="display:none;margin-bottom:20px;"></div>
 
         <a class="text-link faint" id="forgotLink" style="margin-bottom:22px;display:inline-flex;cursor:pointer;">Forgot password?</a>
@@ -175,7 +176,9 @@ function paintBrand(){
 function renderRoleSel(){
   document.getElementById('roleRenter').classList.toggle('sel', role==='renter');
   document.getElementById('roleProvider').classList.toggle('sel', role==='provider');
-  document.getElementById('providerNote').style.display = role==='provider' ? 'flex' : 'none';
+  const isProviderSignup = mode==='signup' && role==='provider';
+  document.getElementById('providerNote').style.display = isProviderSignup ? 'flex' : 'none';
+  document.getElementById('businessNameField').style.display = isProviderSignup ? 'block' : 'none';
   if(role==='provider') document.getElementById('providerNote').innerHTML = icon('shield',{size:15})+`<div><div class="t">ID verification required</div><div class="d">Provider accounts are verified within 24 hours before your first listing can go live.</div></div>`;
   paintBrand();
 }
@@ -229,10 +232,11 @@ document.getElementById('submitAuthBtn').addEventListener('click', async ()=>{
       const {data} = await apiFetch('/auth/signup',{method:'POST',auth:false,body:{
         email, password, fullName, roles:[role],
       }});
-      if(role==='provider'){
-        await apiFetch('/providers/profile',{method:'POST',body:{}}).catch(()=>{});
-      }
       setSession(data.user, data);
+      if(role==='provider'){
+        const businessName=document.getElementById('businessNameInput').value.trim();
+        await apiFetch('/providers/profile',{method:'POST',body:{businessName: businessName||undefined}}).catch(()=>{});
+      }
       window.location.href = role==='provider' ? 'dashboard-provider' : 'dashboard-renter';
     } else {
       const {data} = await apiFetch('/auth/login',{method:'POST',auth:false,body:{email,password}});
