@@ -278,6 +278,7 @@ body{padding-top:0;}
       <div class="field" id="fieldPrice"><label>Price per day (₦) <span class="req">*</span></label><input type="number" id="modalPrice" placeholder="15000" /><div class="err-msg"></div></div>
       <div class="field"><label>Deposit (₦, optional)</label><input type="number" id="modalDeposit" placeholder="10000" /></div>
     </div>
+    <div class="field"><label>Quantity available <span style="color:var(--ink-faint);font-weight:400">(optional — leave blank if it's a single item)</span></label><input type="number" id="modalQuantity" min="1" placeholder="e.g. 100" /></div>
     <div class="field" id="fieldLocation"><label>Location <span class="req">*</span></label><input type="text" id="modalLocation" placeholder="e.g. Lekki Phase 1, Lagos" /><div class="err-msg"></div></div>
     <div class="field"><label>Booking mode</label>
       <select id="modalBookingMode"><option value="request">Request to Book</option><option value="instant">Instant Book</option></select>
@@ -887,6 +888,7 @@ document.getElementById('submitListingBtn').addEventListener('click', async ()=>
   const categoryId=document.getElementById('modalCatSelect').value;
   const priceNaira=+document.getElementById('modalPrice').value;
   const depositNaira=+document.getElementById('modalDeposit').value||0;
+  const quantityAvailable=+document.getElementById('modalQuantity').value||1;
   const locationText=document.getElementById('modalLocation').value.trim();
   const bookingMode=document.getElementById('modalBookingMode').value;
   const description=document.getElementById('modalDesc').value.trim();
@@ -896,6 +898,7 @@ document.getElementById('submitListingBtn').addEventListener('click', async ()=>
   if(!title){ markFieldError('fieldTitle','Please enter a title.'); firstInvalid=firstInvalid||'modalTitle'; }
   if(!categoryId){ markFieldError('fieldCat','Please select a category.'); firstInvalid=firstInvalid||'modalCatSelect'; }
   if(!priceNaira){ markFieldError('fieldPrice','Please enter a price per day.'); firstInvalid=firstInvalid||'modalPrice'; }
+  if(quantityAvailable<1 || !Number.isInteger(quantityAvailable)){ errEl.innerHTML=icon('alert',{size:15})+'<div>Quantity available must be a whole number of at least 1.</div>'; errEl.style.display='flex'; document.getElementById('modalQuantity').focus(); return; }
   if(!locationText){ markFieldError('fieldLocation','Please enter a location.'); firstInvalid=firstInvalid||'modalLocation'; }
   if(!description){ markFieldError('fieldDesc','Please enter a description.'); firstInvalid=firstInvalid||'modalDesc'; }
   if(!files.length){ markFieldError('fieldPhotos','Add at least one photo.'); firstInvalid=firstInvalid||'modalPhotos'; }
@@ -911,7 +914,7 @@ document.getElementById('submitListingBtn').addEventListener('click', async ()=>
   try{
     ({data:listing} = await apiFetch('/listings',{method:'POST',body:{
       categoryId, title, description, priceMinor:Math.round(priceNaira*100), priceUnit:'day',
-      depositMinor:Math.round(depositNaira*100), locationText, bookingMode,
+      depositMinor:Math.round(depositNaira*100), locationText, bookingMode, quantityAvailable,
     }}));
     let uploaded=0;
     for(const file of files){
@@ -921,7 +924,7 @@ document.getElementById('submitListingBtn').addEventListener('click', async ()=>
     }
     await apiFetch(`/listings/${listing.id}/publish`,{method:'POST'});
     closeModal();
-    ['modalTitle','modalPrice','modalDeposit','modalLocation','modalDesc'].forEach(id=>document.getElementById(id).value='');
+    ['modalTitle','modalPrice','modalDeposit','modalQuantity','modalLocation','modalDesc'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('modalPhotos').value='';
     document.getElementById('modalPhotoPreview').innerHTML='';
     await loadListings();

@@ -85,6 +85,38 @@ export class BookingRepository extends BaseRepository<Booking> {
   }
 
   /**
+   * Total `quantity` reserved by overlapping pending/confirmed bookings on
+   * this listing, padded by `bufferMinutes` — the bulk-quantity counterpart
+   * to hasOverlapWithBuffer's boolean check. With every existing booking's
+   * `quantity` defaulted to 1, this returns exactly the same signal
+   * (0 or ≥1) as hasOverlapWithBuffer used to for a single-unit listing, so
+   * `booked + requestedQuantity > listing.quantityAvailable` is a drop-in
+   * replacement for the old check, not just an addition.
+   */
+  async getBookedQuantity(
+    listingId: string,
+    from: Date,
+    to: Date,
+    bufferMinutes: number,
+    excludeBookingId?: string,
+  ): Promise<number> {
+    const qb = this.repository
+      .createQueryBuilder('booking')
+      .select('COALESCE(SUM(booking.quantity), 0)', 'total')
+      .where('booking.listingId = :listingId', { listingId })
+      .andWhere("booking.status IN ('pending','confirmed')")
+      .andWhere(
+        "booking.during && tstzrange(:from::timestamptz - (:buffer || ' minutes')::interval, :to::timestamptz + (:buffer || ' minutes')::interval)",
+        { from: from.toISOString(), to: to.toISOString(), buffer: bufferMinutes },
+      );
+    if (excludeBookingId) {
+      qb.andWhere('booking.id != :excludeBookingId', { excludeBookingId });
+    }
+    const row = await qb.getRawOne<{ total: string }>();
+    return Number(row?.total ?? 0);
+  }
+
+  /**
    * `role` picks which column to filter by: a renter sees bookings they
    * made, a provider sees bookings against their listings. `listingIds` is
    * supplied by the caller (resolved via CatalogService — Booking doesn't

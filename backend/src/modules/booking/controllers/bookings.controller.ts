@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Headers, Param, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Public } from '@common/decorators/public.decorator';
 import { Idempotent } from '@common/decorators/idempotent.decorator';
 import { CheckPolicies } from '@common/decorators/check-policies.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
@@ -11,6 +12,7 @@ import { DisputeService } from '../services/dispute.service';
 import { CreateBookingDto } from '../dto/create-booking.dto';
 import { QueryBookingsDto } from '../dto/query-bookings.dto';
 import { RecordInspectionDto } from '../dto/record-inspection.dto';
+import { BookingAvailabilityQueryDto } from '../dto/booking-availability-query.dto';
 import { IsBookingProviderPolicy } from '../policies/is-booking-provider.policy';
 import { IsBookingPartyPolicy } from '../policies/is-booking-party.policy';
 
@@ -33,6 +35,16 @@ export class BookingsController {
     @Headers('idempotency-key') idempotencyKey: string,
   ) {
     return this.bookingService.create(user.id, dto, idempotencyKey);
+  }
+
+  @Public()
+  @Get('availability')
+  async availability(@Query() query: BookingAvailabilityQueryDto) {
+    return this.bookingService.getAvailableQuantity(
+      query.listingId,
+      new Date(query.from),
+      new Date(query.to),
+    );
   }
 
   @Get()

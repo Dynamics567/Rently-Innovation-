@@ -94,6 +94,13 @@ export class Listing extends BaseEntity {
   @Column({ name: 'turnaround_buffer_minutes', type: 'int', default: 120 })
   turnaroundBufferMinutes: number;
 
+  // How many identical units the provider has of this listing (e.g. 50
+  // chairs) — for fungible/bulk items, distinct from the Asset system below
+  // which tracks individually distinguishable units (e.g. specific cars).
+  // A listing using Assets ignores this column; it stays at its default 1.
+  @Column({ name: 'quantity_available', type: 'int', default: 1 })
+  quantityAvailable: number;
+
   @Column({ type: 'enum', enum: ListingStatus, default: ListingStatus.DRAFT })
   status: ListingStatus;
 

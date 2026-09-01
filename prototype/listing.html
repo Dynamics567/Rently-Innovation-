@@ -207,6 +207,17 @@ body{padding-top:86px;}
           </div>
           <div class="bw-cal-panel" id="bwCalPanel"><div class="cal" id="bwCal"></div></div>
         </div>
+        <div class="bw-quantity" id="bwQuantityRow" style="display:none;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);">
+          <div>
+            <label style="font-size:13px;font-weight:600;">Quantity</label>
+            <div style="font-size:12px;color:var(--ink-faint)" id="bwQuantityHint"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button type="button" class="pill-btn ghost sm" id="bwQtyMinus" style="width:32px;height:32px;padding:0;">−</button>
+            <span id="bwQtyVal" style="min-width:24px;text-align:center;font-weight:600;">1</span>
+            <button type="button" class="pill-btn ghost sm" id="bwQtyPlus" style="width:32px;height:32px;padding:0;">+</button>
+          </div>
+        </div>
         <div class="bw-breakdown" id="bwBreakdown"></div>
         <button class="pill-btn blue block lg" id="bwCta">Add dates to continue</button>
         <div class="bw-trust" id="bwTrust1"></div>
@@ -333,7 +344,12 @@ setCopyrightYear('copyrightLine');
    describes what happens next.
    ================================================================ */
 function initBookingWidget(){
-  let bStart=null, bEnd=null;
+  let bStart=null, bEnd=null, bQty=1, bMaxQty=listing.quantityAvailable;
+  const bulkQuantity = listing.quantityAvailable > 1;
+  if(bulkQuantity){
+    document.getElementById('bwQuantityRow').style.display='flex';
+    document.getElementById('bwQuantityHint').textContent = `${listing.quantityAvailable} available in total`;
+  }
   document.getElementById('bwModeBadge').innerHTML = (listing.mode==='instant'
     ? `<span class="badge instant">${icon('check',{size:11,stroke:2.8})}Instant Book</span>`
     : `<span class="badge request">${icon('clock',{size:11,stroke:2.5})}Request to Book</span>`);
@@ -352,10 +368,24 @@ function initBookingWidget(){
     }
     cta.disabled=true; cta.textContent='Calculating…';
     try{
-      const {data:q} = await apiFetch(`/listings/${listing.id}/quote?from=${bStart.toISOString()}&to=${bEnd.toISOString()}`,{auth:false});
+      if(bulkQuantity){
+        const {data:avail} = await apiFetch(`/bookings/availability?listingId=${listing.id}&from=${bStart.toISOString()}&to=${bEnd.toISOString()}`,{auth:false});
+        bMaxQty = Math.max(1, avail.quantityFree);
+        if(bQty>bMaxQty) bQty=bMaxQty;
+        document.getElementById('bwQtyVal').textContent=bQty;
+        document.getElementById('bwQuantityHint').textContent = avail.quantityFree>0
+          ? `${avail.quantityFree} of ${listing.quantityAvailable} free for these dates`
+          : `None left for these dates`;
+        if(avail.quantityFree<1){
+          document.getElementById('bwBreakdown').innerHTML = `<div class="row" style="color:var(--red)">Every unit is already booked for these dates.</div>`;
+          cta.disabled=true; cta.textContent='Choose different dates';
+          return;
+        }
+      }
+      const {data:q} = await apiFetch(`/listings/${listing.id}/quote?from=${bStart.toISOString()}&to=${bEnd.toISOString()}${bulkQuantity?`&quantity=${bQty}`:''}`,{auth:false});
       const rentalNaira=Math.round(q.rentalFeeMinor/100), serviceNaira=Math.round(q.serviceFeeMinor/100), depositNaira=Math.round(q.depositMinor/100), totalNaira=Math.round(q.totalMinor/100);
       document.getElementById('bwBreakdown').innerHTML = `
-        <div class="row"><span>${money(listing.price)} × ${q.nights} ${listing.unit}${q.nights>1?'s':''}</span><span>${money(rentalNaira)}</span></div>
+        <div class="row"><span>${money(listing.price)} × ${q.nights} ${listing.unit}${q.nights>1?'s':''}${bulkQuantity?` × ${bQty}`:''}</span><span>${money(rentalNaira)}</span></div>
         <div class="row"><span>Service fee</span><span>${money(serviceNaira)}</span></div>
         <div class="row"><span>Refundable deposit</span><span>${money(depositNaira)}</span></div>
         <div class="row total"><span>Total due today</span><span>${money(totalNaira)}</span></div>`;
@@ -367,6 +397,19 @@ function initBookingWidget(){
     }
   }
   renderBreakdown();
+
+  if(bulkQuantity){
+    document.getElementById('bwQtyMinus').addEventListener('click',()=>{
+      if(bQty<=1) return;
+      bQty--; document.getElementById('bwQtyVal').textContent=bQty;
+      if(bStart&&bEnd) renderBreakdown();
+    });
+    document.getElementById('bwQtyPlus').addEventListener('click',()=>{
+      if(bQty>=bMaxQty) return;
+      bQty++; document.getElementById('bwQtyVal').textContent=bQty;
+      if(bStart&&bEnd) renderBreakdown();
+    });
+  }
 
   document.getElementById('bwTrust1').innerHTML = icon('shield',{size:14})+`<span>Payment is held in escrow until your rental period begins.</span>`;
   document.getElementById('bwTrust2').innerHTML = icon('info',{size:14})+`<span>${listing.mode==='instant' ? 'Your card is charged immediately — this provider accepts bookings automatically.' : 'You won\'t be charged until '+provider.name+' approves your request.'}</span>`;
@@ -385,6 +428,7 @@ function initBookingWidget(){
     if(!bStart||!bEnd) return;
     if(!getSession()){ window.location.href='auth'; return; }
     const q=new URLSearchParams({id:listing.id, from:bStart.toISOString(), to:bEnd.toISOString()});
+    if(bulkQuantity) q.set('quantity', bQty);
     window.location.href='checkout?'+q.toString();
   });
 }

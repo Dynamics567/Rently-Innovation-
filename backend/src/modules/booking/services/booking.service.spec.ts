@@ -36,7 +36,8 @@ describe('BookingService', () => {
     | 'findByIdempotencyKey'
     | 'search'
     | 'hasOverlapWithBuffer'
-    | 'hasOverlapForAssetWithBuffer',
+    | 'hasOverlapForAssetWithBuffer'
+    | 'getBookedQuantity',
     jest.Mock
   >;
   let historyRepository: Record<'findByBooking', jest.Mock>;
@@ -57,11 +58,13 @@ describe('BookingService', () => {
     priceMinor: 20000,
     depositMinor: 15000,
     turnaroundBufferMinutes: 120,
+    quantityAvailable: 1,
   };
 
   const quote = {
     currency: 'NGN' as const,
     nights: 3,
+    quantity: 1,
     priceMinor: 20000,
     rentalFeeMinor: 60000,
     serviceFeeMinor: 3000,
@@ -87,6 +90,7 @@ describe('BookingService', () => {
       search: jest.fn(),
       hasOverlapWithBuffer: jest.fn(async () => false),
       hasOverlapForAssetWithBuffer: jest.fn(async () => false),
+      getBookedQuantity: jest.fn(async () => 0),
     };
     historyRepository = { findByBooking: jest.fn() };
     listingsService = {
@@ -225,16 +229,54 @@ describe('BookingService', () => {
       expect(dataSource.transaction).not.toHaveBeenCalled();
     });
 
-    it('falls back to the listing-level buffer check when the listing has no assets at all', async () => {
+    it('falls back to the listing-level quantity check when the listing has no assets at all', async () => {
       const result: any = await service.create('renter-1', dto);
 
       expect(result.assetId).toBeNull();
-      expect(bookingRepository.hasOverlapWithBuffer).toHaveBeenCalledWith(
+      expect(bookingRepository.getBookedQuantity).toHaveBeenCalledWith(
         'listing-1',
         expect.any(Date),
         expect.any(Date),
         liveListing.turnaroundBufferMinutes,
       );
+    });
+
+    it('books the requested quantity against a bulk-quantity listing when enough units are free', async () => {
+      listingsService.findByIdOrFail.mockResolvedValue({ ...liveListing, quantityAvailable: 50 });
+      bookingRepository.getBookedQuantity.mockResolvedValue(30);
+      listingsService.getQuote.mockResolvedValue({ ...quote, quantity: 20 });
+
+      const result: any = await service.create('renter-1', { ...dto, quantity: 20 });
+
+      expect(result.quantity).toBe(20);
+      expect(listingsService.getQuote).toHaveBeenCalledWith('listing-1', expect.any(Date), expect.any(Date), 20);
+    });
+
+    it('rejects a bulk-quantity booking once the requested amount would exceed the units still free', async () => {
+      listingsService.findByIdOrFail.mockResolvedValue({ ...liveListing, quantityAvailable: 50 });
+      bookingRepository.getBookedQuantity.mockResolvedValue(40);
+
+      await expect(service.create('renter-1', { ...dto, quantity: 20 })).rejects.toMatchObject({
+        code: 'BOOKING_DATES_UNAVAILABLE',
+      });
+      expect(dataSource.transaction).not.toHaveBeenCalled();
+    });
+
+    it('rejects requesting more units than a listing has at all, without even checking booked quantity', async () => {
+      listingsService.findByIdOrFail.mockResolvedValue({ ...liveListing, quantityAvailable: 5 });
+
+      await expect(service.create('renter-1', { ...dto, quantity: 20 })).rejects.toMatchObject({
+        code: 'BOOKING_QUANTITY_INVALID',
+      });
+      expect(bookingRepository.getBookedQuantity).not.toHaveBeenCalled();
+    });
+
+    it('rejects requesting quantity > 1 against a listing with individually-tracked assets', async () => {
+      assetsService.getActiveForListing.mockResolvedValue([{ id: 'asset-1' }]);
+
+      await expect(service.create('renter-1', { ...dto, quantity: 2 })).rejects.toMatchObject({
+        code: 'BOOKING_QUANTITY_INVALID',
+      });
     });
   });
 

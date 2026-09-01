@@ -119,7 +119,7 @@ export class ListingsController {
   @Public()
   @Get(':id/quote')
   async quote(@Param('id') id: string, @Query() range: DateRangeQueryDto) {
-    return this.listingsService.getQuote(id, new Date(range.from), new Date(range.to));
+    return this.listingsService.getQuote(id, new Date(range.from), new Date(range.to), range.quantity ?? 1);
   }
 
   @Public()

@@ -36,6 +36,12 @@ export class Booking extends BaseEntity {
   @Column({ name: 'renter_id' })
   renterId: string;
 
+  // How many units of the listing this booking reserves — for a bulk/
+  // fungible listing (e.g. "20 of 50 chairs"). Always 1 for a single-unit
+  // or Asset-tracked listing (assetId set means exactly one specific unit).
+  @Column({ type: 'int', default: 1 })
+  quantity: number;
+
   @Column({ type: 'tstzrange' })
   during: string;
 

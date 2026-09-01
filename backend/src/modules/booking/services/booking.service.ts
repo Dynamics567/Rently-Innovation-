@@ -146,6 +146,7 @@ export class BookingService {
 
     const from = new Date(dto.from);
     const to = new Date(dto.to);
+    const quantity = dto.quantity ?? 1;
 
     // Two application-level guards layered on top of the DB-level
     // no_overlapping_bookings EXCLUDE constraint, which remains the only
@@ -162,13 +163,21 @@ export class BookingService {
         'These dates fall within a period the provider has blocked.',
       );
     }
-    // A listing with active Asset rows has more than one physical unit —
-    // pick the first one free for this window instead of a single
-    // listing-wide buffer check. A listing with zero Asset rows (the vast
-    // majority) falls through to the original single-unit check unchanged.
+    // A listing with active Asset rows has more than one physically distinct
+    // unit (e.g. specific cars) — pick the first one free for this window.
+    // Those don't support bulk quantity: a renter reserves exactly one asset
+    // per booking. A listing with zero Asset rows (the vast majority) falls
+    // through to the bulk-quantity check instead, which is a drop-in
+    // replacement for the old single-unit check (see getBookedQuantity).
     const activeAssets = await this.assetsService.getActiveForListing(dto.listingId);
     let assetId: string | null = null;
     if (activeAssets.length > 0) {
+      if (quantity > 1) {
+        throw DomainException.unprocessable(
+          ErrorCode.BOOKING_QUANTITY_INVALID,
+          'This listing tracks individual units — request one at a time.',
+        );
+      }
       for (const asset of activeAssets) {
         const conflict = await this.bookingRepository.hasOverlapForAssetWithBuffer(
           asset.id,
@@ -188,27 +197,36 @@ export class BookingService {
         );
       }
     } else {
-      const bufferConflict = await this.bookingRepository.hasOverlapWithBuffer(
+      if (quantity > listing.quantityAvailable) {
+        throw DomainException.unprocessable(
+          ErrorCode.BOOKING_QUANTITY_INVALID,
+          `This listing only has ${listing.quantityAvailable} unit(s) available.`,
+        );
+      }
+      const booked = await this.bookingRepository.getBookedQuantity(
         dto.listingId,
         from,
         to,
         listing.turnaroundBufferMinutes,
       );
-      if (bufferConflict) {
+      if (booked + quantity > listing.quantityAvailable) {
         throw DomainException.conflict(
           ErrorCode.BOOKING_DATES_UNAVAILABLE,
-          `This provider needs ${listing.turnaroundBufferMinutes} minutes between rentals — these dates are too close to another booking.`,
+          listing.quantityAvailable > 1
+            ? `Only ${Math.max(0, listing.quantityAvailable - booked)} of ${listing.quantityAvailable} unit(s) left for these dates — you requested ${quantity}.`
+            : `This provider needs ${listing.turnaroundBufferMinutes} minutes between rentals — these dates are too close to another booking.`,
         );
       }
     }
 
-    const quote = await this.listingsService.getQuote(dto.listingId, from, to);
+    const quote = await this.listingsService.getQuote(dto.listingId, from, to, quantity);
 
     const result = await this.dataSource.transaction(async (manager) => {
       const booking = manager.getRepository(Booking).create({
         listingId: dto.listingId,
         assetId,
         renterId,
+        quantity,
         during: toTstzRangeLiteral(from, to),
         startsAt: from,
         endsAt: to,
@@ -274,6 +292,45 @@ export class BookingService {
       await this.emitBookingEvent(DomainEvents.BookingCreated, result, providerUserId);
     }
     return result;
+  }
+
+  /**
+   * How many units of a listing are free for a given date range — lets the
+   * frontend cap a quantity selector before the renter submits. Lives here
+   * rather than in Catalog's AvailabilityService because it needs Booking's
+   * own table (module-boundary rule — Catalog can't read Booking directly).
+   */
+  async getAvailableQuantity(
+    listingId: string,
+    from: Date,
+    to: Date,
+  ): Promise<{ quantityAvailable: number; quantityBooked: number; quantityFree: number }> {
+    const listing = await this.listingsService.findByIdOrFail(listingId);
+    const activeAssets = await this.assetsService.getActiveForListing(listingId);
+    if (activeAssets.length > 0) {
+      let free = 0;
+      for (const asset of activeAssets) {
+        const conflict = await this.bookingRepository.hasOverlapForAssetWithBuffer(
+          asset.id,
+          from,
+          to,
+          listing.turnaroundBufferMinutes,
+        );
+        if (!conflict) free++;
+      }
+      return { quantityAvailable: activeAssets.length, quantityBooked: activeAssets.length - free, quantityFree: free };
+    }
+    const booked = await this.bookingRepository.getBookedQuantity(
+      listingId,
+      from,
+      to,
+      listing.turnaroundBufferMinutes,
+    );
+    return {
+      quantityAvailable: listing.quantityAvailable,
+      quantityBooked: booked,
+      quantityFree: Math.max(0, listing.quantityAvailable - booked),
+    };
   }
 
   /** [Provider] Request-to-Book only — captures payment on approval, never before. */

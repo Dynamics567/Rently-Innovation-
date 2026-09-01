@@ -59,6 +59,7 @@ export class ListingsService {
       maxDuration: dto.maxDuration ?? null,
       cancellationPolicy: dto.cancellationPolicy,
       bookingMode: dto.bookingMode,
+      quantityAvailable: dto.quantityAvailable ?? 1,
       status: ListingStatus.DRAFT,
     });
     return this.listingRepository.save(listing);
@@ -229,6 +230,7 @@ export class ListingsService {
       maxDuration: source.maxDuration,
       cancellationPolicy: source.cancellationPolicy,
       bookingMode: source.bookingMode,
+      quantityAvailable: source.quantityAvailable,
       status: ListingStatus.DRAFT,
     });
     return this.listingRepository.save(copy);
@@ -257,7 +259,13 @@ export class ListingsService {
    * and return (checkout − checkin), minimum 1; this is the one place that
    * convention is decided, rather than each caller assuming its own.
    */
-  computeQuote(listing: Listing, from: Date, to: Date, commissionRateBps: number): QuoteResult {
+  computeQuote(
+    listing: Listing,
+    from: Date,
+    to: Date,
+    commissionRateBps: number,
+    quantity = 1,
+  ): QuoteResult {
     if (to.getTime() <= from.getTime()) {
       throw DomainException.unprocessable(
         ErrorCode.BOOKING_DATE_RANGE_INVALID,
@@ -265,12 +273,13 @@ export class ListingsService {
       );
     }
     const nights = Math.max(1, Math.ceil((to.getTime() - from.getTime()) / MS_PER_DAY));
-    const rentalFeeMinor = listing.priceMinor * nights;
+    const rentalFeeMinor = listing.priceMinor * nights * quantity;
     const serviceFeeMinor = Math.round((rentalFeeMinor * commissionRateBps) / 10000);
-    const depositMinor = listing.depositMinor ?? 0;
+    const depositMinor = (listing.depositMinor ?? 0) * quantity;
     return {
       currency: 'NGN',
       nights,
+      quantity,
       priceMinor: listing.priceMinor,
       rentalFeeMinor,
       serviceFeeMinor,
@@ -279,10 +288,10 @@ export class ListingsService {
     };
   }
 
-  async getQuote(listingId: string, from: Date, to: Date): Promise<QuoteResult> {
+  async getQuote(listingId: string, from: Date, to: Date, quantity = 1): Promise<QuoteResult> {
     const listing = await this.findByIdOrFail(listingId);
     const category = await this.categoriesService.getByIdOrFail(listing.categoryId);
-    return this.computeQuote(listing, from, to, category.commissionRateBps);
+    return this.computeQuote(listing, from, to, category.commissionRateBps, quantity);
   }
 
   /** [Trust] Recomputes the denormalized avgRating/reviewCount from a fresh aggregate over Review rows — never written directly by review submission itself. */

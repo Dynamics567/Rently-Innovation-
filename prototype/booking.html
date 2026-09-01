@@ -404,7 +404,7 @@ async function loadBooking(){
   document.getElementById('bkThumb').innerHTML = artDiv(listing.img||listing.cat,120,.2);
   document.getElementById('bkTitle').textContent = listing.title;
   const dFrom=new Date(booking.dateFrom+'T10:00:00'), dTo=new Date(booking.dateTo+'T17:00:00');
-  document.getElementById('bkSub').textContent = `${fmt(dFrom)} – ${fmt(dTo)} · ${provider.name}`;
+  document.getElementById('bkSub').textContent = `${fmt(dFrom)} – ${fmt(dTo)}${booking.quantity>1?` · Qty ${booking.quantity}`:''} · ${provider.name}`;
   document.getElementById('bkRef').textContent = 'Reference RNT-'+booking.id.slice(0,8).toUpperCase();
 
   document.getElementById('cancelBookingBtn').addEventListener('click', async ()=>{

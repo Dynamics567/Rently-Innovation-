@@ -91,4 +91,13 @@ export class CreateListingDto {
   @IsOptional()
   @IsEnum(BookingMode)
   bookingMode?: BookingMode;
+
+  @ApiPropertyOptional({
+    description: 'How many identical units of this listing you have (e.g. 50 chairs). Leave blank for a single item.',
+    default: 1,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  quantityAvailable?: number;
 }

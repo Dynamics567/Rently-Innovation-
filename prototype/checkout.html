@@ -156,6 +156,7 @@ const params=new URLSearchParams(window.location.search);
 let listing=null, provider=null, quote=null;
 const fromISO = params.get('from') || new Date(Date.now()+7*86400000).toISOString();
 const toISO = params.get('to') || new Date(Date.now()+9*86400000).toISOString();
+const quantity = Math.max(1, +params.get('quantity') || 1);
 
 document.getElementById('coSecure').innerHTML = icon('lock',{size:13})+'<span>Secure checkout</span>';
 
@@ -186,7 +187,7 @@ renderStepper();
     const {data: apiListing} = await apiFetch(`/listings/${listingId}`,{auth:false});
     listing = await mapListing(apiListing, categoryById);
     provider = await getProviderCached(listing.providerId);
-    const {data:q} = await apiFetch(`/listings/${listingId}/quote?from=${fromISO}&to=${toISO}`,{auth:false});
+    const {data:q} = await apiFetch(`/listings/${listingId}/quote?from=${fromISO}&to=${toISO}${quantity>1?`&quantity=${quantity}`:''}`,{auth:false});
     quote = q;
   }catch(e){
     document.querySelector('.container').innerHTML = `<div style="padding:100px 0;text-align:center;color:var(--ink-faint)">Couldn't load this booking. <a href="browse">Browse listings</a>.</div>`;
@@ -201,11 +202,11 @@ renderStepper();
   function paintThumb(el){ el.innerHTML = artDiv(listing.img||listing.cat, 130, .2); }
   ['revThumb','osThumb'].forEach(id=>paintThumb(document.getElementById(id)));
   document.getElementById('revTitle').textContent=listing.title;
-  document.getElementById('revDates').textContent=`${dateStr} · ${quote.nights} ${listing.unit}${quote.nights>1?'s':''} · ${provider.name}`;
+  document.getElementById('revDates').textContent=`${dateStr} · ${quote.nights} ${listing.unit}${quote.nights>1?'s':''}${quantity>1?` · Qty ${quantity}`:''} · ${provider.name}`;
   document.getElementById('osTitle').textContent=listing.title;
   document.getElementById('osDates').textContent=dateStr;
   document.getElementById('osBreakdown').innerHTML = `
-    <div class="os-row"><span>${money(listing.price)} × ${quote.nights} ${listing.unit}${quote.nights>1?'s':''}</span><span>${money(rentalNaira)}</span></div>
+    <div class="os-row"><span>${money(listing.price)} × ${quote.nights} ${listing.unit}${quote.nights>1?'s':''}${quantity>1?` × ${quantity}`:''}</span><span>${money(rentalNaira)}</span></div>
     <div class="os-row"><span>Service fee</span><span>${money(serviceNaira)}</span></div>
     <div class="os-row"><span>Refundable deposit</span><span>${money(depositNaira)}</span></div>
     <div class="os-row total"><span>Total</span><span>${money(totalNaira)}</span></div>`;
@@ -252,7 +253,7 @@ renderStepper();
     const errEl=document.getElementById('payError'); errEl.style.display='none';
     btn.disabled=true; const original=btn.textContent; btn.textContent='Processing…';
     try{
-      const {data: booking} = await apiFetch('/bookings',{method:'POST',idempotencyKey,body:{listingId:listing.id, from:fromISO, to:toISO}});
+      const {data: booking} = await apiFetch('/bookings',{method:'POST',idempotencyKey,body:{listingId:listing.id, from:fromISO, to:toISO, quantity}});
       goToStep(2);
       const instant = booking.stage==='reserved';
       document.getElementById('confirmIcon').innerHTML = icon(instant?'check':'clock',{size:30,stroke:2.4});
