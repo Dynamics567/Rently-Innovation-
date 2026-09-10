@@ -57,8 +57,8 @@ body{min-height:100vh;}
     <div class="collage-mini" id="brandCollage"></div>
     <div class="top"><a class="wordmark wordmark-lg" href="homepage"><img src="assets/images/logo-dark.png" alt="Rently" /></a></div>
     <div class="quote">
-      <blockquote id="brandQuote">"I stopped chasing tent suppliers on WhatsApp groups. Now I compare providers, see real ratings, and my deposit's protected until setup day."</blockquote>
-      <div class="who" id="brandWho">Bola S. — Renter, Lagos</div>
+      <blockquote id="brandQuote">Compare providers, see real ratings, and keep your deposit protected until setup day.</blockquote>
+      <div class="who" id="brandWho">Why renters choose Rently</div>
     </div>
   </div>
 
@@ -165,11 +165,11 @@ function paintBrand(){
   const keys = role==='provider' ? ['tools','event','realestate','music'] : ['realestate','event','vehicle','av'];
   document.getElementById('brandCollage').innerHTML = keys.map(k=>`<div class="tile">${artDiv(k,140,.5)}</div>`).join('');
   if(role==='provider'){
-    document.getElementById('brandQuote').textContent = '"My scaffolding used to sit idle between contracts. On Rently it\'s booked three weeks out, and I get paid on completion."';
-    document.getElementById('brandWho').textContent = 'BuildRight Equipment — Provider since 2021';
+    document.getElementById('brandQuote').textContent = 'List your equipment, get discovered by renters actively searching your category, and get paid on completion — not chasing invoices.';
+    document.getElementById('brandWho').textContent = 'Why providers choose Rently';
   } else {
-    document.getElementById('brandQuote').textContent = '"I stopped chasing tent suppliers on WhatsApp groups. Now I compare providers, see real ratings, and my deposit\'s protected until setup day."';
-    document.getElementById('brandWho').textContent = 'Bola S. — Renter, Lagos';
+    document.getElementById('brandQuote').textContent = 'Compare providers, see real ratings, and keep your deposit protected until setup day.';
+    document.getElementById('brandWho').textContent = 'Why renters choose Rently';
   }
 }
 

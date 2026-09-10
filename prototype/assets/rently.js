@@ -302,129 +302,18 @@ function renderConversationList(containerId, conversations, emptyText){
   `).join('');
 }
 
-/* ---------------- MOCK DATA ---------------- */
-const CATEGORIES=[
-  {key:'event',name:'Event & Party',count:1240,size:'c-large'},
-  {key:'vehicle',name:'Vehicles',count:380,size:'c-med'},
-  {key:'realestate',name:'Real Estate & Spaces',count:610,size:'c-small'},
-  {key:'tools',name:'Tools & Construction',count:890,size:'c-small'},
-  {key:'av',name:'AV Equipment',count:520,size:'c-med'},
-  {key:'music',name:'Musical Instruments',count:260,size:'c-small'},
-  {key:'clothing',name:'Fashion & Attire',count:175,size:'c-small'},
-  {key:'sports',name:'Sports & Leisure',count:140,size:'c-small'},
-  {key:'boats',name:'Marine & Watercraft',count:38,size:'c-small'},
-  {key:'spaces',name:'Studios & Workspaces',count:210,size:'c-small'},
-];
+/* ---------------- UI CONSTANTS ----------------
+   Everything that used to live here as fabricated demo data (fake
+   categories/providers/listings/bookings/admin stats/current-user) has been
+   removed -- every one of those was fully superseded by real API data
+   (GET /categories, /listings, /bookings, /admin/*) and, per a repo-wide
+   reference check, was no longer read by any page. What is left below is
+   genuinely used, non-fabricated UI content: an icon lookup and static,
+   honestly-labeled search suggestions/locations (not personalized history
+   or "trending now" claims -- see homepage.html/browse.html for how these
+   are presented). */
 const CATEGORY_ICON={event:'calendar',vehicle:'truck',realestate:'building',tools:'tool',av:'video',music:'music',clothing:'shirt',sports:'star',boats:'map',spaces:'grid'};
 
-const PROVIDERS=[
-  {id:'ec',name:'EventCraft NG',avatar:'EC',verified:true,since:2022,responseTime:'< 2 hrs',rating:4.8,listings:34,bio:'Full-service event infrastructure — tents, drapery, staging and décor for weddings and corporate functions across Lagos.'},
-  {id:'al',name:'AeroLens Rentals',avatar:'AL',verified:true,since:2023,responseTime:'< 1 hr',rating:4.7,listings:12,bio:'Cinema and broadcast-grade drone and gimbal equipment, maintained and insured for commercial shoots.'},
-  {id:'pa',name:'Prestige Auto',avatar:'PA',verified:true,since:2021,responseTime:'< 3 hrs',rating:5.0,listings:9,bio:'Curated fleet of exotic and luxury vehicles, self-drive or chauffeured, fully insured.'},
-  {id:'us',name:'UrbanStay Lekki',avatar:'US',verified:true,since:2022,responseTime:'< 4 hrs',rating:4.6,listings:6,bio:'Boutique shortlet apartments across Lekki and Victoria Island, professionally managed.'},
-  {id:'sw',name:'SoundWave Pro',avatar:'SW',verified:true,since:2020,responseTime:'< 2 hrs',rating:4.9,listings:21,bio:'Professional sound reinforcement and DJ equipment for events of every scale.'},
-  {id:'br',name:'BuildRight Equipment',avatar:'BR',verified:true,since:2021,responseTime:'< 6 hrs',rating:4.5,listings:47,bio:'Construction and scaffolding equipment for contractors, rented by the day or the project.'},
-  {id:'cp',name:'Canon Pro Rentals',avatar:'CP',verified:true,since:2023,responseTime:'< 2 hrs',rating:4.8,listings:15,bio:'Professional camera and lens kits maintained to broadcast standard.'},
-  {id:'pg',name:'PowerGen Rentals',avatar:'PG',verified:true,since:2020,responseTime:'< 3 hrs',rating:4.7,listings:28,bio:'Soundproof and industrial generators for events, construction sites and homes — maintained and delivered nationwide.'},
-  {id:'ap',name:'Abuja Party Hire',avatar:'AH',verified:true,since:2022,responseTime:'< 3 hrs',rating:4.7,listings:22,bio:'Abuja\'s go-to for event essentials — canopies, chairs, tables and décor for weddings, naming ceremonies and corporate events.'},
-];
-
-const LISTINGS=[
-  {id:'l1',title:'Premium Event Tent & Décor Package',cat:'event',catName:'Event & Party',price:45000,unit:'day',rating:4.8,reviews:120,loc:'Lekki, Lagos',providerId:'ec',provider:'EventCraft NG',pAvatar:'EC',verified:true,mode:'request',deposit:20000,delivery:true,availability:'available',desc:'A complete 20×30ft weatherproof event setup with elegant drapery and coordinated décor — delivery and setup crew included.',specs:['20×30ft weatherproof marquee','Full drapery & lighting rig','Setup and breakdown crew included','Seats up to 150 guests']},
-  {id:'l2',title:'DJI Mavic 3 Pro Drone Kit',cat:'av',catName:'AV Equipment',price:25000,unit:'day',rating:4.7,reviews:86,loc:'Victoria Island, Lagos',providerId:'al',provider:'AeroLens Rentals',pAvatar:'AL',verified:true,mode:'instant',deposit:50000,delivery:true,availability:'available',desc:'Cinema-grade 5.1K drone with 3 batteries, ND filters and a hard case — ideal for weddings and real estate shoots.',specs:['5.1K/50fps Hasselblad camera','3 batteries (~135 min total flight)','ND filter set + hard case','Insured against accidental damage']},
-  {id:'l3',title:'Lamborghini Huracán EVO',cat:'vehicle',catName:'Vehicles',price:250000,unit:'day',rating:5.0,reviews:22,loc:'Banana Island, Lagos',providerId:'pa',provider:'Prestige Auto',pAvatar:'PA',verified:true,mode:'request',deposit:500000,delivery:false,availability:'limited',desc:'Self-drive or chauffeured, fully insured, 100km/day included. Turn heads at your next event.',specs:['630hp V10, self-drive or chauffeured','100km/day included, ₦850/km after','Comprehensive insurance included','Valid driver\'s licence + ₦500,000 deposit']},
-  {id:'l4',title:'Furnished 2-Bed Shortlet Apartment',cat:'realestate',catName:'Real Estate & Spaces',price:60000,unit:'night',rating:4.6,reviews:98,loc:'Lekki Phase 1, Lagos',providerId:'us',provider:'UrbanStay Lekki',pAvatar:'US',verified:true,mode:'instant',deposit:30000,delivery:false,availability:'available',desc:'Bright, fully furnished, gated estate with a private pool and 24/7 power — walking distance to the beach.',specs:['2 bedrooms, sleeps 4','Private pool, 24/7 power & water','Gated estate with security','5 min walk to the beach']},
-  {id:'l5',title:'Professional PA & DJ Equipment Set',cat:'music',catName:'Musical Instruments',price:35000,unit:'day',rating:4.9,reviews:64,loc:'Ikeja, Lagos',providerId:'sw',provider:'SoundWave Pro',pAvatar:'SW',verified:true,mode:'instant',deposit:15000,delivery:true,availability:'available',desc:'Dual 15" active speakers, wireless mics and a Pioneer controller — sound for up to 300 guests.',specs:['2× 15" active speakers, 2400W','Pioneer DDJ controller','2 wireless handheld mics','Delivery available within Lagos']},
-  {id:'l6',title:'Heavy-Duty Scaffolding Set',cat:'tools',catName:'Tools & Construction',price:18000,unit:'day',rating:4.5,reviews:41,loc:'Ajah, Lagos',providerId:'br',provider:'BuildRight Equipment',pAvatar:'BR',verified:true,mode:'request',deposit:25000,delivery:true,availability:'available',desc:'Galvanized full-bay scaffolding with guard rails, suitable for facades up to 4 storeys.',specs:['Galvanized steel, corrosion resistant','Guard rails on every level','Suitable up to 4 storeys','Transport quoted separately']},
-  {id:'l7',title:'Canon EOS R5 + L-Series Kit',cat:'av',catName:'AV Equipment',price:30000,unit:'day',rating:4.8,reviews:73,loc:'Yaba, Lagos',providerId:'cp',provider:'Canon Pro Rentals',pAvatar:'CP',verified:true,mode:'instant',deposit:60000,delivery:true,availability:'available',desc:'Full-frame body with 24-70mm and 70-200mm L lenses, extra batteries and a 128GB card.',specs:['45MP full-frame, 8K RAW video','24-70mm f/2.8L + 70-200mm f/2.8L','3 batteries, 128GB CFexpress','Padded hard case included']},
-  {id:'l8',title:'Rooftop Event Space, Victoria Island',cat:'realestate',catName:'Real Estate & Spaces',img:'spaces',price:120000,unit:'day',rating:4.7,reviews:31,loc:'Victoria Island, Lagos',providerId:'us',provider:'UrbanStay Lekki',pAvatar:'US',verified:true,mode:'request',deposit:60000,delivery:false,availability:'available',desc:'Skyline-view rooftop with in-house lighting rig, ideal for launches and intimate receptions of up to 80.',specs:['Capacity up to 80 guests','In-house lighting & PA hookup','Backup generator on site','Caterer-friendly service lift']},
-  {id:'l9',title:'Tailored Agbada, 3-Piece',cat:'clothing',catName:'Fashion & Attire',price:20000,unit:'day',rating:4.9,reviews:19,loc:'Ikoyi, Lagos',providerId:'ec',provider:'EventCraft NG',pAvatar:'EC',verified:true,mode:'instant',deposit:10000,delivery:true,availability:'available',desc:'Hand-embroidered 3-piece agbada, dry-cleaned and pressed before every booking.',specs:['Hand embroidery, made to measure sizing','Dry-cleaned before every rental','Comes with matching cap','48hr notice for alterations']},
-  {id:'l10',title:'Toyota Hiace Event Shuttle Bus',cat:'vehicle',catName:'Vehicles',img:'shuttlebus',price:65000,unit:'day',rating:4.6,reviews:38,loc:'Ikeja, Lagos',providerId:'pa',provider:'Prestige Auto',pAvatar:'PA',verified:true,mode:'request',deposit:40000,delivery:false,availability:'available',desc:'18-seater with driver, air conditioning, ideal for wedding guest shuttling and corporate transport.',specs:['18 seats, driver included','Air conditioned','200km/day included','Fuel billed separately']},
-  {id:'l11',title:'Yamaha Grand Piano, Studio Upright',cat:'music',catName:'Musical Instruments',img:'piano',price:28000,unit:'day',rating:4.9,reviews:14,loc:'Victoria Island, Lagos',providerId:'sw',provider:'SoundWave Pro',pAvatar:'SW',verified:true,mode:'request',deposit:80000,delivery:true,availability:'limited',desc:'Freshly tuned studio upright, moved and tuned on-site by our technician for the duration of your rental.',specs:['Tuned on delivery','Professional movers included','Climate-stable transport','Insurance included in price']},
-  {id:'l12',title:'42ft Speedboat Charter, Half Day',cat:'boats',catName:'Marine & Watercraft',price:180000,unit:'day',rating:4.8,reviews:27,loc:'Ikoyi, Lagos',providerId:'pa',provider:'Prestige Auto',pAvatar:'PA',verified:true,mode:'request',deposit:100000,delivery:false,availability:'available',desc:'Captain-operated 42ft speedboat, life jackets and cooler included, half-day charter around Lagos waterways.',specs:['Captain & crew included','Life jackets for up to 12','Cooler and bluetooth sound system','Fuel included up to 3 hours']},
-  {id:'l13',title:'Toyota Hilux Pickup Truck',cat:'vehicle',catName:'Vehicles',img:'pickup',price:40000,unit:'day',rating:4.6,reviews:47,loc:'Ojo, Lagos',providerId:'pa',provider:'Prestige Auto',pAvatar:'PA',verified:true,mode:'instant',deposit:35000,delivery:false,availability:'available',desc:'Double-cab 4x4 pickup with an open bed, ideal for moving furniture, building materials or market goods across town.',specs:['Double-cab, 4x4, manual','1-tonne open bed capacity','150km/day included','Driver available on request']},
-  {id:'l14',title:'Mercedes-Benz Sprinter Cargo Van',cat:'vehicle',catName:'Vehicles',img:'cargovan',price:45000,unit:'day',rating:4.7,reviews:33,loc:'Apapa, Lagos',providerId:'pa',provider:'Prestige Auto',pAvatar:'PA',verified:true,mode:'request',deposit:40000,delivery:false,availability:'available',desc:'Enclosed cargo van for house moves, event logistics or bulk deliveries — loading assistance available on request.',specs:['11m³ enclosed cargo space','Loading assistance available','150km/day included','Driver included']},
-  {id:'l15',title:'Massey Ferguson Farm Tractor',cat:'tools',catName:'Tools & Construction',img:'tractor',price:70000,unit:'day',rating:4.6,reviews:18,loc:'Epe, Lagos',providerId:'br',provider:'BuildRight Equipment',pAvatar:'BR',verified:true,mode:'request',deposit:100000,delivery:true,availability:'available',desc:'75HP tractor with plough and harrow attachments, operator included — suited to land clearing and farm preparation.',specs:['75HP, plough & harrow attachments','Trained operator included','Fuel billed separately','Suitable for land clearing & tilling']},
-  {id:'l16',title:'Canopy, Chairs & Tables Package (100 Guests)',cat:'event',catName:'Event & Party',price:28000,unit:'day',rating:4.7,reviews:56,loc:'Ajah, Lagos',providerId:'ec',provider:'EventCraft NG',pAvatar:'EC',verified:true,mode:'instant',deposit:12000,delivery:true,availability:'available',desc:'The everyday event essentials — a durable canopy, plastic chairs and round tables for up to 100 guests, delivered and set up.',specs:['Canopy for up to 100 guests','100 plastic chairs, 10 round tables','Delivery and setup included','Pickup the next day']},
-  {id:'l17',title:'Electric Concrete Mixer (140L)',cat:'tools',catName:'Tools & Construction',price:13000,unit:'day',rating:4.4,reviews:29,loc:'Ikorodu, Lagos',providerId:'br',provider:'BuildRight Equipment',pAvatar:'BR',verified:true,mode:'instant',deposit:15000,delivery:true,availability:'available',desc:'140-litre electric concrete mixer, well maintained and tested before every rental — ideal for small to mid-size building projects.',specs:['140-litre drum capacity','Single-phase electric motor','Tested before every rental','Transport quoted separately']},
-  {id:'l18',title:'500 White Plastic Chairs',cat:'event',catName:'Event & Party',img:'plasticchairs',price:15000,unit:'day',rating:4.6,reviews:88,loc:'Ikeja, Lagos',providerId:'ec',provider:'EventCraft NG',pAvatar:'EC',verified:true,mode:'instant',deposit:8000,delivery:true,availability:'available',desc:'500 sturdy white plastic chairs, cleaned and delivered — perfect for weddings, church programmes and large gatherings.',specs:['500 chairs, white plastic','Delivery and pickup included','Cleaned before every rental','Extra chairs available on request']},
-  {id:'l19',title:'Round Banquet Tables (Set of 20)',cat:'event',catName:'Event & Party',price:20000,unit:'day',rating:4.7,reviews:41,loc:'Wuse II, Abuja',providerId:'ap',provider:'Abuja Party Hire',pAvatar:'AH',verified:true,mode:'instant',deposit:10000,delivery:true,availability:'available',desc:'20 round banquet tables (seats 10 each) with white linen covers, delivered and set up at your venue.',specs:['20 tables, seats 10 each','White linen covers included','Delivery and setup included','Ideal for weddings & receptions']},
-  {id:'l20',title:'Wedding Decoration & Backdrop Package',cat:'event',catName:'Event & Party',img:'weddingdecor',price:150000,unit:'day',rating:4.9,reviews:37,loc:'Bodija, Ibadan',providerId:'ec',provider:'EventCraft NG',pAvatar:'EC',verified:true,mode:'request',deposit:50000,delivery:true,availability:'limited',desc:'Full wedding styling — floral backdrop, aisle runner, stage décor and lighting, designed and installed by our team.',specs:['Custom floral backdrop & stage décor','Aisle runner and lighting included','Design consultation included','Installed the day before your event']},
-  {id:'l21',title:'10KVA Soundproof Generator',cat:'tools',catName:'Tools & Construction',img:'generator',price:25000,unit:'day',rating:4.8,reviews:102,loc:'Yaba, Lagos',providerId:'pg',provider:'PowerGen Rentals',pAvatar:'PG',verified:true,mode:'instant',deposit:20000,delivery:true,availability:'available',desc:'Soundproof 10KVA generator with a full tank, ideal for events and homes during extended power outages.',specs:['10KVA, soundproof canopy','Delivered with a full tank','Fuel top-up available on request','24hr support line for breakdowns']},
-  {id:'l22',title:'20KVA Industrial Generator',cat:'tools',catName:'Tools & Construction',img:'generator',price:45000,unit:'day',rating:4.7,reviews:34,loc:'Sabon Gari, Kano',providerId:'pg',provider:'PowerGen Rentals',pAvatar:'PG',verified:true,mode:'request',deposit:40000,delivery:true,availability:'available',desc:'Heavy-duty 20KVA generator for construction sites and large events, delivered with a trained technician on standby.',specs:['20KVA, diesel','Technician on standby','Delivered and installed','Fuel billed separately']},
-  {id:'l23',title:'Bouncy Castle (Kids Party)',cat:'event',catName:'Event & Party',price:22000,unit:'day',rating:4.6,reviews:29,loc:'Independence Layout, Enugu',providerId:'ap',provider:'Abuja Party Hire',pAvatar:'AH',verified:true,mode:'instant',deposit:10000,delivery:true,availability:'available',desc:'Colourful inflatable bouncy castle with an attendant, delivered, set up and collected the same day.',specs:['Holds up to 8 children at a time','On-site attendant included','Delivery, setup & collection included','Generator available on request']},
-  {id:'l24',title:'HD Projector & 120" Screen',cat:'av',catName:'AV Equipment',img:'projector',price:20000,unit:'day',rating:4.6,reviews:24,loc:'GRA, Port Harcourt',providerId:'cp',provider:'Canon Pro Rentals',pAvatar:'CP',verified:true,mode:'instant',deposit:15000,delivery:true,availability:'available',desc:'Bright 6000-lumen projector with a 120" screen, HDMI and sound bar included — ready for conferences or outdoor movie nights.',specs:['6000-lumen HD projector','120" portable screen','HDMI, sound bar included','Delivery & setup available']},
-  {id:'l25',title:'Sony FX6 Cinema Camera Kit',cat:'av',catName:'AV Equipment',img:'cinemacamera',price:55000,unit:'day',rating:4.9,reviews:16,loc:'Lekki, Lagos',providerId:'cp',provider:'Canon Pro Rentals',pAvatar:'CP',verified:true,mode:'request',deposit:120000,delivery:true,availability:'limited',desc:'Full-frame cinema camera with a prime lens set, tripod and audio kit — built for commercial and broadcast shoots.',specs:['Full-frame 4K/120fps cinema body','Prime lens set + tripod','Wireless audio kit included','Insured against accidental damage']},
-  {id:'l26',title:'Toyota Camry (Self-Drive or Chauffeured)',cat:'vehicle',catName:'Vehicles',img:'sedan',price:30000,unit:'day',rating:4.6,reviews:61,loc:'GRA, Benin City',providerId:'pa',provider:'Prestige Auto',pAvatar:'PA',verified:true,mode:'instant',deposit:50000,delivery:false,availability:'available',desc:'Comfortable, fuel-efficient sedan for everyday trips, airport runs or a weekend away — self-drive or with a driver.',specs:['Self-drive or chauffeured','100km/day included','Comprehensive insurance included','Valid driver\'s licence required for self-drive']},
-  {id:'l27',title:'Furnished Studio Apartment, Wuse',cat:'realestate',catName:'Real Estate & Spaces',price:35000,unit:'night',rating:4.5,reviews:22,loc:'Wuse II, Abuja',providerId:'us',provider:'UrbanStay Lekki',pAvatar:'US',verified:true,mode:'instant',deposit:20000,delivery:false,availability:'available',desc:'Cosy, fully furnished studio in the heart of Abuja — fast wifi, 24/7 power and walking distance to the city centre.',specs:['Studio, sleeps 2','Fast wifi & 24/7 power','Self check-in','Walking distance to the city centre']},
-  {id:'l28',title:'Arc Welding Machine',cat:'tools',catName:'Tools & Construction',img:'welding',price:12000,unit:'day',rating:4.4,reviews:19,loc:'Oke-Ilewo, Abeokuta',providerId:'br',provider:'BuildRight Equipment',pAvatar:'BR',verified:true,mode:'instant',deposit:15000,delivery:true,availability:'available',desc:'Portable arc welding machine with rods included, tested before every rental — suited to fabrication and repair work.',specs:['Portable, single-phase','Welding rods included','Tested before every rental','Transport quoted separately']},
-  {id:'l29',title:'Line Array PA System (Large Event)',cat:'music',catName:'Musical Instruments',price:80000,unit:'day',rating:4.8,reviews:21,loc:'Trans Amadi, Port Harcourt',providerId:'sw',provider:'SoundWave Pro',pAvatar:'SW',verified:true,mode:'request',deposit:60000,delivery:true,availability:'available',desc:'Line array system built for 500+ guests, with a sound engineer included for setup and the duration of your event.',specs:['Line array, 500+ guest capacity','Sound engineer included','Wireless mic set included','Delivery & rigging included']},
-];
-
-const BOOKINGS=[
-  {id:'b1',listingId:'l4',title:'Furnished 2-Bed Shortlet Apartment',cat:'realestate',status:'upcoming',stage:'reserved',dateFrom:'2026-07-18',dateTo:'2026-07-21',total:180000,provider:'UrbanStay Lekki',deposit:30000,depositStatus:'held'},
-  {id:'b2',listingId:'l2',title:'DJI Mavic 3 Pro Drone Kit',cat:'av',status:'completed',stage:'completed',dateFrom:'2026-06-02',dateTo:'2026-06-03',total:50000,provider:'AeroLens Rentals',deposit:50000,depositStatus:'released'},
-  {id:'b3',listingId:'l1',title:'Premium Event Tent & Décor Package',cat:'event',status:'pending',stage:'requested',dateFrom:'2026-08-09',dateTo:'2026-08-10',total:90000,provider:'EventCraft NG',deposit:20000,depositStatus:'held'},
-  {id:'b4',listingId:'l7',title:'Canon EOS R5 + L-Series Kit',cat:'av',status:'completed',stage:'completed',dateFrom:'2026-05-14',dateTo:'2026-05-15',total:30000,provider:'Canon Pro Rentals',deposit:60000,depositStatus:'released'},
-  {id:'b5',listingId:'l6',title:'Heavy-Duty Scaffolding Set',cat:'tools',status:'cancelled',stage:'cancelled',dateFrom:'2026-04-02',dateTo:'2026-04-05',total:54000,provider:'BuildRight Equipment',deposit:25000,depositStatus:'refunded'},
-  {id:'b6',listingId:'l21',title:'10KVA Soundproof Generator',cat:'tools',status:'active',stage:'active',dateFrom:'2026-07-08',dateTo:'2026-07-11',total:75000,provider:'PowerGen Rentals',deposit:20000,depositStatus:'held'},
-];
-
-const PROVIDER_LISTINGS=[
-  {id:'l1',title:'Premium Event Tent & Décor Package',cat:'event',price:45000,status:'live',views:1240,bookings:34},
-  {id:'l9',title:'Tailored Agbada, 3-Piece',cat:'clothing',price:20000,status:'live',views:310,bookings:19},
-  {id:'l8b',title:'Marquee Lighting Rig, Warm White',cat:'event',price:22000,status:'paused',views:96,bookings:4},
-  {id:'l1c',title:'Chiavari Chairs (Set of 100)',cat:'event',price:15000,status:'draft',views:0,bookings:0},
-];
-
-const PROVIDER_REQUESTS=[
-  {id:'r1',renter:'Ifeoma A.',renterAvatar:'IA',listing:'Premium Event Tent & Décor Package',dateFrom:'2026-08-09',dateTo:'2026-08-10',total:90000,status:'pending'},
-  {id:'r2',renter:'Tunde B.',renterAvatar:'TB',listing:'Premium Event Tent & Décor Package',dateFrom:'2026-07-22',dateTo:'2026-07-23',total:45000,status:'pending'},
-  {id:'r3',renter:'Chioma O.',renterAvatar:'CO',listing:'Tailored Agbada, 3-Piece',dateFrom:'2026-07-15',dateTo:'2026-07-16',total:20000,status:'approved'},
-];
-
-/* What a provider sees for rentals currently in progress — distinct from
-   PROVIDER_REQUESTS (not-yet-approved) and from BOOKINGS (the renter's own
-   view of their bookings). Stage mirrors the shared STAGES model, collapsed
-   to the handful a provider actually has to act on. */
-const PROVIDER_ACTIVE_RENTALS=[
-  {id:'ar1',listingId:'l1',cat:'event',title:'Premium Event Tent & Décor Package',renter:'Bola S.',renterAvatar:'BS',dateFrom:'2026-07-07',dateTo:'2026-07-10',stage:'active',deposit:20000},
-  {id:'ar2',listingId:'l18',cat:'event',title:'500 White Plastic Chairs',renter:'Tunde B.',renterAvatar:'TB',dateFrom:'2026-07-09',dateTo:'2026-07-09',stage:'ready',deposit:8000},
-  {id:'ar3',listingId:'l16',cat:'event',title:'Canopy, Chairs & Tables Package',renter:'Chioma O.',renterAvatar:'CO',dateFrom:'2026-07-05',dateTo:'2026-07-08',stage:'returnsched',deposit:12000},
-  {id:'ar4',listingId:'l9',cat:'clothing',title:'Tailored Agbada, 3-Piece',renter:'Femi K.',renterAvatar:'FK',dateFrom:'2026-06-28',dateTo:'2026-06-30',stage:'returned',deposit:10000},
-];
-
-/* ---------------- ADMIN / PLATFORM-WIDE MOCK DATA ---------------- */
-const ADMIN_STATS={totalBookings:1842,gmvMonth:18400000,activeRentals:62,openDisputes:2,pendingVerifications:3,avgRating:4.7};
-const DISPUTES=[
-  {id:'d1',bookingRef:'RNT-B5XXXX-2026',listing:'Heavy-Duty Scaffolding Set',renter:'Segun A.',provider:'BuildRight Equipment',issue:'Item arrived with a damaged guard rail',status:'open',opened:'2026-07-06'},
-  {id:'d2',bookingRef:'RNT-B2XXXX-2026',listing:'DJI Mavic 3 Pro Drone Kit',renter:'Kemi O.',provider:'AeroLens Rentals',issue:'Provider disputes claimed battery damage',status:'investigating',opened:'2026-07-03'},
-  {id:'d3',bookingRef:'RNT-B7XXXX-2026',listing:'Toyota Hiace Event Shuttle Bus',renter:'Yusuf M.',provider:'Prestige Auto',issue:'Late return, deposit deduction disputed by renter',status:'resolved',opened:'2026-06-28'},
-];
-const VERIFICATION_QUEUE=[
-  {id:'v1',name:'GreenLeaf Event Hire',type:'Business',submitted:'2026-07-08',docs:'CAC certificate, utility bill'},
-  {id:'v2',name:'Adaeze Okafor',type:'Individual (ID only)',submitted:'2026-07-07',docs:'NIN slip, selfie verification'},
-  {id:'v3',name:'FastTrack Logistics NG',type:'Business',submitted:'2026-07-06',docs:'CAC certificate, proof of address'},
-];
-const ADMIN_RECENT_BOOKINGS=[
-  {ref:'RNT-B1XXXX-2026',listing:'Furnished 2-Bed Shortlet Apartment',renter:'Damilola A.',provider:'UrbanStay Lekki',amount:180000,status:'reserved'},
-  {ref:'RNT-B6XXXX-2026',listing:'10KVA Soundproof Generator',renter:'Damilola A.',provider:'PowerGen Rentals',amount:79500,status:'active'},
-  {ref:'RNT-B3XXXX-2026',listing:'Premium Event Tent & Décor Package',renter:'Damilola A.',provider:'EventCraft NG',amount:90000,status:'requested'},
-  {ref:'RNT-ARXXXX-2026',listing:'Canopy, Chairs & Tables Package',renter:'Chioma O.',provider:'EventCraft NG',amount:120000,status:'returnsched'},
-  {ref:'RNT-B2XXXX-2026',listing:'DJI Mavic 3 Pro Drone Kit',renter:'Kemi O.',provider:'AeroLens Rentals',amount:50000,status:'completed'},
-  {ref:'RNT-B4XXXX-2026',listing:'Canon EOS R5 + L-Series Kit',renter:'Yusuf M.',provider:'Canon Pro Rentals',amount:30000,status:'completed'},
-];
-
-const TRANSACTIONS=[
-  {date:'2026-07-01',listing:'Premium Event Tent & Décor Package',renter:'Bola S.',amount:90000,commission:4500,status:'paid',payout:'2026-07-08'},
-  {date:'2026-06-24',listing:'Tailored Agbada, 3-Piece',renter:'Chioma O.',amount:20000,commission:1000,status:'paid',payout:'2026-07-01'},
-  {date:'2026-06-18',listing:'Premium Event Tent & Décor Package',renter:'Femi K.',amount:45000,commission:2250,status:'paid',payout:'2026-06-25'},
-  {date:'2026-06-05',listing:'Marquee Lighting Rig, Warm White',renter:'Ada N.',amount:22000,commission:1100,status:'pending',payout:'2026-07-12'},
-];
-
-const CURRENT_USER={name:'Damilola Adeyemi',email:'damilola.a@gmail.com',avatar:'DA',since:2024};
-
-const RECENT_SEARCHES=['Event tents in Lekki','DJI drone this weekend','2-bed shortlet, VI'];
 const POPULAR_SEARCHES=['Generator','Plastic chairs','Canopy & chairs','Sound system','Wedding decoration','Bouncy castle'];
 const LOCATIONS=[['Lekki Phase 1','Lagos'],['Victoria Island','Lagos'],['Ikeja','Lagos'],['Ajah','Lagos'],['Yaba','Lagos'],['Banana Island','Lagos'],['Wuse II','Abuja'],['Garki','Abuja'],['Maitama','Abuja'],['GRA','Port Harcourt'],['Trans Amadi','Port Harcourt'],['Bodija','Ibadan'],['Ring Road','Ibadan'],['Sabon Gari','Kano'],['Independence Layout','Enugu'],['GRA','Benin City'],['Oke-Ilewo','Abeokuta']];
 

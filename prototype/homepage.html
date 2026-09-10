@@ -137,18 +137,6 @@
 @media(max-width:900px){.stat-row{gap:40px 60px;}.stat:nth-child(2),.stat:nth-child(4){margin-top:0;}}
 
 /* ============================================================
-   VOICES — two short quotes, editorial rather than a carousel
-   ============================================================ */
-.voices{padding:140px 0;}
-.voices-grid{display:grid;grid-template-columns:1fr 1fr;gap:56px;}
-.voice{padding-top:28px;border-top:1px solid var(--line-strong);}
-.voice blockquote{font-family:var(--serif);font-size:clamp(19px,2vw,23px);font-weight:400;line-height:1.5;color:var(--ink);margin-bottom:22px;}
-.voice-who{display:flex;align-items:center;gap:12px;}
-.voice-who .name{font-size:13.5px;font-weight:600;}
-.voice-who .role{font-size:12.5px;color:var(--ink-faint);}
-@media(max-width:900px){.voices-grid{grid-template-columns:1fr;gap:44px;}}
-
-/* ============================================================
    PROVIDER / BUSINESS SPLIT
    ============================================================ */
 .provider-split{padding:150px 0;}
@@ -227,9 +215,7 @@
           <div class="search-panel" id="panel-what">
             <div class="panel-h">Browse by category</div>
             <div class="chip-row" id="categorySearchChips"></div>
-            <div class="panel-h">Recent searches</div>
-            <div class="chip-row" id="recentSearches"></div>
-            <div class="panel-h">Popular right now</div>
+            <div class="panel-h">Suggested searches</div>
             <div class="chip-row" id="popularSearches"></div>
           </div>
 
@@ -340,20 +326,6 @@
     <div class="verify-strip reveal">
       <div class="avatar-cluster" id="verifyAvatars"></div>
       <p><b>Every provider is ID-verified</b> before their first listing goes live — business registration checked where applicable, no exceptions.</p>
-    </div>
-  </div>
-</section>
-
-<!-- ============ VOICES ============ -->
-<section class="voices">
-  <div class="container voices-grid">
-    <div class="voice reveal">
-      <blockquote>"I stopped chasing tent suppliers on WhatsApp groups. Now I compare five providers, see their ratings, and my deposit's protected until setup day."</blockquote>
-      <div class="voice-who"><div class="p-avatar">BS</div><div><div class="name">Bola S.</div><div class="role">Renter, Lagos — booked 6 times</div></div></div>
-    </div>
-    <div class="voice reveal">
-      <blockquote>"My scaffolding used to sit idle between contracts. On Rently it's booked three weeks out, and I get paid on completion — not chasing invoices."</blockquote>
-      <div class="voice-who"><div class="p-avatar">BR</div><div><div class="name">BuildRight Equipment</div><div class="role">Provider since 2021</div></div></div>
     </div>
   </div>
 </section>
@@ -476,9 +448,11 @@ let selectedCat=null;
 })();
 function scrollPop(dir){document.getElementById('popScroll').scrollBy({left:dir*300,behavior:'smooth'});}
 
-/* ============ SEARCH: category / recent / popular / locations ============
-   Recent/popular searches and the location autosuggest stay local UI mock
-   data — there's no search-history or geocoding backend to wire these to. */
+/* ============ SEARCH: category / suggested / locations ============
+   Suggested-search chips are editorially curated, not personalized or
+   computed from live activity — no false "recent"/"trending now" claim.
+   The location autosuggest is a static list of real Nigerian areas; there's
+   no geocoding backend to wire it to yet. */
 function pickCategory(key,name){
   selectedCat=key;
   document.getElementById('valWhat').textContent=name;
@@ -486,7 +460,6 @@ function pickCategory(key,name){
   document.querySelectorAll('#categorySearchChips .pchip').forEach(el=>el.classList.toggle('on',el.dataset.cat===key));
   closePanels();
 }
-document.getElementById('recentSearches').innerHTML = RECENT_SEARCHES.map(r=>`<div class="pchip" onclick="pickWhat('${r}')">${icon('clock',{size:13,cls:'',stroke:2})}${r}</div>`).join('');
 document.getElementById('popularSearches').innerHTML = POPULAR_SEARCHES.map(r=>`<div class="pchip" onclick="pickWhat('${r}')">${r}</div>`).join('');
 function pickWhat(v){
   selectedCat=null;
