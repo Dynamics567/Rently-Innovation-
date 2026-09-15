@@ -22,6 +22,10 @@ body{padding-top:0;}
 .queue-row .q-title{font-size:13.5px;font-weight:600;}
 .queue-row .q-sub{font-size:12px;color:var(--ink-faint);margin-top:2px;}
 .queue-row .q-actions{display:flex;gap:8px;flex-shrink:0;}
+.queue-row .q-check{width:17px;height:17px;accent-color:var(--ink);flex-shrink:0;cursor:pointer;}
+.bulk-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 16px;border:1px solid var(--line-strong);border-radius:14px;margin-bottom:16px;background:var(--bg-alt);flex-wrap:wrap;}
+.bulk-select-all{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;color:var(--ink-soft);cursor:pointer;}
+.bulk-select-all input{width:17px;height:17px;accent-color:var(--ink);cursor:pointer;}
 .section-block{margin-bottom:40px;}
 .section-block .sb-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
 .section-block .sb-head h3{font-size:15px;font-weight:600;}
@@ -123,6 +127,13 @@ body{padding-top:0;}
     <!-- ============ LISTINGS MODERATION ============ -->
     <div class="d-view" id="view-listings">
       <div class="app-head"><div><h1>Listings moderation</h1><p>New listings wait here after a provider submits them, until approved or rejected.</p></div></div>
+      <div class="bulk-bar" id="modBulkBar" style="display:none;">
+        <label class="bulk-select-all"><input type="checkbox" id="modSelectAll" /><span id="modSelectedCount">0 selected</span></label>
+        <div class="q-actions">
+          <button class="pill-btn ghost sm" id="modBulkRejectBtn">Reject selected</button>
+          <button class="pill-btn green sm" id="modBulkApproveBtn">Approve selected</button>
+        </div>
+      </div>
       <div id="moderationList"><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
     </div>
 
@@ -142,6 +153,13 @@ body{padding-top:0;}
     <!-- ============ VERIFICATION ============ -->
     <div class="d-view" id="view-verification">
       <div class="app-head"><div><h1>Provider verification queue</h1><p>New providers can't publish a listing until their ID or business registration is approved.</p></div></div>
+      <div class="bulk-bar" id="verifBulkBar" style="display:none;">
+        <label class="bulk-select-all"><input type="checkbox" id="verifSelectAll" /><span id="verifSelectedCount">0 selected</span></label>
+        <div class="q-actions">
+          <button class="pill-btn ghost sm" id="verifBulkRejectBtn">Reject selected</button>
+          <button class="pill-btn green sm" id="verifBulkApproveBtn">Approve selected</button>
+        </div>
+      </div>
       <div id="verificationList"><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
     </div>
 
@@ -362,6 +380,7 @@ async function renderModeration(){
           const cat = categoryById.get(l.categoryId);
           return `
       <div class="queue-row">
+        <input type="checkbox" class="q-check" data-listing-check="${l.id}" />
         <div class="q-main">
           <div class="q-title">${l.title} <span class="badge info" style="margin-left:6px;">${cat?cat.name:'Uncategorized'}</span></div>
           <div class="q-sub">Submitted ${new Date(l.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${money(Math.round(l.priceMinor/100))}/${l.priceUnit} · ${l.locationText}</div>
@@ -383,10 +402,56 @@ async function renderModeration(){
       try{ await apiFetch(`/admin/listings/${b.dataset.rejectListing}/reject`,{method:'POST'}); await renderModeration(); }
       catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
     }));
+    wireModBulkBar();
   }catch(e){
     document.getElementById('moderationList').innerHTML = `<p style="color:var(--ink-faint)">${apiErrorMessage(e)}</p>`;
   }
   renderOverviewExtras();
+}
+
+/* ---- bulk approve/reject for the listings moderation queue — re-wired on
+   every renderModeration() call since the row checkboxes are rebuilt from
+   scratch each time. Runs each admin/listings/:id/{approve,reject} call
+   concurrently (each is an independent write, no shared transaction to
+   worry about) and reports which ones failed rather than silently dropping
+   them, since a partial failure part-way through a batch is the realistic
+   failure mode here. */
+function wireModBulkBar(){
+  const bar=document.getElementById('modBulkBar');
+  const selectAll=document.getElementById('modSelectAll');
+  const countEl=document.getElementById('modSelectedCount');
+  function checkboxes(){ return [...document.querySelectorAll('[data-listing-check]')]; }
+  function selectedIds(){ return checkboxes().filter(c=>c.checked).map(c=>c.dataset.listingCheck); }
+  function syncBar(){
+    const n=selectedIds().length;
+    bar.style.display = checkboxes().length ? 'flex' : 'none';
+    countEl.textContent = n===0 ? 'Select listings to act on them together' : `${n} selected`;
+    selectAll.checked = n>0 && n===checkboxes().length;
+    selectAll.indeterminate = n>0 && n<checkboxes().length;
+  }
+  checkboxes().forEach(c=>c.addEventListener('change',syncBar));
+  selectAll.onchange=()=>{ checkboxes().forEach(c=>{c.checked=selectAll.checked;}); syncBar(); };
+  document.getElementById('modBulkApproveBtn').onclick=async ()=>{
+    const ids=selectedIds();
+    if(!ids.length) return;
+    if(!confirm(`Approve ${ids.length} listing${ids.length===1?'':'s'}?`)) return;
+    const btn=document.getElementById('modBulkApproveBtn'); btn.disabled=true;
+    const results = await Promise.allSettled(ids.map(id=>apiFetch(`/admin/listings/${id}/approve`,{method:'POST'})));
+    const failed = results.filter(r=>r.status==='rejected').length;
+    if(failed) alert(`${failed} of ${ids.length} could not be approved. The rest went through.`);
+    await renderModeration();
+  };
+  document.getElementById('modBulkRejectBtn').onclick=async ()=>{
+    const ids=selectedIds();
+    if(!ids.length) return;
+    if(!confirm(`Reject ${ids.length} listing${ids.length===1?'':'s'}? Providers will need to edit and resubmit.`)) return;
+    const btn=document.getElementById('modBulkRejectBtn'); btn.disabled=true;
+    const results = await Promise.allSettled(ids.map(id=>apiFetch(`/admin/listings/${id}/reject`,{method:'POST'})));
+    const failed = results.filter(r=>r.status==='rejected').length;
+    if(failed) alert(`${failed} of ${ids.length} could not be rejected. The rest went through.`);
+    await renderModeration();
+  };
+  syncBar();
 }
 
 /* ---- verification queue (real) ---- */
@@ -425,9 +490,12 @@ async function renderVerification(){
           return `
       <div class="queue-row" style="flex-direction:column;align-items:stretch;">
         <div style="display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:${docs.length?'14px':'0'};">
-          <div class="q-main">
-            <div class="q-title">${v.businessName||(v.user?v.user.fullName:'Provider')} <span class="badge info" style="margin-left:6px;">${typeOf(v)}</span></div>
-            <div class="q-sub">Submitted ${new Date(v.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${docs.length} document${docs.length===1?'':'s'}</div>
+          <div style="display:flex;gap:14px;align-items:center;flex:1;min-width:0;">
+            <input type="checkbox" class="q-check" data-provider-check="${v.id}" />
+            <div class="q-main">
+              <div class="q-title">${v.businessName||(v.user?v.user.fullName:'Provider')} <span class="badge info" style="margin-left:6px;">${typeOf(v)}</span></div>
+              <div class="q-sub">Submitted ${new Date(v.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${docs.length} document${docs.length===1?'':'s'}</div>
+            </div>
           </div>
           <div class="q-actions">
             <button class="pill-btn ghost sm" data-reject="${v.id}">Reject profile</button>
@@ -461,10 +529,54 @@ async function renderVerification(){
       try{ await apiFetch(`/admin/providers/verification-documents/${b.dataset.rejectDoc}/reject`,{method:'POST',body:{reason:reason.trim()}}); await renderVerification(); }
       catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
     }));
+    wireVerifBulkBar();
   }catch(e){
     document.getElementById('verificationList').innerHTML = `<p style="color:var(--ink-faint)">${apiErrorMessage(e)}</p>`;
   }
   renderOverviewExtras();
+}
+
+/* ---- bulk approve/reject for provider profiles in the verification queue.
+   Scoped to the provider-profile level only, not the nested per-document
+   rows below each one — those stay single-item actions since a document's
+   evidence genuinely needs individual review, unlike a batch of otherwise-
+   equivalent new listings. Bulk reject shares one typed reason across every
+   selected provider (same reason field the single-reject flow requires). */
+function wireVerifBulkBar(){
+  const bar=document.getElementById('verifBulkBar');
+  const selectAll=document.getElementById('verifSelectAll');
+  const countEl=document.getElementById('verifSelectedCount');
+  function checkboxes(){ return [...document.querySelectorAll('[data-provider-check]')]; }
+  function selectedIds(){ return checkboxes().filter(c=>c.checked).map(c=>c.dataset.providerCheck); }
+  function syncBar(){
+    const n=selectedIds().length;
+    bar.style.display = checkboxes().length ? 'flex' : 'none';
+    countEl.textContent = n===0 ? 'Select providers to act on them together' : `${n} selected`;
+    selectAll.checked = n>0 && n===checkboxes().length;
+    selectAll.indeterminate = n>0 && n<checkboxes().length;
+  }
+  checkboxes().forEach(c=>c.addEventListener('change',syncBar));
+  selectAll.onchange=()=>{ checkboxes().forEach(c=>{c.checked=selectAll.checked;}); syncBar(); };
+  document.getElementById('verifBulkApproveBtn').onclick=async ()=>{
+    const ids=selectedIds();
+    if(!ids.length) return;
+    if(!confirm(`Approve ${ids.length} provider${ids.length===1?'':'s'}?`)) return;
+    const results = await Promise.allSettled(ids.map(id=>apiFetch(`/admin/providers/${id}/verify`,{method:'POST'})));
+    const failed = results.filter(r=>r.status==='rejected').length;
+    if(failed) alert(`${failed} of ${ids.length} could not be approved. The rest went through.`);
+    await renderVerification();
+  };
+  document.getElementById('verifBulkRejectBtn').onclick=async ()=>{
+    const ids=selectedIds();
+    if(!ids.length) return;
+    const reason = prompt(`Reason for rejecting ${ids.length} provider${ids.length===1?'':'s'} (visible to them):`);
+    if(!reason || reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); return; }
+    const results = await Promise.allSettled(ids.map(id=>apiFetch(`/admin/providers/${id}/reject`,{method:'POST',body:{reason:reason.trim()}})));
+    const failed = results.filter(r=>r.status==='rejected').length;
+    if(failed) alert(`${failed} of ${ids.length} could not be rejected. The rest went through.`);
+    await renderVerification();
+  };
+  syncBar();
 }
 
 /* ---- disputes queue (real — GET /admin/disputes, POST .../resolve) ---- */

@@ -122,6 +122,21 @@ export class ListingsService {
     await this.listingRepository.softDelete(id);
   }
 
+  /** [Admin] Removes a listing (e.g. test/junk data) — soft delete, reversible via the DB's deleted_at column, never a hard delete. */
+  async removeAsAdmin(id: string, adminId: string): Promise<void> {
+    const listing = await this.findByIdOrFail(id);
+    await this.listingRepository.softDelete(id);
+    await this.auditLogService.record({
+      actorId: adminId,
+      actorType: AuditActorType.ADMIN,
+      action: 'listing.remove',
+      entityType: 'Listing',
+      entityId: id,
+      before: { status: listing.status, title: listing.title },
+      after: { deleted: true },
+    });
+  }
+
   /** DRAFT/REJECTED submit for moderation; PAUSED reactivates directly (already approved once). */
   async publish(id: string): Promise<Listing> {
     const listing = await this.findByIdOrFail(id);

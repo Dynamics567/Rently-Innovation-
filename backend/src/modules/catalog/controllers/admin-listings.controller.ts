@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post } from '@nestjs/common';
+import { Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '@common/decorators/roles.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
@@ -34,5 +34,12 @@ export class AdminListingsController {
   @Post(':id/reject')
   async reject(@Param('id') id: string, @CurrentUser() admin: AuthenticatedUser) {
     return this.listingsService.reject(id, admin.id);
+  }
+
+  /** Soft-deletes a listing (e.g. test/junk data cleanup) — reversible via deleted_at, audit-logged. */
+  @Delete(':id')
+  async remove(@Param('id') id: string, @CurrentUser() admin: AuthenticatedUser) {
+    await this.listingsService.removeAsAdmin(id, admin.id);
+    return { removed: true };
   }
 }
