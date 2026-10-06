@@ -73,10 +73,11 @@ function requireSession(role) {
 
 /* ---------------- FETCH WRAPPER ---------------- */
 class ApiError extends Error {
-  constructor(code, message, status) {
+  constructor(code, message, status, requestId) {
     super(message);
     this.code = code;
     this.status = status;
+    this.requestId = requestId;
   }
 }
 
@@ -150,7 +151,7 @@ async function apiFetch(path, { method = 'GET', body, auth = true, idempotencyKe
         throw e;
       }
     }
-    throw new ApiError(json?.error?.code || 'INTERNAL_ERROR', json?.error?.message || 'Something went wrong.', res.status);
+    throw new ApiError(json?.error?.code || 'INTERNAL_ERROR', json?.error?.message || 'Something went wrong.', res.status, json?.error?.requestId);
   }
   return { data: json.data, meta: json.meta };
 }
@@ -182,7 +183,7 @@ async function apiUpload(path, formData) {
   const res = await fetch(`${API_BASE}${path}`, { method: 'POST', headers, body: formData });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new ApiError(json?.error?.code || 'INTERNAL_ERROR', json?.error?.message || 'Upload failed.', res.status);
+    throw new ApiError(json?.error?.code || 'INTERNAL_ERROR', json?.error?.message || 'Upload failed.', res.status, json?.error?.requestId);
   }
   return json.data;
 }
@@ -286,4 +287,9 @@ function mapBooking(b) {
 /** Renders a friendly message for a caught ApiError (or any Error) — never surfaces raw stack traces to the UI. */
 function apiErrorMessage(err) {
   return err instanceof ApiError ? err.message : 'Something went wrong. Please try again.';
+}
+
+/** The backend stamps every request with a correlation id (RequestIdMiddleware) and echoes it on every error body — this is what a support/debugging reference should quote, never a client-fabricated one. */
+function apiErrorRequestId(err) {
+  return err instanceof ApiError ? err.requestId : undefined;
 }

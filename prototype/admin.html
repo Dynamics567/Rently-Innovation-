@@ -9,145 +9,295 @@
 <link rel="apple-touch-icon" sizes="180x180" href="assets/images/favicon-180.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="assets/rently.css" />
 <style>
-body{padding-top:0;}
+/* ================================================================
+   Admin runs a denser, cooler, operational palette than the warm
+   marketing site — same brand blue/green/red semantics, no serif, no
+   oversized rounded cards. Scoped to this page only (overrides nothing
+   site-wide since these are new variable names, not re-declarations of
+   rently.css's own --bg/--ink/etc.).
+   ================================================================ */
+:root{
+  --op-bg:#F5F6F8; --op-surface:#FFFFFF; --op-border:#E3E6EB; --op-border-strong:#CBD0D9;
+  --op-text:#171A21; --op-text-soft:#4B5162; --op-text-faint:#8991A1;
+}
+body{padding-top:0;background:var(--op-bg);font-family:var(--sans);}
+h1,h2,h3{font-family:var(--sans);}
 .d-view{display:none;}
-.d-view.active{display:block;animation:fadeUp .35s var(--ease);}
-@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
-.admin-badge{display:inline-flex;align-items:center;gap:5px;background:var(--dark);color:var(--dark-ink);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:999px;margin-left:10px;}
-.queue-row{display:flex;gap:14px;align-items:center;padding:16px;border:1px solid var(--line);border-radius:14px;margin-bottom:12px;}
-.queue-row .q-main{flex:1;min-width:0;}
-.queue-row .q-title{font-size:13.5px;font-weight:600;}
-.queue-row .q-sub{font-size:12px;color:var(--ink-faint);margin-top:2px;}
-.queue-row .q-actions{display:flex;gap:8px;flex-shrink:0;}
-.queue-row .q-check{width:17px;height:17px;accent-color:var(--ink);flex-shrink:0;cursor:pointer;}
-.bulk-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 16px;border:1px solid var(--line-strong);border-radius:14px;margin-bottom:16px;background:var(--bg-alt);flex-wrap:wrap;}
-.bulk-select-all{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;color:var(--ink-soft);cursor:pointer;}
-.bulk-select-all input{width:17px;height:17px;accent-color:var(--ink);cursor:pointer;}
-.section-block{margin-bottom:40px;}
-.section-block .sb-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
-.section-block .sb-head h3{font-size:15px;font-weight:600;}
-.tabs-filter{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;}
-.tabs-filter button{padding:8px 15px;border-radius:999px;border:1.5px solid var(--line-strong);font-size:12.5px;font-weight:600;color:var(--ink-soft);}
-.tabs-filter button.on{background:var(--ink);border-color:var(--ink);color:#fff;}
-.role-check{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--ink-soft);margin-bottom:12px;cursor:pointer;}
-.role-check:last-child{margin-bottom:0;}
-.role-check input{accent-color:var(--ink);width:16px;height:16px;}
+.d-view.active{display:block;animation:fadeUp .25s var(--ease);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.admin-badge{display:inline-flex;align-items:center;gap:5px;background:var(--op-text);color:#fff;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:6px;margin-left:10px;}
 
-@media(max-width:680px){
-  .queue-row{flex-wrap:wrap;}
-  .queue-row .q-main{min-width:100%;order:1;margin-bottom:10px;}
-  .queue-row .q-actions{order:2;}
+/* ---- top bar: wordmark, global search trigger, exit ---- */
+.app-topbar{display:flex;align-items:center;gap:16px;padding:14px 24px;background:var(--op-surface);border-bottom:1px solid var(--op-border);position:sticky;top:0;z-index:40;}
+.search-trigger{flex:1;max-width:420px;display:flex;align-items:center;gap:10px;background:var(--op-bg);border:1px solid var(--op-border);border-radius:8px;padding:9px 12px;color:var(--op-text-faint);font-size:13px;cursor:pointer;}
+.search-trigger:hover{border-color:var(--op-border-strong);}
+.search-trigger kbd{margin-left:auto;font-size:10.5px;font-weight:600;background:var(--op-surface);border:1px solid var(--op-border-strong);border-radius:4px;padding:2px 6px;color:var(--op-text-faint);}
+
+/* ---- sidebar: grouped, flat, no rounded-pill nav items ---- */
+.app-shell{display:flex;min-height:100vh;padding-top:0;}
+.app-side{width:232px;flex-shrink:0;border-right:1px solid var(--op-border);padding:20px 12px;position:sticky;top:57px;height:calc(100vh - 57px);overflow-y:auto;background:var(--op-surface);}
+.side-group-lbl{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--op-text-faint);margin:18px 10px 6px;}
+.side-group-lbl:first-child{margin-top:4px;}
+.side-link{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;font-size:13px;font-weight:600;color:var(--op-text-soft);margin-bottom:1px;}
+.side-link svg{width:16px;height:16px;opacity:.8;flex-shrink:0;}
+.side-link:hover{background:var(--op-bg);color:var(--op-text);}
+.side-link.active{background:var(--blue-soft);color:var(--blue-dark);}
+.side-link.active svg{opacity:1;}
+.side-link .cnt{margin-left:auto;font-size:11px;font-weight:700;background:var(--op-border);color:var(--op-text-soft);border-radius:999px;padding:1px 7px;}
+.side-link.active .cnt{background:var(--blue);color:#fff;}
+@media(max-width:980px){.app-side{display:none;}.app-main{padding:20px 16px 60px !important;max-width:100% !important;}}
+.mobile-tabbar{display:none;}
+@media(max-width:980px){
+  .mobile-tabbar{display:flex;gap:6px;overflow-x:auto;padding:10px 14px;background:var(--op-surface);border-bottom:1px solid var(--op-border);position:sticky;top:57px;z-index:30;}
+  .mobile-tabbar::-webkit-scrollbar{display:none;}
+  .mobile-tabbar .side-link{flex-shrink:0;white-space:nowrap;margin-bottom:0;border:1px solid var(--op-border);}
+  .mobile-tabbar .side-link.active{border-color:var(--blue);}
 }
-.team-search-row{display:flex;gap:10px;align-items:flex-end;}
-@media(max-width:520px){
-  .team-search-row{flex-direction:column;align-items:stretch;}
-  .team-search-row .pill-btn{margin-bottom:0;}
-}
+
+.app-main{flex:1;min-width:0;padding:28px 32px 80px;max-width:1280px;}
+.app-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;gap:20px;flex-wrap:wrap;}
+.app-head h1{font-size:22px;font-weight:700;color:var(--op-text);}
+.app-head p{color:var(--op-text-soft);font-size:13px;margin-top:4px;max-width:540px;}
+
+/* ---- needs-attention list (Overview headline, not vanity KPIs) ---- */
+.attn-list{border:1px solid var(--op-border);border-radius:10px;overflow:hidden;background:var(--op-surface);}
+.attn-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--op-border);cursor:pointer;transition:.15s;}
+.attn-row:last-child{border-bottom:none;}
+.attn-row:hover{background:var(--op-bg);}
+.attn-row .ic{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--red-soft);color:var(--red);}
+.attn-row .ic.amber{background:var(--amber-soft);color:var(--amber-ink);}
+.attn-row .ic.blue{background:var(--blue-soft);color:var(--blue-dark);}
+.attn-row .main{flex:1;min-width:0;}
+.attn-row .t{font-size:13.5px;font-weight:600;color:var(--op-text);}
+.attn-row .s{font-size:12px;color:var(--op-text-faint);margin-top:1px;}
+.attn-row .n{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--op-text);}
+.attn-empty{padding:28px 16px;text-align:center;color:var(--op-text-faint);font-size:13px;}
+
+/* ---- secondary KPI row: smaller, flatter than the old marketing-style cards ---- */
+.kpi-row-sm{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.kpi-sm{background:var(--op-surface);border:1px solid var(--op-border);border-radius:8px;padding:14px 16px;}
+.kpi-sm .lbl{font-size:11px;color:var(--op-text-faint);font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+.kpi-sm .val{font-size:22px;font-weight:700;color:var(--op-text);margin-top:4px;font-variant-numeric:tabular-nums;}
+@media(max-width:760px){.kpi-row-sm{grid-template-columns:repeat(2,1fr);}}
+
+.section-block{margin-bottom:32px;}
+.section-block .sb-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.section-block .sb-head h3{font-size:13px;font-weight:700;color:var(--op-text);text-transform:uppercase;letter-spacing:.03em;}
+
+/* ---- filter bar: search input + status chips + date range, shared across every list view ---- */
+.filter-bar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+.filter-bar input[type="search"],.filter-bar input[type="date"]{background:var(--op-surface);border:1px solid var(--op-border);border-radius:7px;padding:8px 12px;font-size:13px;color:var(--op-text);min-width:180px;}
+.filter-bar select{background:var(--op-surface);border:1px solid var(--op-border);border-radius:7px;padding:8px 10px;font-size:13px;color:var(--op-text);}
+.chip-filter{display:flex;gap:6px;flex-wrap:wrap;}
+.chip-filter button{padding:6px 13px;border-radius:999px;border:1px solid var(--op-border-strong);font-size:12px;font-weight:600;color:var(--op-text-soft);background:var(--op-surface);}
+.chip-filter button.on{background:var(--op-text);border-color:var(--op-text);color:#fff;}
+
+/* ---- operational table: dense, click-to-open-drawer rows ---- */
+.optable-wrap{overflow-x:auto;border:1px solid var(--op-border);border-radius:10px;background:var(--op-surface);}
+.optable{width:100%;border-collapse:collapse;}
+.optable th{text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--op-text-faint);padding:10px 14px;border-bottom:1px solid var(--op-border);white-space:nowrap;}
+.optable td{padding:12px 14px;font-size:13px;color:var(--op-text);border-bottom:1px solid var(--op-border);vertical-align:middle;}
+.optable tbody tr:last-child td{border-bottom:none;}
+.optable tbody tr.clickable{cursor:pointer;transition:.12s;}
+.optable tbody tr.clickable:hover{background:var(--op-bg);}
+.optable .num{font-variant-numeric:tabular-nums;}
+.optable .check-col{width:36px;}
+.optable .q-check{width:15px;height:15px;accent-color:var(--blue);cursor:pointer;}
+.optable-wrap .optable{min-width:640px;}
+
+.bulk-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 16px;border:1px solid var(--op-border-strong);border-radius:8px;margin-bottom:12px;background:var(--blue-soft);flex-wrap:wrap;}
+.bulk-select-all{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--blue-dark);cursor:pointer;}
+.bulk-select-all input{width:15px;height:15px;accent-color:var(--blue);cursor:pointer;}
+
+/* ---- status pills (reuse .badge's palette, just tighter) ---- */
+.pill-status{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;}
+.pill-status.good{background:var(--green-soft);color:var(--green-dark);}
+.pill-status.warn{background:var(--amber-soft);color:var(--amber-ink);}
+.pill-status.bad{background:var(--red-soft);color:var(--red);}
+.pill-status.neutral{background:var(--op-border);color:var(--op-text-soft);}
+.pill-status.info{background:var(--blue-soft);color:var(--blue-dark);}
+
+/* ---- async state helper: loading / empty / error, used everywhere instead of ad hoc alert()s ---- */
+.state-box{padding:36px 20px;text-align:center;border:1px dashed var(--op-border-strong);border-radius:10px;color:var(--op-text-faint);font-size:13px;}
+.state-box.error{border-color:var(--red-soft);background:var(--red-soft);color:var(--red);}
+.state-box .ref{display:block;margin-top:8px;font-size:11px;font-family:monospace;color:inherit;opacity:.75;}
+.skel-row-sm{height:48px;border-radius:8px;margin-bottom:8px;background:linear-gradient(90deg,var(--op-border) 25%,#EDEFF3 37%,var(--op-border) 63%);background-size:400px 100%;animation:shimmer 1.6s infinite linear;}
+
+/* ---- record-detail drawer: slide-over from the right, tabbed ---- */
+.drawer-overlay{position:fixed;inset:0;background:rgba(10,12,18,.35);z-index:200;opacity:0;pointer-events:none;transition:.2s;}
+.drawer-overlay.open{opacity:1;pointer-events:auto;}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,92vw);background:var(--op-surface);z-index:201;box-shadow:-8px 0 32px rgba(0,0,0,.14);transform:translateX(100%);transition:.25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;}
+.drawer.open{transform:translateX(0);}
+.drawer-head{padding:20px 24px 0;border-bottom:1px solid var(--op-border);flex-shrink:0;}
+.drawer-head .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px;}
+.drawer-head h2{font-size:17px;font-weight:700;color:var(--op-text);}
+.drawer-head .sub{font-size:12.5px;color:var(--op-text-faint);margin-top:2px;}
+.drawer-close{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--op-text-faint);flex-shrink:0;}
+.drawer-close:hover{background:var(--op-bg);color:var(--op-text);}
+.drawer-tabs{display:flex;gap:4px;overflow-x:auto;}
+.drawer-tabs button{padding:9px 12px;font-size:12.5px;font-weight:600;color:var(--op-text-faint);border-bottom:2px solid transparent;white-space:nowrap;}
+.drawer-tabs button.on{color:var(--op-text);border-bottom-color:var(--blue);}
+.drawer-body{flex:1;overflow-y:auto;padding:20px 24px 40px;}
+.dkv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--op-border);font-size:13px;}
+.dkv:last-child{border-bottom:none;}
+.dkv .k{color:var(--op-text-faint);}
+.dkv .v{color:var(--op-text);font-weight:600;text-align:right;}
+.timeline-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--op-border);}
+.timeline-item:last-child{border-bottom:none;}
+.timeline-item .dot{width:8px;height:8px;border-radius:50%;background:var(--blue);margin-top:5px;flex-shrink:0;}
+.timeline-item .t{font-size:13px;font-weight:600;color:var(--op-text);}
+.timeline-item .s{font-size:11.5px;color:var(--op-text-faint);margin-top:1px;}
+
+/* ---- command palette (Cmd+K) ---- */
+.cmdk-overlay{position:fixed;inset:0;background:rgba(10,12,18,.45);z-index:300;display:none;align-items:flex-start;justify-content:center;padding-top:14vh;}
+.cmdk-overlay.open{display:flex;}
+.cmdk{width:min(560px,92vw);background:var(--op-surface);border-radius:12px;box-shadow:0 24px 64px rgba(0,0,0,.28);overflow:hidden;max-height:70vh;display:flex;flex-direction:column;}
+.cmdk input{width:100%;padding:16px 20px;font-size:15px;border-bottom:1px solid var(--op-border);color:var(--op-text);}
+.cmdk-results{overflow-y:auto;padding:8px;}
+.cmdk-group-lbl{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--op-text-faint);padding:10px 10px 4px;}
+.cmdk-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:7px;font-size:13.5px;color:var(--op-text);cursor:pointer;}
+.cmdk-row:hover,.cmdk-row.sel{background:var(--blue-soft);}
+.cmdk-row .meta{margin-left:auto;font-size:11.5px;color:var(--op-text-faint);}
+.cmdk-empty{padding:28px 20px;text-align:center;color:var(--op-text-faint);font-size:13px;}
+
+.role-check{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--op-text-soft);margin-bottom:10px;cursor:pointer;}
+.role-check:last-child{margin-bottom:0;}
+.role-check input{accent-color:var(--blue);width:16px;height:16px;}
+.field-sm label{font-size:12px;font-weight:600;color:var(--op-text-soft);display:block;margin-bottom:5px;}
+.field-sm input,.field-sm select,.field-sm textarea{width:100%;background:var(--op-surface);border:1px solid var(--op-border-strong);border-radius:7px;padding:9px 12px;font-size:13px;color:var(--op-text);margin-bottom:12px;}
 </style>
 </head>
 <body class="no-grain">
 
-<nav class="nav app-nav">
-  <div class="container nav-inner">
-    <a class="wordmark" href="homepage"><img src="assets/images/logo.png" alt="Rently" /></a>
-    <span class="admin-badge">Admin</span>
+<nav class="app-topbar">
+  <a class="wordmark" href="homepage" style="margin-right:4px;"><img src="assets/images/logo.png" alt="Rently" style="height:22px;" /></a>
+  <span class="admin-badge">Admin</span>
+  <div class="search-trigger" id="searchTrigger">
+    <span id="searchTriggerIcon"></span>
+    <span>Search customers, providers, listings…</span>
+    <kbd>⌘K</kbd>
   </div>
+  <a class="side-link" href="homepage" id="linkExit" style="margin-left:auto;"></a>
 </nav>
 
 <div class="mobile-tabbar">
   <a class="side-link active" data-view="overview" id="mLinkOverview"></a>
-  <a class="side-link" data-view="listings" id="mLinkListings"></a>
   <a class="side-link" data-view="bookings" id="mLinkBookings"></a>
   <a class="side-link" data-view="disputes" id="mLinkDisputes"></a>
+  <a class="side-link" data-view="listings" id="mLinkListings"></a>
+  <a class="side-link" data-view="providers" id="mLinkProviders"></a>
+  <a class="side-link" data-view="customers" id="mLinkCustomers"></a>
   <a class="side-link" data-view="verification" id="mLinkVerification"></a>
-  <a class="side-link" data-view="reports" id="mLinkReports"></a>
-  <a class="side-link" data-view="team" id="mLinkTeam" style="display:none;"></a>
+  <a class="side-link" data-view="reviews" id="mLinkReviews"></a>
+  <a class="side-link" data-view="audit" id="mLinkAudit"></a>
 </div>
 
 <div class="app-shell">
   <aside class="app-side">
-    <div class="side-group-lbl">Platform</div>
+    <div class="side-group-lbl">Overview</div>
     <a class="side-link active" data-view="overview" id="linkOverview"></a>
-    <a class="side-link" data-view="listings" id="linkListings"></a>
+
+    <div class="side-group-lbl">Operations</div>
     <a class="side-link" data-view="bookings" id="linkBookings"></a>
+    <a class="side-link" data-view="returns" id="linkReturns"></a>
     <a class="side-link" data-view="disputes" id="linkDisputes"></a>
+
+    <div class="side-group-lbl">Marketplace</div>
+    <a class="side-link" data-view="listings" id="linkListings"></a>
+    <a class="side-link" data-view="categories" id="linkCategories"></a>
+    <a class="side-link" data-view="providers" id="linkProviders"></a>
+    <a class="side-link" data-view="customers" id="linkCustomers"></a>
+
+    <div class="side-group-lbl">Trust &amp; Safety</div>
     <a class="side-link" data-view="verification" id="linkVerification"></a>
-    <a class="side-link" data-view="reports" id="linkReports"></a>
-    <a class="side-link" data-view="team" id="linkTeam" style="display:none;"></a>
-    <div class="side-group-lbl">Exit</div>
-    <a class="side-link" href="homepage" id="linkExit"></a>
+    <a class="side-link" data-view="reviews" id="linkReviews"></a>
+
+    <div class="side-group-lbl">Admin</div>
+    <a class="side-link" data-view="audit" id="linkAudit"></a>
+
+    <div class="side-group-lbl">Not built yet</div>
+    <a class="side-link" data-view="planned" id="linkPlanned" style="opacity:.6;"></a>
   </aside>
 
   <main class="app-main">
     <!-- ============ OVERVIEW ============ -->
     <div class="d-view active" id="view-overview">
-      <div class="app-head"><div><h1 id="overviewGreeting">Platform overview</h1><p id="overviewSubtitle">Rently-wide health, at a glance — not scoped to any one provider.</p></div></div>
-
-      <div class="kpi-row" style="margin-bottom:24px;" id="overviewKpiRow"></div>
-
-      <div class="banner info" style="margin-bottom:40px;"><div><div class="t">Not available yet</div><div class="d">A platform-wide bookings/GMV view needs an admin-scoped bookings endpoint, which hasn't been built yet.</div></div></div>
+      <div class="app-head"><div><h1 id="overviewGreeting">Overview</h1><p id="overviewSubtitle">Rently-wide health, at a glance.</p></div></div>
 
       <div class="section-block">
-        <div class="sb-head"><h3>Queue composition</h3></div>
-        <div style="display:flex;gap:36px;flex-wrap:wrap;">
-          <div style="flex:1;min-width:220px;">
-            <div style="font-size:12px;color:var(--ink-faint);font-weight:600;margin-bottom:12px;">Verification by type</div>
-            <div id="verifTypeChart"></div>
-          </div>
-          <div style="flex:1;min-width:220px;">
-            <div style="font-size:12px;color:var(--ink-faint);font-weight:600;margin-bottom:12px;">Listings by category</div>
-            <div id="listingCatChart"></div>
-          </div>
-          <div style="flex:1;min-width:220px;">
-            <div style="font-size:12px;color:var(--ink-faint);font-weight:600;margin-bottom:12px;">Disputes by status</div>
-            <div id="disputeStatusChart"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="section-block" id="insightsSection" style="display:none;">
-        <div class="sb-head"><h3>Insights</h3></div>
-        <div id="insightsList"></div>
+        <div class="sb-head"><h3>Needs attention</h3></div>
+        <div class="attn-list" id="attnList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
       </div>
 
       <div class="section-block">
-        <div class="sb-head"><h3>Quick actions</h3></div>
-        <div id="quickActions" style="display:flex;gap:12px;flex-wrap:wrap;"></div>
-      </div>
-
-      <div class="section-block">
-        <div class="sb-head"><h3>Recently submitted</h3></div>
-        <div id="recentSubmittedList"><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
+        <div class="sb-head"><h3>At a glance</h3></div>
+        <div class="kpi-row-sm" id="kpiRowSm"></div>
       </div>
     </div>
 
-    <!-- ============ LISTINGS MODERATION ============ -->
-    <div class="d-view" id="view-listings">
-      <div class="app-head"><div><h1>Listings moderation</h1><p>New listings wait here after a provider submits them, until approved or rejected.</p></div></div>
-      <div class="bulk-bar" id="modBulkBar" style="display:none;">
-        <label class="bulk-select-all"><input type="checkbox" id="modSelectAll" /><span id="modSelectedCount">0 selected</span></label>
-        <div class="q-actions">
-          <button class="pill-btn ghost sm" id="modBulkRejectBtn">Reject selected</button>
-          <button class="pill-btn green sm" id="modBulkApproveBtn">Approve selected</button>
-        </div>
-      </div>
-      <div id="moderationList"><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
-    </div>
-
-    <!-- ============ BOOKINGS ============ -->
+    <!-- ============ BOOKINGS / RETURNS ============ -->
     <div class="d-view" id="view-bookings">
-      <div class="app-head"><div><h1>All bookings</h1><p>Every booking on Rently, across every provider and category.</p></div></div>
-      <div class="banner info"><div><div class="t">Not available yet</div><div class="d">A platform-wide bookings view needs the Admin module, which hasn't been built yet — provider verification and listings moderation are wired up so far.</div></div></div>
+      <div class="app-head"><div><h1 id="bookingsTitle">Bookings</h1><p id="bookingsSub">Every booking on Rently, across every provider and renter.</p></div></div>
+      <div class="filter-bar">
+        <select id="bkStatusFilter"><option value="">Any status</option></select>
+        <input type="date" id="bkFromFilter" title="From" />
+        <input type="date" id="bkToFilter" title="To" />
+        <button class="pill-btn ghost sm" id="bkFilterApply">Apply</button>
+      </div>
+      <div id="bookingsList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
+      <div style="margin-top:14px;text-align:center;"><button class="pill-btn ghost sm" id="bkLoadMore" style="display:none;">Load more</button></div>
     </div>
-
     <!-- ============ DISPUTES ============ -->
     <div class="d-view" id="view-disputes">
       <div class="app-head"><div><h1>Disputes</h1><p>Damage claims flagged by a provider at inspection — resolve from any state, whether or not the two parties have agreed.</p></div></div>
-      <div class="tabs-filter" id="disputeStatusFilter"></div>
-      <div id="disputesList"><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
+      <div class="chip-filter" id="disputeStatusFilter" style="margin-bottom:14px;"></div>
+      <div id="disputesList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
+    </div>
+
+    <!-- ============ LISTINGS ============ -->
+    <div class="d-view" id="view-listings">
+      <div class="app-head"><div><h1>Listings</h1><p>Every listing on Rently, any status — approve new submissions, pause one that's causing problems, or dig into any single listing.</p></div></div>
+      <div class="filter-bar">
+        <input type="search" id="lstSearch" placeholder="Search title, description, location…" />
+        <div class="chip-filter" id="lstStatusFilter"></div>
+      </div>
+      <div class="bulk-bar" id="lstBulkBar" style="display:none;">
+        <label class="bulk-select-all"><input type="checkbox" id="lstSelectAll" /><span id="lstSelectedCount">0 selected</span></label>
+        <div class="q-actions" style="display:flex;gap:8px;">
+          <button class="pill-btn ghost sm" id="lstBulkRejectBtn">Reject selected</button>
+          <button class="pill-btn green sm" id="lstBulkApproveBtn">Approve selected</button>
+        </div>
+      </div>
+      <div id="listingsList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
+      <div style="margin-top:14px;text-align:center;"><button class="pill-btn ghost sm" id="lstLoadMore" style="display:none;">Load more</button></div>
+    </div>
+
+    <!-- ============ CATEGORIES ============ -->
+    <div class="d-view" id="view-categories">
+      <div class="app-head">
+        <div><h1>Categories</h1><p>The taxonomy every listing is filed under.</p></div>
+        <button class="pill-btn blue sm" id="catAddBtn">Add category</button>
+      </div>
+      <div id="categoriesList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
+    </div>
+
+    <!-- ============ PROVIDERS ============ -->
+    <div class="d-view" id="view-providers">
+      <div class="app-head"><div><h1>Providers</h1><p>Every provider on Rently, any verification status.</p></div></div>
+      <div class="filter-bar"><input type="search" id="provSearch" placeholder="Search business name, owner, email…" /></div>
+      <div id="providersList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
+      <div style="margin-top:14px;text-align:center;"><button class="pill-btn ghost sm" id="provLoadMore" style="display:none;">Load more</button></div>
+    </div>
+
+    <!-- ============ CUSTOMERS ============ -->
+    <div class="d-view" id="view-customers">
+      <div class="app-head"><div><h1>Customers</h1><p>Every account on Rently — renters, providers, and staff.</p></div></div>
+      <div class="filter-bar"><input type="search" id="custSearch" placeholder="Search name or email…" /></div>
+      <div id="customersList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
+      <div style="margin-top:14px;text-align:center;"><button class="pill-btn ghost sm" id="custLoadMore" style="display:none;">Load more</button></div>
     </div>
 
     <!-- ============ VERIFICATION ============ -->
@@ -155,66 +305,78 @@ body{padding-top:0;}
       <div class="app-head"><div><h1>Provider verification queue</h1><p>New providers can't publish a listing until their ID or business registration is approved.</p></div></div>
       <div class="bulk-bar" id="verifBulkBar" style="display:none;">
         <label class="bulk-select-all"><input type="checkbox" id="verifSelectAll" /><span id="verifSelectedCount">0 selected</span></label>
-        <div class="q-actions">
+        <div class="q-actions" style="display:flex;gap:8px;">
           <button class="pill-btn ghost sm" id="verifBulkRejectBtn">Reject selected</button>
           <button class="pill-btn green sm" id="verifBulkApproveBtn">Approve selected</button>
         </div>
       </div>
-      <div id="verificationList"><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
+      <div id="verificationList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
     </div>
 
-    <!-- ============ REPORTS ============ -->
-    <div class="d-view" id="view-reports">
-      <div class="app-head"><div><h1>Reports</h1><p>Built from the two live queues — no fabricated numbers.</p></div></div>
-      <div class="banner info" style="margin-bottom:28px;"><div><div class="t">Point-in-time snapshot</div><div class="d">This reflects the queues right now, not historical trends — approval/rejection history isn't tracked yet.</div></div></div>
-
-      <div class="section-block">
-        <div class="sb-head"><h3>Listings moderation queue by category</h3></div>
-        <div id="reportListingCatChart" style="margin-bottom:20px;"></div>
-        <div class="dtable-wrap">
-          <table class="dtable">
-            <thead><tr><th>Category</th><th>Count</th></tr></thead>
-            <tbody id="reportListingCatTbody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="section-block">
-        <div class="sb-head"><h3>Verification queue by type</h3></div>
-        <div id="reportVerifTypeChart" style="margin-bottom:20px;"></div>
-        <div class="dtable-wrap">
-          <table class="dtable">
-            <thead><tr><th>Type</th><th>Count</th></tr></thead>
-            <tbody id="reportVerifTypeTbody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="section-block">
-        <div class="sb-head"><h3>Disputes by status</h3></div>
-        <div id="reportDisputeStatusChart" style="margin-bottom:20px;"></div>
-        <div class="dtable-wrap">
-          <table class="dtable">
-            <thead><tr><th>Status</th><th>Count</th></tr></thead>
-            <tbody id="reportDisputeStatusTbody"></tbody>
-          </table>
-        </div>
-      </div>
+    <!-- ============ REVIEWS ============ -->
+    <div class="d-view" id="view-reviews">
+      <div class="app-head"><div><h1>Reviews</h1><p>Hiding a review removes it from public listing/provider pages — reversible, never a delete.</p></div></div>
+      <div class="filter-bar"><input type="search" id="revSearch" placeholder="Search review text…" /></div>
+      <div id="reviewsList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
+      <div style="margin-top:14px;text-align:center;"><button class="pill-btn ghost sm" id="revLoadMore" style="display:none;">Load more</button></div>
     </div>
 
-    <!-- ============ TEAM & ACCESS (super admin only) ============ -->
-    <div class="d-view" id="view-team">
-      <div class="app-head"><div><h1>Team &amp; access</h1><p>Look up an account by email and grant or remove admin access.</p></div></div>
-      <div class="section-block" style="max-width:480px;">
-        <div class="team-search-row">
-          <div class="field" style="flex:1;margin-bottom:0;"><label>Find a person by email</label><input type="email" id="teamEmailInput" placeholder="person@example.com" /></div>
-          <button class="pill-btn blue" id="teamSearchBtn" style="margin-bottom:0;">Search</button>
-        </div>
-        <div id="teamError" class="banner danger" style="display:none;margin-top:16px;"></div>
+    <!-- ============ AUDIT LOG ============ -->
+    <div class="d-view" id="view-audit">
+      <div class="app-head"><div><h1>Audit log</h1><p>Every sensitive admin action — who, what, when, before and after.</p></div></div>
+      <div class="filter-bar">
+        <select id="auditEntityFilter"><option value="">Any entity type</option></select>
+        <button class="pill-btn ghost sm" id="auditClearFilter">Clear filter</button>
       </div>
-      <div id="teamResult" style="max-width:480px;"></div>
+      <div id="auditList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
+      <div style="margin-top:14px;text-align:center;"><button class="pill-btn ghost sm" id="auditLoadMore" style="display:none;">Load more</button></div>
+    </div>
+
+    <!-- ============ PLANNED (honest placeholder) ============ -->
+    <div class="d-view" id="view-planned">
+      <div class="app-head"><div><h1>Planned</h1><p>Real backend work, not yet built — listed here instead of hidden, so the roadmap is honest about what exists today.</p></div></div>
+      <div class="optable-wrap">
+        <table class="optable">
+          <thead><tr><th>Module</th><th>Status</th></tr></thead>
+          <tbody id="plannedTbody"></tbody>
+        </table>
+      </div>
     </div>
   </main>
+</div>
+
+<!-- ============ RECORD-DETAIL DRAWER ============ -->
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div class="top">
+      <div><h2 id="drawerTitle"></h2><div class="sub" id="drawerSub"></div></div>
+      <button class="drawer-close" id="drawerCloseBtn"></button>
+    </div>
+    <div class="drawer-tabs" id="drawerTabs"></div>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</div>
+
+<!-- ============ COMMAND PALETTE ============ -->
+<div class="cmdk-overlay" id="cmdkOverlay">
+  <div class="cmdk">
+    <input type="text" id="cmdkInput" placeholder="Search customers, providers, listings…" autocomplete="off" />
+    <div class="cmdk-results" id="cmdkResults"></div>
+  </div>
+</div>
+
+<!-- ============ CATEGORY EDIT MODAL ============ -->
+<div class="overlay" id="catOverlay">
+  <div class="modal">
+    <button class="modal-close" id="catCloseBtn"></button>
+    <h3 style="font-size:18px;margin-bottom:18px;" id="catModalTitle">Add category</h3>
+    <div id="catModalError" class="banner danger" style="display:none;margin-bottom:14px;"></div>
+    <div class="field-sm"><label>Name</label><input type="text" id="catNameInput" placeholder="e.g. Event & Party" /></div>
+    <div class="field-sm"><label>Slug</label><input type="text" id="catSlugInput" placeholder="e.g. event" /></div>
+    <div class="field-sm"><label>Commission (basis points, 500 = 5%)</label><input type="number" id="catCommissionInput" placeholder="500" /></div>
+    <button class="pill-btn blue block" id="catSaveBtn">Save category</button>
+  </div>
 </div>
 
 <script src="assets/rently.js"></script>
@@ -223,203 +385,341 @@ body{padding-top:0;}
 const session = requireSession('admin');
 </script>
 <script>
-document.querySelector('.admin-badge').innerHTML = icon('shield',{size:11,stroke:3})+' Admin';
-document.getElementById('linkOverview').innerHTML = icon('grid',{size:17})+' Overview';
-document.getElementById('linkListings').innerHTML = icon('grid',{size:17})+' Listings';
-document.getElementById('linkBookings').innerHTML = icon('calendar',{size:17})+' All Bookings';
-document.getElementById('linkDisputes').innerHTML = icon('alert',{size:17})+' Disputes';
-document.getElementById('overviewKpiRow').innerHTML =
-  kpiCard('statListings','Pending listings',{icon:'list',accent:'blue'}) +
-  kpiCard('statVerif','Pending verifications',{icon:'shield',accent:'amber'}) +
-  kpiCard('statDisputes','Open disputes',{icon:'alert',accent:'red'}) +
-  kpiCard('statOverdue','Waiting &gt;24h',{icon:'clock'});
-document.getElementById('linkVerification').innerHTML = icon('shield',{size:17})+' Verification';
-document.getElementById('linkReports').innerHTML = icon('filter',{size:17})+' Reports';
-document.getElementById('linkExit').innerHTML = icon('logout',{size:17})+' Exit to site';
-document.getElementById('mLinkOverview').innerHTML = icon('grid',{size:16})+' Overview';
-document.getElementById('mLinkListings').innerHTML = icon('grid',{size:16})+' Listings';
-document.getElementById('mLinkBookings').innerHTML = icon('calendar',{size:16})+' Bookings';
-document.getElementById('mLinkDisputes').innerHTML = icon('alert',{size:16})+' Disputes';
-document.getElementById('mLinkVerification').innerHTML = icon('shield',{size:16})+' Verify';
-document.getElementById('mLinkReports').innerHTML = icon('filter',{size:16})+' Reports';
-document.getElementById('linkTeam').innerHTML = icon('user',{size:17})+' Team & Access';
-document.getElementById('mLinkTeam').innerHTML = icon('user',{size:16})+' Team';
-
-/* ---- "Team & Access" is SUPER_ADMIN-only on the backend — hide the nav
-   entirely for a plain admin rather than show a screen that would just 403. ---- */
-if(session && session.user.roles.includes('super_admin')){
-  document.getElementById('linkTeam').style.display='';
-  document.getElementById('mLinkTeam').style.display='';
-}
+/* ================================================================
+   NAV + ICONS
+   ================================================================ */
+document.querySelector('.admin-badge').innerHTML = icon('shield',{size:11,stroke:3});
+document.getElementById('searchTriggerIcon').innerHTML = icon('search',{size:15});
+document.getElementById('linkExit').innerHTML = icon('logout',{size:16})+' Exit';
+document.getElementById('linkOverview').innerHTML = icon('grid',{size:16})+' Overview';
+document.getElementById('linkBookings').innerHTML = icon('calendar',{size:16})+' Bookings';
+document.getElementById('linkReturns').innerHTML = icon('arrowRight',{size:16})+' Returns';
+document.getElementById('linkDisputes').innerHTML = icon('alert',{size:16})+' Disputes';
+document.getElementById('linkListings').innerHTML = icon('list',{size:16})+' Listings';
+document.getElementById('linkCategories').innerHTML = icon('grid',{size:16})+' Categories';
+document.getElementById('linkProviders').innerHTML = icon('building',{size:16})+' Providers';
+document.getElementById('linkCustomers').innerHTML = icon('user',{size:16})+' Customers';
+document.getElementById('linkVerification').innerHTML = icon('shield',{size:16})+' Verification';
+document.getElementById('linkReviews').innerHTML = icon('star',{size:16})+' Reviews';
+document.getElementById('linkAudit').innerHTML = icon('filter',{size:16})+' Audit log';
+document.getElementById('linkPlanned').innerHTML = icon('info',{size:16})+' Roadmap';
+document.getElementById('mLinkOverview').innerHTML = icon('grid',{size:15})+' Overview';
+document.getElementById('mLinkBookings').innerHTML = icon('calendar',{size:15})+' Bookings';
+document.getElementById('mLinkDisputes').innerHTML = icon('alert',{size:15})+' Disputes';
+document.getElementById('mLinkListings').innerHTML = icon('list',{size:15})+' Listings';
+document.getElementById('mLinkProviders').innerHTML = icon('building',{size:15})+' Providers';
+document.getElementById('mLinkCustomers').innerHTML = icon('user',{size:15})+' Customers';
+document.getElementById('mLinkVerification').innerHTML = icon('shield',{size:15})+' Verify';
+document.getElementById('mLinkReviews').innerHTML = icon('star',{size:15})+' Reviews';
+document.getElementById('mLinkAudit').innerHTML = icon('filter',{size:15})+' Audit';
+document.getElementById('drawerCloseBtn').innerHTML = icon('close',{size:15});
+document.getElementById('catCloseBtn').innerHTML = icon('close',{size:15});
 
 function goView(v){
+  // "Returns" has no DOM of its own — it's the Bookings view's exact table,
+  // pre-filtered to return-related stages (see loadBookings's second arg).
+  // Reusing the same markup rather than duplicating it is what keeps this
+  // from being a second, divergent copy of the bookings table.
+  const domView = v==='returns' ? 'bookings' : v;
   document.querySelectorAll('.side-link[data-view]').forEach(o=>o.classList.toggle('active',o.dataset.view===v));
   document.querySelectorAll('.d-view').forEach(el=>el.classList.remove('active'));
-  document.getElementById('view-'+v).classList.add('active');
+  const el = document.getElementById('view-'+domView);
+  (el||document.getElementById('view-overview')).classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
+  if(v==='bookings') loadBookings(true);
+  if(v==='returns') loadBookings(true, RETURN_STAGES);
+  if(v==='listings') loadListings(true);
+  if(v==='categories') loadCategories();
+  if(v==='providers') loadProviders(true);
+  if(v==='customers') loadCustomers(true);
+  if(v==='reviews') loadReviews(true);
+  if(v==='audit') loadAuditLog(true);
+  if(v==='planned') renderPlanned();
 }
 document.querySelectorAll('.side-link[data-view]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goView(l.dataset.view);}));
-document.querySelectorAll('[data-view-link]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goView(l.dataset.viewLink);}));
 
-/* ---- welcome + personalization (from the real lastLoginAt field) ---- */
-function money2(minor){ return money(Math.round((minor||0)/100)); }
-function daysAgo(dateStr){ return Math.floor((Date.now()-new Date(dateStr).getTime())/86400000); }
-function relativeTime(dateStr){
-  if(!dateStr) return '';
-  const d=daysAgo(dateStr);
-  if(d<=0) return 'today';
-  if(d===1) return 'yesterday';
-  if(d<7) return d+' days ago';
-  return new Date(dateStr).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+/* ================================================================
+   SHARED: async state rendering — loading/empty/error, every list
+   view uses this instead of an ad hoc try/catch + alert().
+   ================================================================ */
+function stateError(err){
+  const reqId = apiErrorRequestId(err);
+  return `<div class="state-box error">${apiErrorMessage(err)}${reqId?`<span class="ref">Reference: ${reqId}</span>`:''}</div>`;
 }
+function stateEmpty(message){
+  return `<div class="state-box">${message}</div>`;
+}
+
+/* ================================================================
+   RECORD-DETAIL DRAWER — generic tabbed slide-over. `tabs` is
+   [{key,label,render: async () => htmlString}]. Each entity view
+   supplies only the tabs that make sense for it.
+   ================================================================ */
+let drawerTabs=[], drawerActiveTab=null;
+function openDrawer(title, sub, tabs){
+  drawerTabs = tabs;
+  document.getElementById('drawerTitle').textContent = title;
+  document.getElementById('drawerSub').textContent = sub||'';
+  document.getElementById('drawerTabs').innerHTML = tabs.map(t=>`<button data-dtab="${t.key}">${t.label}</button>`).join('');
+  document.querySelectorAll('[data-dtab]').forEach(b=>b.addEventListener('click',()=>selectDrawerTab(b.dataset.dtab)));
+  document.getElementById('drawerOverlay').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+  selectDrawerTab(tabs[0].key);
+}
+async function selectDrawerTab(key){
+  drawerActiveTab = key;
+  document.querySelectorAll('[data-dtab]').forEach(b=>b.classList.toggle('on', b.dataset.dtab===key));
+  const tab = drawerTabs.find(t=>t.key===key);
+  const body = document.getElementById('drawerBody');
+  body.innerHTML = `<div class="skel-row-sm"></div>`;
+  try{ body.innerHTML = await tab.render(); }
+  catch(e){ body.innerHTML = stateError(e); }
+}
+function closeDrawer(){
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+}
+document.getElementById('drawerCloseBtn').addEventListener('click',closeDrawer);
+document.getElementById('drawerOverlay').addEventListener('click',closeDrawer);
+
+function dkv(k,v){ return `<div class="dkv"><span class="k">${k}</span><span class="v">${v}</span></div>`; }
+
+/** Deep-links a drawer tab into the Audit Log view, filtered to one entity — reused by every entity's Audit tab. */
+function auditTabFor(entityType, entityId){
+  return { key:'audit', label:'Audit', render: async ()=>{
+    try{
+      const {data} = await apiFetch(`/admin/audit-log?entity_type=${entityType}&entity_id=${entityId}&limit=20`);
+      if(!data.length) return stateEmpty('No audit entries for this record yet.');
+      return data.map(renderAuditRow).join('');
+    }catch(e){ return stateError(e); }
+  }};
+}
+function renderAuditRow(a){
+  return `<div class="timeline-item"><div class="dot"></div><div><div class="t">${a.action}</div><div class="s">${new Date(a.createdAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}${a.after&&a.after.reason?' — '+a.after.reason:''}</div></div></div>`;
+}
+
+/* ================================================================
+   COMMAND PALETTE (Cmd+K)
+   ================================================================ */
+const cmdkOverlay=document.getElementById('cmdkOverlay'), cmdkInput=document.getElementById('cmdkInput'), cmdkResults=document.getElementById('cmdkResults');
+function openCmdk(){ cmdkOverlay.classList.add('open'); cmdkInput.value=''; cmdkResults.innerHTML=`<div class="cmdk-empty">Type at least 2 characters…</div>`; cmdkInput.focus(); }
+function closeCmdk(){ cmdkOverlay.classList.remove('open'); }
+document.getElementById('searchTrigger').addEventListener('click',openCmdk);
+cmdkOverlay.addEventListener('click',(e)=>{ if(e.target===cmdkOverlay) closeCmdk(); });
+document.addEventListener('keydown',(e)=>{
+  if((e.metaKey||e.ctrlKey) && e.key==='k'){ e.preventDefault(); openCmdk(); }
+  if(e.key==='Escape'){ closeCmdk(); closeDrawer(); }
+});
+let cmdkDebounce=null;
+cmdkInput.addEventListener('input',()=>{
+  clearTimeout(cmdkDebounce);
+  const q=cmdkInput.value.trim();
+  if(q.length<2){ cmdkResults.innerHTML=`<div class="cmdk-empty">Type at least 2 characters…</div>`; return; }
+  cmdkDebounce=setTimeout(async ()=>{
+    try{
+      const {data} = await apiFetch(`/admin/search?q=${encodeURIComponent(q)}`);
+      renderCmdkResults(data);
+    }catch(e){ cmdkResults.innerHTML = stateError(e); }
+  },250);
+});
+function renderCmdkResults(data){
+  const groups=[
+    {label:'Customers', rows:data.customers.map(c=>({text:c.fullName, meta:c.email||'', onClick:()=>{closeCmdk();goView('customers');openCustomerDrawer(c.id);}}))},
+    {label:'Providers', rows:data.providers.map(p=>({text:p.businessName||(p.user?p.user.fullName:'Provider'), meta:p.verificationStatus, onClick:()=>{closeCmdk();goView('providers');openProviderDrawer(p.id);}}))},
+    {label:'Listings', rows:data.listings.map(l=>({text:l.title, meta:l.status, onClick:()=>{closeCmdk();goView('listings');openListingDrawer(l.id);}}))},
+  ].filter(g=>g.rows.length);
+  if(!groups.length){ cmdkResults.innerHTML=`<div class="cmdk-empty">No matches.</div>`; return; }
+  cmdkResults.innerHTML = groups.map(g=>`
+    <div class="cmdk-group-lbl">${g.label}</div>
+    ${g.rows.map((r,i)=>`<div class="cmdk-row" data-g="${g.label}" data-i="${i}"><span>${r.text}</span><span class="meta">${r.meta}</span></div>`).join('')}
+  `).join('');
+  groups.forEach(g=>g.rows.forEach((r,i)=>{
+    document.querySelector(`[data-g="${g.label}"][data-i="${i}"]`).addEventListener('click',r.onClick);
+  }));
+}
+
+/* ================================================================
+   OVERVIEW — needs-attention first, KPIs secondary. Counts come from
+   each real queue's own endpoint (limit=100, "100+" shown honestly if
+   there's more — no dedicated count endpoint exists yet).
+   ================================================================ */
 function renderWelcome(){
-  const firstName = (session.user.fullName||'').split(' ')[0];
+  const firstName=(session.user.fullName||'').split(' ')[0];
   document.getElementById('overviewGreeting').textContent = 'Welcome, '+firstName;
-  let subtitle = 'Rently-wide health, at a glance — not scoped to any one provider.';
-  if(session.user.lastLoginAt){
-    const d = daysAgo(session.user.lastLoginAt);
-    if(d>=1) subtitle += ` Last seen ${d===1?'yesterday':d+' days ago'}.`;
-  }
-  document.getElementById('overviewSubtitle').textContent = subtitle;
 }
-
-/* ---- overview KPIs, queue composition, insights, quick actions, recently
-   submitted, and Reports — all computed client-side from the two real
-   queues fetched by renderModeration()/renderVerification() below ---- */
-const pendingCounts = { verification: 0, listings: 0 };
-let moderationQueue=[], verificationQueue=[], disputeQueue=[];
-const DISPUTE_OPEN_STATUSES=['open','proposed','contested'];
-async function renderOverviewExtras(){
-  document.getElementById('statListings').textContent = pendingCounts.listings;
-  document.getElementById('statVerif').textContent = pendingCounts.verification;
-  document.getElementById('statDisputes').textContent = disputeQueue.filter(d=>DISPUTE_OPEN_STATUSES.includes(d.status)).length;
-
-  const overdueListings = moderationQueue.filter(l=>daysAgo(l.createdAt)>=1);
-  const overdueVerifs = verificationQueue.filter(v=>daysAgo(v.createdAt)>=1);
-  const overdueDisputes = disputeQueue.filter(d=>DISPUTE_OPEN_STATUSES.includes(d.status) && daysAgo(d.createdAt)>=1);
-  document.getElementById('statOverdue').textContent = overdueListings.length + overdueVerifs.length + overdueDisputes.length;
-
-  const categoryById = await getCategoryMapById().catch(()=>new Map());
-  const catCounts = {};
-  moderationQueue.forEach(l=>{
-    const name = (categoryById.get(l.categoryId)||{}).name || 'Uncategorized';
-    catCounts[name] = (catCounts[name]||0)+1;
-  });
-  const catRows = Object.entries(catCounts).map(([label,count])=>({label,count}));
-  const verifTypeRows = [
-    {label:'Business', count:verificationQueue.filter(v=>v.businessRegistrationNo).length},
-    {label:'Individual', count:verificationQueue.filter(v=>!v.businessRegistrationNo).length},
-  ].filter(r=>r.count>0);
-
-  const disputeStatusLabels={open:'Open',proposed:'Proposed',contested:'Contested',resolved:'Resolved'};
-  const disputeRows=Object.keys(disputeStatusLabels).map(s=>({label:disputeStatusLabels[s],count:disputeQueue.filter(d=>d.status===s).length})).filter(r=>r.count>0);
-
-  renderBarChart('listingCatChart', catRows.map(r=>({label:r.label,value:r.count})), {horizontal:true, color:'var(--green)'});
-  renderBarChart('verifTypeChart', verifTypeRows.map(r=>({label:r.label,value:r.count})), {horizontal:true, color:'var(--blue)'});
-  renderBarChart('disputeStatusChart', disputeRows.map(r=>({label:r.label,value:r.count})), {horizontal:true, color:'var(--red)'});
-  renderBarChart('reportListingCatChart', catRows.map(r=>({label:r.label,value:r.count})), {horizontal:true, color:'var(--green)'});
-  renderBarChart('reportVerifTypeChart', verifTypeRows.map(r=>({label:r.label,value:r.count})), {horizontal:true, color:'var(--blue)'});
-  renderBarChart('reportDisputeStatusChart', disputeRows.map(r=>({label:r.label,value:r.count})), {horizontal:true, color:'var(--red)'});
-  document.getElementById('reportListingCatTbody').innerHTML = catRows.length ? catRows.map(r=>
-    `<tr><td>${r.label}</td><td class="num">${r.count}</td></tr>`
-  ).join('') : `<tr><td colspan="2" style="color:var(--ink-faint)">No listings pending review.</td></tr>`;
-  document.getElementById('reportVerifTypeTbody').innerHTML = verifTypeRows.length ? verifTypeRows.map(r=>
-    `<tr><td>${r.label}</td><td class="num">${r.count}</td></tr>`
-  ).join('') : `<tr><td colspan="2" style="color:var(--ink-faint)">No providers pending verification.</td></tr>`;
-  document.getElementById('reportDisputeStatusTbody').innerHTML = disputeRows.length ? disputeRows.map(r=>
-    `<tr><td>${r.label}</td><td class="num">${r.count}</td></tr>`
-  ).join('') : `<tr><td colspan="2" style="color:var(--ink-faint)">No disputes on record.</td></tr>`;
-
-  const insights=[];
-  if(overdueListings.length) insights.push(`${overdueListings.length} listing${overdueListings.length===1?'':'s'} ${overdueListings.length===1?'has':'have'} waited more than 24 hours for review.`);
-  if(overdueVerifs.length) insights.push(`${overdueVerifs.length} provider verification${overdueVerifs.length===1?'':'s'} ${overdueVerifs.length===1?'has':'have'} waited more than 24 hours.`);
-  if(overdueDisputes.length) insights.push(`${overdueDisputes.length} dispute${overdueDisputes.length===1?'':'s'} ${overdueDisputes.length===1?'has':'have'} been open more than 24 hours.`);
-  const section=document.getElementById('insightsSection');
-  if(!insights.length){ section.style.display='none'; }
-  else{
-    section.style.display='block';
-    document.getElementById('insightsList').innerHTML = insights.map(text=>
-      `<div class="banner warning" style="margin-bottom:10px;">${icon('alert',{size:16})}<div><div class="d">${text}</div></div></div>`
-    ).join('');
-  }
-
-  const actions=[];
-  if(moderationQueue.length) actions.push({label:`Review ${moderationQueue.length} pending listing${moderationQueue.length===1?'':'s'}`,ic:'grid',cls:'green',handler:()=>goView('listings')});
-  if(verificationQueue.length) actions.push({label:`Review ${verificationQueue.length} pending verification${verificationQueue.length===1?'':'s'}`,ic:'shield',cls:'green',handler:()=>goView('verification')});
-  const openDisputeCount = disputeQueue.filter(d=>DISPUTE_OPEN_STATUSES.includes(d.status)).length;
-  if(openDisputeCount) actions.push({label:`Resolve ${openDisputeCount} open dispute${openDisputeCount===1?'':'s'}`,ic:'alert',cls:'green',handler:()=>goView('disputes')});
-  if(session.user.roles.includes('super_admin')) actions.push({label:'Team & Access',ic:'user',cls:'ghost',handler:()=>goView('team')});
-  const qa=document.getElementById('quickActions');
-  if(!actions.length){
-    qa.innerHTML = `<p style="color:var(--ink-faint);font-size:13.5px;">Nothing needs your attention right now.</p>`;
-  }else{
-    qa.innerHTML = actions.map((a,i)=>`<button class="pill-btn ${a.cls}" data-qa="${i}">${icon(a.ic,{size:15})} ${a.label}</button>`).join('');
-    qa.querySelectorAll('[data-qa]').forEach((b,i)=>b.addEventListener('click',actions[i].handler));
-  }
-
-  const submitted = [
-    ...moderationQueue.map(l=>({ts:l.createdAt, text:`"${l.title}" submitted for review`})),
-    ...verificationQueue.map(v=>({ts:v.createdAt, text:`${v.businessName||(v.user?v.user.fullName:'A provider')} submitted for verification`})),
-    ...disputeQueue.map(d=>({ts:d.createdAt, text:`Dispute opened — ${d.description.slice(0,60)}${d.description.length>60?'…':''}`})),
-  ].sort((a,b)=>new Date(b.ts||0)-new Date(a.ts||0)).slice(0,6);
-  document.getElementById('recentSubmittedList').innerHTML = submitted.length ? submitted.map(i=>
-    `<div class="row-card" style="margin-bottom:10px;"><div class="main"><div class="t">${i.text}</div><div class="s">${relativeTime(i.ts)}</div></div></div>`
-  ).join('') : `<p style="color:var(--ink-faint);font-size:13.5px;">Nothing submitted recently.</p>`;
-}
-
-/* ---- listings moderation queue (real) ---- */
-async function renderModeration(){
+async function countFor(path){
   try{
-    const {data} = await apiFetch('/admin/listings/moderation-queue');
-    moderationQueue = data;
-    pendingCounts.listings = data.length;
-    const categoryById = await getCategoryMapById().catch(()=>new Map());
-    document.getElementById('moderationList').innerHTML = data.length===0
-      ? `<p style="color:var(--ink-faint);font-size:13.5px;">No listings waiting on review.</p>`
-      : data.map(l=>{
-          const cat = categoryById.get(l.categoryId);
-          return `
-      <div class="queue-row">
-        <input type="checkbox" class="q-check" data-listing-check="${l.id}" />
-        <div class="q-main">
-          <div class="q-title">${l.title} <span class="badge info" style="margin-left:6px;">${cat?cat.name:'Uncategorized'}</span></div>
-          <div class="q-sub">Submitted ${new Date(l.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${money(Math.round(l.priceMinor/100))}/${l.priceUnit} · ${l.locationText}</div>
-        </div>
-        <div class="q-actions">
-          <button class="pill-btn ghost sm" data-reject-listing="${l.id}">Reject</button>
-          <button class="pill-btn green sm" data-approve-listing="${l.id}">Approve</button>
-        </div>
-      </div>`;
-        }).join('');
-    document.querySelectorAll('[data-approve-listing]').forEach(b=>b.addEventListener('click', async ()=>{
-      b.disabled=true;
-      try{ await apiFetch(`/admin/listings/${b.dataset.approveListing}/approve`,{method:'POST'}); await renderModeration(); }
-      catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
-    }));
-    document.querySelectorAll('[data-reject-listing]').forEach(b=>b.addEventListener('click', async ()=>{
-      if(!confirm('Reject this listing? The provider will need to edit and resubmit it.')) return;
-      b.disabled=true;
-      try{ await apiFetch(`/admin/listings/${b.dataset.rejectListing}/reject`,{method:'POST'}); await renderModeration(); }
-      catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
-    }));
-    wireModBulkBar();
-  }catch(e){
-    document.getElementById('moderationList').innerHTML = `<p style="color:var(--ink-faint)">${apiErrorMessage(e)}</p>`;
-  }
-  renderOverviewExtras();
+    const {data} = await apiFetch(`${path}${path.includes('?')?'&':'?'}limit=100`);
+    const items = data.data || data;
+    return { n: items.length, plus: !!(data.meta&&data.meta.hasMore) };
+  }catch(e){ return { n: 0, plus:false, error:true }; }
+}
+async function renderOverview(){
+  const [listings, verif, disputes, returns] = await Promise.all([
+    countFor('/admin/listings/moderation-queue'),
+    countFor('/admin/providers/verification-queue'),
+    countFor('/admin/disputes'),
+    countFor('/admin/bookings?stage=returned'),
+  ]);
+  const disputesOpen = await apiFetch('/admin/disputes').then(({data})=>data.filter(d=>d.status==='open'||d.status==='proposed').length).catch(()=>0);
+
+  const rows=[
+    {n:listings.n, plus:listings.plus, ic:'list', cls:'blue', t:'Listings pending review', s:'New submissions waiting on approval', go:'listings'},
+    {n:verif.n, plus:verif.plus, ic:'shield', cls:'amber', t:'Providers pending verification', s:'Can\'t publish until approved', go:'verification'},
+    {n:disputesOpen, plus:false, ic:'alert', cls:'', t:'Open disputes', s:'Damage claims needing resolution', go:'disputes'},
+    {n:returns.n, plus:returns.plus, ic:'arrowRight', cls:'blue', t:'Returns awaiting inspection', s:'Items returned, not yet inspected', go:'returns'},
+  ].filter(r=>r.n>0);
+
+  const list=document.getElementById('attnList');
+  list.innerHTML = rows.length ? rows.map(r=>`
+    <div class="attn-row" data-go="${r.go}">
+      <div class="ic ${r.cls}">${icon(r.ic,{size:16})}</div>
+      <div class="main"><div class="t">${r.t}</div><div class="s">${r.s}</div></div>
+      <div class="n">${r.n}${r.plus?'+':''}</div>
+    </div>`).join('') : `<div class="attn-empty">Nothing needs attention right now.</div>`;
+  list.querySelectorAll('[data-go]').forEach(el=>el.addEventListener('click',()=>goView(el.dataset.go)));
+
+  document.getElementById('kpiRowSm').innerHTML = [
+    {lbl:'Pending listings', val:listings.n+(listings.plus?'+':'')},
+    {lbl:'Pending verifications', val:verif.n+(verif.plus?'+':'')},
+    {lbl:'Open disputes', val:disputesOpen},
+    {lbl:'Returns in progress', val:returns.n+(returns.plus?'+':'')},
+  ].map(k=>`<div class="kpi-sm"><div class="lbl">${k.lbl}</div><div class="val">${k.val}</div></div>`).join('');
 }
 
-/* ---- bulk approve/reject for the listings moderation queue — re-wired on
-   every renderModeration() call since the row checkboxes are rebuilt from
-   scratch each time. Runs each admin/listings/:id/{approve,reject} call
-   concurrently (each is an independent write, no shared transaction to
-   worry about) and reports which ones failed rather than silently dropping
-   them, since a partial failure part-way through a batch is the realistic
-   failure mode here. */
-function wireModBulkBar(){
-  const bar=document.getElementById('modBulkBar');
-  const selectAll=document.getElementById('modSelectAll');
-  const countEl=document.getElementById('modSelectedCount');
+/* ================================================================
+   BOOKINGS / RETURNS — admin-wide search, cursor-paginated. Returns
+   is this exact same list pre-filtered to stage=returnsched/returned/
+   inspected (no separate entity — see AdminBookingsController).
+   ================================================================ */
+const RETURN_STAGES=['returnsched','returned','inspected'];
+const BOOKING_STAGE_LABEL={requested:'Requested',accepted:'Accepted',payment:'Payment',reserved:'Reserved',ready:'Ready',pickedup:'Picked up',active:'Active',returnsched:'Return scheduled',returned:'Returned',inspected:'Inspected',depositreleased:'Deposit released',completed:'Completed'};
+const BOOKING_STATUS_PILL={pending:'warn',confirmed:'good',declined:'bad',cancelled:'neutral',completed:'good',disputed:'bad'};
+let bkCursor=null, bkRows=[], bkReturnsMode=false;
+document.getElementById('bkStatusFilter').innerHTML = '<option value="">Any status</option>'+['pending','confirmed','declined','cancelled','completed','disputed'].map(s=>`<option value="${s}">${s}</option>`).join('');
+async function loadBookings(reset, forcedStages){
+  // `forcedStages` only arrives from the Returns nav link's own call — every
+  // other call site (filter Apply, Load more) omits it, so the mode has to
+  // be remembered here rather than re-inferred from the argument each time,
+  // or clicking Apply while on Returns would silently fall back to showing
+  // every booking instead of re-applying the stage filter.
+  if(forcedStages !== undefined) bkReturnsMode = true; else if(reset) bkReturnsMode = false;
+  const isReturns = bkReturnsMode;
+  document.getElementById('bookingsTitle').textContent = isReturns ? 'Returns' : 'Bookings';
+  document.getElementById('bookingsSub').textContent = isReturns ? 'Items returned or scheduled to return, awaiting inspection.' : 'Every booking on Rently, across every provider and renter.';
+  document.querySelector('#view-bookings .filter-bar').style.display = isReturns ? 'none' : 'flex';
+  if(reset){ bkCursor=null; bkRows=[]; document.getElementById('bookingsList').innerHTML='<div class="skel-row-sm"></div><div class="skel-row-sm"></div>'; }
+  const status=document.getElementById('bkStatusFilter').value;
+  const from=document.getElementById('bkFromFilter').value;
+  const to=document.getElementById('bkToFilter').value;
+  try{
+    if(isReturns){
+      const pages = await Promise.all(RETURN_STAGES.map(st=>apiFetch(`/admin/bookings?stage=${st}&limit=50`)));
+      bkRows = pages.flatMap(p=>p.data);
+      document.getElementById('bkLoadMore').style.display='none';
+    } else {
+      const params=new URLSearchParams({limit:'20'});
+      if(status) params.set('status',status);
+      if(from) params.set('from',new Date(from).toISOString());
+      if(to) params.set('to',new Date(to).toISOString());
+      if(bkCursor) params.set('cursor',bkCursor);
+      const {data,meta} = await apiFetch(`/admin/bookings?${params}`);
+      bkRows = reset ? data : bkRows.concat(data);
+      bkCursor = meta.nextCursor;
+      document.getElementById('bkLoadMore').style.display = meta.hasMore ? '' : 'none';
+    }
+    renderBookingsTable();
+  }catch(e){ document.getElementById('bookingsList').innerHTML = stateError(e); }
+}
+function renderBookingsTable(){
+  const el=document.getElementById('bookingsList');
+  if(!bkRows.length){ el.innerHTML = stateEmpty('No bookings match this view.'); return; }
+  el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th>Dates</th><th>Stage</th><th>Status</th><th>Total</th></tr></thead><tbody>${
+    bkRows.map(b=>`<tr class="clickable" data-bk="${b.id}">
+      <td>${new Date(b.startsAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${new Date(b.endsAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td>
+      <td>${BOOKING_STAGE_LABEL[b.stage]||b.stage}</td>
+      <td><span class="pill-status ${BOOKING_STATUS_PILL[b.status]||'neutral'}">${b.status}</span></td>
+      <td class="num">${money(Math.round(b.totalMinor/100))}</td>
+    </tr>`).join('')
+  }</tbody></table></div>`;
+  el.querySelectorAll('[data-bk]').forEach(r=>r.addEventListener('click',()=>openBookingDrawer(r.dataset.bk)));
+}
+document.getElementById('bkFilterApply').addEventListener('click',()=>loadBookings(true));
+document.getElementById('bkLoadMore').addEventListener('click',()=>loadBookings(false));
+
+async function openBookingDrawer(id){
+  openDrawer('Booking', id.slice(0,8).toUpperCase(), [
+    { key:'overview', label:'Overview', render: async ()=>{
+      const d = await apiFetch(`/admin/bookings/${id}`).then(r=>r.data);
+      const b=d.booking;
+      return dkv('Listing', d.listingTitle||'—')+dkv('Renter', (d.renterName||'—')+(d.renterEmail?` (${d.renterEmail})`:''))
+        +dkv('Provider', d.providerName||'—')+dkv('Dates', `${new Date(b.startsAt).toLocaleDateString()} – ${new Date(b.endsAt).toLocaleDateString()}`)
+        +dkv('Stage', BOOKING_STAGE_LABEL[b.stage]||b.stage)+dkv('Status', b.status)+dkv('Quantity', b.quantity);
+    }},
+    { key:'activity', label:'Activity', render: async ()=>{
+      const d = await apiFetch(`/admin/bookings/${id}`).then(r=>r.data);
+      if(!d.history.length) return stateEmpty('No status history recorded.');
+      return d.history.map(h=>`<div class="timeline-item"><div class="dot"></div><div><div class="t">${h.toStage||h.toStatus}</div><div class="s">${new Date(h.createdAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}${h.reason?' — '+h.reason:''}</div></div></div>`).join('');
+    }},
+    { key:'financial', label:'Financial', render: async ()=>{
+      const d = await apiFetch(`/admin/bookings/${id}`).then(r=>r.data);
+      const b=d.booking;
+      return dkv('Rental fee', money(Math.round(b.rentalFeeMinor/100)))+dkv('Service fee', money(Math.round(b.serviceFeeMinor/100)))
+        +dkv('Deposit', money(Math.round(b.depositMinor/100)))+dkv('Total', money(Math.round(b.totalMinor/100)))+dkv('Cancellation policy', b.cancellationPolicy);
+    }},
+    auditTabFor('Booking', id),
+  ]);
+}
+
+/* ================================================================
+   LISTINGS — search across every status; the old standalone
+   moderation screen is now just the "Pending review" chip here.
+   ================================================================ */
+const LISTING_STATUS_PILL={draft:'neutral',pending_review:'warn',live:'good',paused:'neutral',rejected:'bad'};
+let lstCursor=null, lstStatus='', lstRows=[];
+document.getElementById('lstStatusFilter').innerHTML = ['','draft','pending_review','live','paused','rejected'].map(s=>
+  `<button data-s="${s}" class="${s===''?'on':''}">${s===''?'All':s.replace('_',' ')}</button>`).join('');
+document.querySelectorAll('#lstStatusFilter [data-s]').forEach(b=>b.addEventListener('click',()=>{
+  lstStatus=b.dataset.s;
+  document.querySelectorAll('#lstStatusFilter [data-s]').forEach(x=>x.classList.toggle('on',x===b));
+  loadListings(true);
+}));
+let lstSearchDebounce=null;
+document.getElementById('lstSearch').addEventListener('input',()=>{ clearTimeout(lstSearchDebounce); lstSearchDebounce=setTimeout(()=>loadListings(true),300); });
+async function loadListings(reset){
+  if(reset){ lstCursor=null; lstRows=[]; document.getElementById('listingsList').innerHTML='<div class="skel-row-sm"></div><div class="skel-row-sm"></div>'; }
+  const q=document.getElementById('lstSearch').value.trim();
+  const params=new URLSearchParams({limit:'20'});
+  if(q) params.set('q',q);
+  if(lstStatus) params.set('status',lstStatus);
+  if(lstCursor) params.set('cursor',lstCursor);
+  try{
+    const {data,meta} = await apiFetch(`/admin/listings?${params}`);
+    lstRows = reset ? data : lstRows.concat(data);
+    lstCursor = meta.nextCursor;
+    document.getElementById('lstLoadMore').style.display = meta.hasMore ? '' : 'none';
+    renderListingsTable();
+  }catch(e){ document.getElementById('listingsList').innerHTML = stateError(e); }
+}
+function renderListingsTable(){
+  const el=document.getElementById('listingsList');
+  if(!lstRows.length){ el.innerHTML = stateEmpty('No listings match this filter.'); return; }
+  el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th class="check-col"></th><th>Title</th><th>Status</th><th>Price</th><th>Location</th></tr></thead><tbody>${
+    lstRows.map(l=>`<tr>
+      <td><input type="checkbox" class="q-check" data-listing-check="${l.id}" /></td>
+      <td class="clickable" data-lst="${l.id}">${l.title}</td>
+      <td><span class="pill-status ${LISTING_STATUS_PILL[l.status]||'neutral'}">${l.status.replace('_',' ')}</span></td>
+      <td class="num">${money(Math.round(l.priceMinor/100))}/${l.priceUnit}</td>
+      <td>${l.locationText}</td>
+    </tr>`).join('')
+  }</tbody></table></div>`;
+  el.querySelectorAll('[data-lst]').forEach(r=>r.addEventListener('click',()=>openListingDrawer(r.dataset.lst)));
+  wireListingsBulkBar();
+}
+document.getElementById('lstLoadMore').addEventListener('click',()=>loadListings(false));
+
+function wireListingsBulkBar(){
+  const bar=document.getElementById('lstBulkBar'), selectAll=document.getElementById('lstSelectAll'), countEl=document.getElementById('lstSelectedCount');
   function checkboxes(){ return [...document.querySelectorAll('[data-listing-check]')]; }
   function selectedIds(){ return checkboxes().filter(c=>c.checked).map(c=>c.dataset.listingCheck); }
   function syncBar(){
@@ -429,123 +729,289 @@ function wireModBulkBar(){
     selectAll.checked = n>0 && n===checkboxes().length;
     selectAll.indeterminate = n>0 && n<checkboxes().length;
   }
-  checkboxes().forEach(c=>c.addEventListener('change',syncBar));
+  checkboxes().forEach(c=>{ c.addEventListener('click',e=>e.stopPropagation()); c.addEventListener('change',syncBar); });
   selectAll.onchange=()=>{ checkboxes().forEach(c=>{c.checked=selectAll.checked;}); syncBar(); };
-  document.getElementById('modBulkApproveBtn').onclick=async ()=>{
-    const ids=selectedIds();
-    if(!ids.length) return;
+  document.getElementById('lstBulkApproveBtn').onclick=async ()=>{
+    const ids=selectedIds(); if(!ids.length) return;
     if(!confirm(`Approve ${ids.length} listing${ids.length===1?'':'s'}?`)) return;
-    const btn=document.getElementById('modBulkApproveBtn'); btn.disabled=true;
     const results = await Promise.allSettled(ids.map(id=>apiFetch(`/admin/listings/${id}/approve`,{method:'POST'})));
-    const failed = results.filter(r=>r.status==='rejected').length;
-    if(failed) alert(`${failed} of ${ids.length} could not be approved. The rest went through.`);
-    await renderModeration();
+    const failed=results.filter(r=>r.status==='rejected').length;
+    if(failed) alert(`${failed} of ${ids.length} could not be approved.`);
+    loadListings(true);
   };
-  document.getElementById('modBulkRejectBtn').onclick=async ()=>{
-    const ids=selectedIds();
-    if(!ids.length) return;
-    if(!confirm(`Reject ${ids.length} listing${ids.length===1?'':'s'}? Providers will need to edit and resubmit.`)) return;
-    const btn=document.getElementById('modBulkRejectBtn'); btn.disabled=true;
+  document.getElementById('lstBulkRejectBtn').onclick=async ()=>{
+    const ids=selectedIds(); if(!ids.length) return;
+    if(!confirm(`Reject ${ids.length} listing${ids.length===1?'':'s'}?`)) return;
     const results = await Promise.allSettled(ids.map(id=>apiFetch(`/admin/listings/${id}/reject`,{method:'POST'})));
-    const failed = results.filter(r=>r.status==='rejected').length;
-    if(failed) alert(`${failed} of ${ids.length} could not be rejected. The rest went through.`);
-    await renderModeration();
+    const failed=results.filter(r=>r.status==='rejected').length;
+    if(failed) alert(`${failed} of ${ids.length} could not be rejected.`);
+    loadListings(true);
   };
   syncBar();
 }
 
-/* ---- verification queue (real) ---- */
-function typeOf(v){ return v.businessRegistrationNo ? 'Business' : 'Individual'; }
-const DOC_TYPE_LABEL={id_card:'ID card',cac_certificate:'CAC certificate',proof_of_address:'Proof of address',liveness_video:'Liveness video'};
-const DOC_STATUS_BADGE={pending:'pending',approved:'confirmed',rejected:'cancelled'};
-function docRow(providerId, d){
-  const actions = d.status==='pending'
-    ? `<button class="pill-btn ghost sm" data-reject-doc="${d.id}">Reject</button><button class="pill-btn green sm" data-approve-doc="${d.id}">Approve</button>`
-    : '';
-  return `<div class="queue-row" style="margin-bottom:8px;background:var(--bg-alt);border-style:dashed;">
-    <div class="q-main">
-      <div class="q-title">${DOC_TYPE_LABEL[d.docType]||d.docType} <span class="badge ${DOC_STATUS_BADGE[d.status]}" style="margin-left:6px;">${d.status}</span></div>
-      <div class="q-sub">${d.status==='rejected' && d.reviewNotes ? 'Reason: '+d.reviewNotes : new Date(d.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
-    </div>
-    <div class="q-actions"><a href="${d.url}" target="_blank" rel="noopener" class="pill-btn ghost sm">View</a>${actions}</div>
-  </div>`;
-}
-async function renderVerification(){
-  try{
-    const {data} = await apiFetch('/admin/providers/verification-queue');
-    verificationQueue = data;
-    pendingCounts.verification = data.length;
-    // The queue's embedded verificationDocuments relation has no signed url
-    // (that only exists on the real per-document listing endpoint), so
-    // documents are fetched again here, per provider, to actually review them.
-    const docsByProvider = {};
-    await Promise.all(data.map(async v=>{
-      try{ const {data:docs}=await apiFetch(`/admin/providers/${v.id}/verification-documents`); docsByProvider[v.id]=docs; }
-      catch(e){ docsByProvider[v.id]=[]; }
-    }));
-    document.getElementById('verificationList').innerHTML = data.length===0
-      ? `<p style="color:var(--ink-faint);font-size:13.5px;">No providers waiting on verification.</p>`
-      : data.map(v=>{
-          const docs = docsByProvider[v.id]||[];
-          return `
-      <div class="queue-row" style="flex-direction:column;align-items:stretch;">
-        <div style="display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:${docs.length?'14px':'0'};">
-          <div style="display:flex;gap:14px;align-items:center;flex:1;min-width:0;">
-            <input type="checkbox" class="q-check" data-provider-check="${v.id}" />
-            <div class="q-main">
-              <div class="q-title">${v.businessName||(v.user?v.user.fullName:'Provider')} <span class="badge info" style="margin-left:6px;">${typeOf(v)}</span></div>
-              <div class="q-sub">Submitted ${new Date(v.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · ${docs.length} document${docs.length===1?'':'s'}</div>
-            </div>
-          </div>
-          <div class="q-actions">
-            <button class="pill-btn ghost sm" data-reject="${v.id}">Reject profile</button>
-            <button class="pill-btn green sm" data-approve="${v.id}">Approve profile</button>
-          </div>
-        </div>
-        ${docs.length ? `<div style="padding-left:2px;">${docs.map(d=>docRow(v.id,d)).join('')}</div>` : ''}
-      </div>`;
-        }).join('');
-    document.querySelectorAll('[data-approve]').forEach(b=>b.addEventListener('click', async ()=>{
-      b.disabled=true;
-      try{ await apiFetch(`/admin/providers/${b.dataset.approve}/verify`,{method:'POST'}); await renderVerification(); }
-      catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
-    }));
-    document.querySelectorAll('[data-reject]').forEach(b=>b.addEventListener('click', async ()=>{
-      const reason = prompt('Reason for rejecting this provider (visible to them):');
-      if(!reason || reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); return; }
-      b.disabled=true;
-      try{ await apiFetch(`/admin/providers/${b.dataset.reject}/reject`,{method:'POST',body:{reason:reason.trim()}}); await renderVerification(); }
-      catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
-    }));
-    document.querySelectorAll('[data-approve-doc]').forEach(b=>b.addEventListener('click', async ()=>{
-      b.disabled=true;
-      try{ await apiFetch(`/admin/providers/verification-documents/${b.dataset.approveDoc}/approve`,{method:'POST',body:{}}); await renderVerification(); }
-      catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
-    }));
-    document.querySelectorAll('[data-reject-doc]').forEach(b=>b.addEventListener('click', async ()=>{
-      const reason = prompt('Reason for rejecting this document (visible to the provider):');
-      if(!reason || reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); return; }
-      b.disabled=true;
-      try{ await apiFetch(`/admin/providers/verification-documents/${b.dataset.rejectDoc}/reject`,{method:'POST',body:{reason:reason.trim()}}); await renderVerification(); }
-      catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
-    }));
-    wireVerifBulkBar();
-  }catch(e){
-    document.getElementById('verificationList').innerHTML = `<p style="color:var(--ink-faint)">${apiErrorMessage(e)}</p>`;
-  }
-  renderOverviewExtras();
+async function openListingDrawer(id){
+  const l = await apiFetch(`/admin/listings/${id}`).then(r=>r.data).catch(()=>null);
+  if(!l){ alert('Could not load this listing.'); return; }
+  const actions=[];
+  if(l.status==='pending_review') actions.push(
+    `<button class="pill-btn ghost sm" id="dwReject">Reject</button>`,
+    `<button class="pill-btn green sm" id="dwApprove">Approve</button>`,
+  );
+  if(l.status==='live') actions.push(`<button class="pill-btn ghost sm" id="dwPause">Pause</button>`);
+  if(l.status==='paused') actions.push(`<button class="pill-btn green sm" id="dwReinstate">Reinstate</button>`);
+  openDrawer(l.title, l.locationText, [
+    { key:'overview', label:'Overview', render: async ()=> {
+      const html = dkv('Status', l.status.replace('_',' '))+dkv('Price', money(Math.round(l.priceMinor/100))+'/'+l.priceUnit)
+        +dkv('Deposit', l.depositMinor?money(Math.round(l.depositMinor/100)):'None')+dkv('Booking mode', l.bookingMode)
+        +dkv('Quantity available', l.quantityAvailable)+dkv('Submitted', new Date(l.createdAt).toLocaleDateString())
+        + (actions.length ? `<div style="display:flex;gap:8px;margin-top:18px;">${actions.join('')}</div>` : '');
+      return html;
+    }},
+    auditTabFor('Listing', id),
+  ]);
+  setTimeout(()=>{
+    const approveBtn=document.getElementById('dwApprove');
+    if(approveBtn) approveBtn.addEventListener('click', async ()=>{ await apiFetch(`/admin/listings/${id}/approve`,{method:'POST'}).catch(e=>alert(apiErrorMessage(e))); closeDrawer(); loadListings(true); });
+    const rejectBtn=document.getElementById('dwReject');
+    if(rejectBtn) rejectBtn.addEventListener('click', async ()=>{ if(!confirm('Reject this listing?')) return; await apiFetch(`/admin/listings/${id}/reject`,{method:'POST'}).catch(e=>alert(apiErrorMessage(e))); closeDrawer(); loadListings(true); });
+    const pauseBtn=document.getElementById('dwPause');
+    if(pauseBtn) pauseBtn.addEventListener('click', async ()=>{ const reason=prompt('Reason for pausing this listing (optional):'); await apiFetch(`/admin/listings/${id}/pause`,{method:'POST',body:{reason:reason||undefined}}).catch(e=>alert(apiErrorMessage(e))); closeDrawer(); loadListings(true); });
+    const reinstateBtn=document.getElementById('dwReinstate');
+    if(reinstateBtn) reinstateBtn.addEventListener('click', async ()=>{ await apiFetch(`/admin/listings/${id}/reinstate`,{method:'POST'}).catch(e=>alert(apiErrorMessage(e))); closeDrawer(); loadListings(true); });
+  },0);
 }
 
-/* ---- bulk approve/reject for provider profiles in the verification queue.
-   Scoped to the provider-profile level only, not the nested per-document
-   rows below each one — those stay single-item actions since a document's
-   evidence genuinely needs individual review, unlike a batch of otherwise-
-   equivalent new listings. Bulk reject shares one typed reason across every
-   selected provider (same reason field the single-reject flow requires). */
+/* ================================================================
+   CATEGORIES — simple CRUD against the already-real backend
+   ================================================================ */
+async function loadCategories(){
+  const el=document.getElementById('categoriesList');
+  try{
+    const categories = await apiFetch('/categories',{auth:false}).then(r=>r.data);
+    if(!categories.length){ el.innerHTML = stateEmpty('No categories yet.'); return; }
+    el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th>Name</th><th>Slug</th><th>Commission</th><th>Status</th><th></th></tr></thead><tbody>${
+      categories.map(c=>`<tr>
+        <td>${c.name}</td><td>${c.slug}</td><td class="num">${(c.commissionRateBps/100).toFixed(1)}%</td>
+        <td><span class="pill-status ${c.isActive?'good':'neutral'}">${c.isActive?'active':'inactive'}</span></td>
+        <td><button class="pill-btn ghost sm" data-edit-cat="${c.id}">Edit</button></td>
+      </tr>`).join('')
+    }</tbody></table></div>`;
+    el.querySelectorAll('[data-edit-cat]').forEach(b=>b.addEventListener('click',()=>openCategoryModal(categories.find(c=>c.id===b.dataset.editCat))));
+  }catch(e){ el.innerHTML = stateError(e); }
+}
+let catEditingId=null;
+function openCategoryModal(cat){
+  catEditingId = cat ? cat.id : null;
+  document.getElementById('catModalTitle').textContent = cat ? 'Edit category' : 'Add category';
+  document.getElementById('catModalError').style.display='none';
+  document.getElementById('catNameInput').value = cat ? cat.name : '';
+  document.getElementById('catSlugInput').value = cat ? cat.slug : '';
+  document.getElementById('catCommissionInput').value = cat ? cat.commissionRateBps : 500;
+  document.getElementById('catOverlay').classList.add('open');
+}
+document.getElementById('catAddBtn').addEventListener('click',()=>openCategoryModal(null));
+document.getElementById('catCloseBtn').addEventListener('click',()=>document.getElementById('catOverlay').classList.remove('open'));
+document.getElementById('catOverlay').addEventListener('click',(e)=>{ if(e.target.id==='catOverlay') document.getElementById('catOverlay').classList.remove('open'); });
+document.getElementById('catSaveBtn').addEventListener('click', async ()=>{
+  const errEl=document.getElementById('catModalError'); errEl.style.display='none';
+  const name=document.getElementById('catNameInput').value.trim();
+  const slug=document.getElementById('catSlugInput').value.trim();
+  const commissionRateBps=+document.getElementById('catCommissionInput').value;
+  if(!name||!slug){ errEl.textContent='Name and slug are required.'; errEl.style.display='block'; return; }
+  try{
+    if(catEditingId) await apiFetch(`/categories/${catEditingId}`,{method:'PATCH',body:{name,slug,commissionRateBps}});
+    else await apiFetch('/categories',{method:'POST',body:{name,slug,commissionRateBps}});
+    document.getElementById('catOverlay').classList.remove('open');
+    loadCategories();
+  }catch(e){ errEl.textContent=apiErrorMessage(e); errEl.style.display='block'; }
+});
+
+/* ================================================================
+   PROVIDERS — search beyond the verification queue
+   ================================================================ */
+let provCursor=null, provRows=[];
+let provSearchDebounce=null;
+document.getElementById('provSearch').addEventListener('input',()=>{ clearTimeout(provSearchDebounce); provSearchDebounce=setTimeout(()=>loadProviders(true),300); });
+async function loadProviders(reset){
+  if(reset){ provCursor=null; provRows=[]; document.getElementById('providersList').innerHTML='<div class="skel-row-sm"></div>'; }
+  const q=document.getElementById('provSearch').value.trim();
+  const params=new URLSearchParams({limit:'20'});
+  if(q) params.set('search',q);
+  if(provCursor) params.set('cursor',provCursor);
+  try{
+    const {data,meta} = await apiFetch(`/admin/providers?${params}`);
+    provRows = reset ? data : provRows.concat(data);
+    provCursor = meta.nextCursor;
+    document.getElementById('provLoadMore').style.display = meta.hasMore ? '' : 'none';
+    renderProvidersTable();
+  }catch(e){ document.getElementById('providersList').innerHTML = stateError(e); }
+}
+function renderProvidersTable(){
+  const el=document.getElementById('providersList');
+  if(!provRows.length){ el.innerHTML = stateEmpty('No providers match this search.'); return; }
+  el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th>Business / owner</th><th>Verification</th><th>Account status</th><th>Completed bookings</th></tr></thead><tbody>${
+    provRows.map(p=>`<tr class="clickable" data-prov="${p.id}">
+      <td>${p.businessName||(p.user?p.user.fullName:'—')}</td>
+      <td><span class="pill-status ${p.verificationStatus==='verified'?'good':p.verificationStatus==='rejected'?'bad':'warn'}">${p.verificationStatus}</span></td>
+      <td><span class="pill-status ${p.user&&p.user.status==='active'?'good':'bad'}">${p.user?p.user.status:'—'}</span></td>
+      <td class="num">${p.totalCompletedBookings}</td>
+    </tr>`).join('')
+  }</tbody></table></div>`;
+  el.querySelectorAll('[data-prov]').forEach(r=>r.addEventListener('click',()=>openProviderDrawer(r.dataset.prov)));
+}
+document.getElementById('provLoadMore').addEventListener('click',()=>loadProviders(false));
+
+async function openProviderDrawer(id){
+  const p = await apiFetch(`/admin/providers/${id}`).then(r=>r.data).catch(()=>null);
+  if(!p){ alert('Could not load this provider.'); return; }
+  const isActive = p.user && p.user.status==='active';
+  openDrawer(p.businessName||(p.user?p.user.fullName:'Provider'), p.user?p.user.email:'', [
+    { key:'overview', label:'Overview', render: async ()=> dkv('Owner', p.user?p.user.fullName:'—')+dkv('Email', p.user?p.user.email:'—')
+        +dkv('Verification', p.verificationStatus)+dkv('Account status', p.user?p.user.status:'—')
+        +dkv('Avg rating', p.avgRating)+dkv('Completed bookings', p.totalCompletedBookings)
+        +`<div style="margin-top:18px;"><button class="pill-btn ${isActive?'ghost':'green'} sm" id="dwProvStatus">${isActive?'Suspend account':'Reinstate account'}</button></div>` },
+    { key:'documents', label:'Documents', render: async ()=>{
+      const docs = await apiFetch(`/admin/providers/${id}/verification-documents`).then(r=>r.data).catch(()=>[]);
+      if(!docs.length) return stateEmpty('No verification documents uploaded.');
+      return docs.map(d=>`<div class="dkv"><span class="k">${d.docType.replace('_',' ')}</span><span class="v"><a href="${d.url}" target="_blank" rel="noopener">View</a> · ${d.status}</span></div>`).join('');
+    }},
+    auditTabFor('ProviderProfile', id),
+  ]);
+  setTimeout(()=>{
+    const btn=document.getElementById('dwProvStatus');
+    if(btn) btn.addEventListener('click', async ()=>{
+      const reason = isActive ? prompt('Reason for suspending this provider (visible in the audit log):') : undefined;
+      if(isActive && (!reason || reason.trim().length<5)){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); return; }
+      try{
+        await apiFetch(`/admin/providers/${id}/status`,{method:'POST',body:{status:isActive?'suspended':'active',reason}});
+        closeDrawer(); loadProviders(true);
+      }catch(e){ alert(apiErrorMessage(e)); }
+    });
+  },0);
+}
+
+/* ================================================================
+   CUSTOMERS — search, detail, suspend/reinstate, and role-granting
+   folded in as an Access tab (replaces the old standalone Team &
+   Access page, which is now redundant once Customers has real search).
+   ================================================================ */
+let custCursor=null, custRows=[];
+let custSearchDebounce=null;
+document.getElementById('custSearch').addEventListener('input',()=>{ clearTimeout(custSearchDebounce); custSearchDebounce=setTimeout(()=>loadCustomers(true),300); });
+async function loadCustomers(reset){
+  if(reset){ custCursor=null; custRows=[]; document.getElementById('customersList').innerHTML='<div class="skel-row-sm"></div>'; }
+  const q=document.getElementById('custSearch').value.trim();
+  const params=new URLSearchParams({limit:'20'});
+  if(q) params.set('search',q);
+  if(custCursor) params.set('cursor',custCursor);
+  try{
+    const {data,meta} = await apiFetch(`/admin/users?${params}`);
+    custRows = reset ? data : custRows.concat(data);
+    custCursor = meta.nextCursor;
+    document.getElementById('custLoadMore').style.display = meta.hasMore ? '' : 'none';
+    renderCustomersTable();
+  }catch(e){ document.getElementById('customersList').innerHTML = stateError(e); }
+}
+function renderCustomersTable(){
+  const el=document.getElementById('customersList');
+  if(!custRows.length){ el.innerHTML = stateEmpty('No accounts match this search.'); return; }
+  el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th>Name</th><th>Email</th><th>Roles</th><th>Status</th></tr></thead><tbody>${
+    custRows.map(u=>`<tr class="clickable" data-cust="${u.id}">
+      <td>${u.fullName}</td><td>${u.email||u.phone||'—'}</td><td>${u.roles.join(', ')}</td>
+      <td><span class="pill-status ${u.status==='active'?'good':'bad'}">${u.status}</span></td>
+    </tr>`).join('')
+  }</tbody></table></div>`;
+  el.querySelectorAll('[data-cust]').forEach(r=>r.addEventListener('click',()=>openCustomerDrawer(r.dataset.cust)));
+}
+document.getElementById('custLoadMore').addEventListener('click',()=>loadCustomers(false));
+
+const ROLE_OPTIONS=['provider','provider_staff','admin','super_admin'];
+const ROLE_LABELS={provider:'Provider',provider_staff:'Provider staff',admin:'Admin',super_admin:'Super admin'};
+async function openCustomerDrawer(id){
+  const u = await apiFetch(`/admin/users/${id}`).then(r=>r.data).catch(()=>null);
+  if(!u){ alert('Could not load this account.'); return; }
+  const isActive = u.status==='active';
+  const canGrantRoles = session.user.roles.includes('super_admin');
+  openDrawer(u.fullName, u.email||u.phone||'', [
+    { key:'overview', label:'Overview', render: async ()=> dkv('Email', u.email||'—')+dkv('Phone', u.phone||'—')
+        +dkv('Roles', u.roles.join(', '))+dkv('Status', u.status)+dkv('Joined', new Date(u.createdAt).toLocaleDateString())
+        +dkv('Last seen', u.lastLoginAt?new Date(u.lastLoginAt).toLocaleDateString():'Never')
+        +`<div style="margin-top:18px;"><button class="pill-btn ${isActive?'ghost':'green'} sm" id="dwCustStatus">${isActive?'Suspend account':'Reinstate account'}</button></div>` },
+    { key:'activity', label:'Activity', render: async ()=>{
+      const {data} = await apiFetch(`/admin/bookings?renterId=${id}&limit=20`);
+      if(!data.length) return stateEmpty('No bookings as a renter yet.');
+      return data.map(b=>`<div class="dkv"><span class="k">${new Date(b.startsAt).toLocaleDateString()} – ${new Date(b.endsAt).toLocaleDateString()}</span><span class="v">${b.status}</span></div>`).join('');
+    }},
+    { key:'access', label:'Access', render: async ()=>{
+      if(!canGrantRoles) return stateEmpty('Only a super admin can grant or remove roles.');
+      return `${ROLE_OPTIONS.map(r=>`<label class="role-check"><input type="checkbox" data-role="${r}" ${u.roles.includes(r)?'checked':''} />${ROLE_LABELS[r]}</label>`).join('')}
+        <div id="roleSaveError" class="banner danger" style="display:none;margin:12px 0;"></div>
+        <button class="pill-btn blue sm" id="roleSaveBtn">Save roles</button>`;
+    }},
+    auditTabFor('User', id),
+  ]);
+  setTimeout(()=>{
+    const btn=document.getElementById('dwCustStatus');
+    if(btn) btn.addEventListener('click', async ()=>{
+      const reason = isActive ? prompt('Reason for suspending this account (visible in the audit log):') : undefined;
+      if(isActive && (!reason || reason.trim().length<5)){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); return; }
+      try{
+        await apiFetch(`/admin/users/${id}/status`,{method:'POST',body:{status:isActive?'suspended':'active',reason}});
+        closeDrawer(); loadCustomers(true);
+      }catch(e){ alert(apiErrorMessage(e)); }
+    });
+    const saveBtn=document.getElementById('roleSaveBtn');
+    if(saveBtn) saveBtn.addEventListener('click', async ()=>{
+      const errEl=document.getElementById('roleSaveError'); errEl.style.display='none';
+      const selected=ROLE_OPTIONS.filter(r=>document.querySelector(`[data-role="${r}"]`).checked);
+      try{
+        await apiFetch(`/admin/users/${id}/roles`,{method:'PATCH',body:{roles:selected}});
+        saveBtn.textContent='Saved'; setTimeout(()=>{ closeDrawer(); loadCustomers(true); },700);
+      }catch(e){ errEl.textContent=apiErrorMessage(e); errEl.style.display='block'; }
+    });
+  },0);
+}
+
+/* ================================================================
+   VERIFICATION (real, carried over) — restyled onto the new table
+   pattern, same endpoints/logic/bulk actions as before.
+   ================================================================ */
+function typeOf(v){ return v.businessRegistrationNo ? 'Business' : 'Individual'; }
+const DOC_TYPE_LABEL={id_card:'ID card',cac_certificate:'CAC certificate',proof_of_address:'Proof of address',liveness_video:'Liveness video'};
+async function renderVerification(){
+  const el=document.getElementById('verificationList');
+  try{
+    const {data} = await apiFetch('/admin/providers/verification-queue');
+    if(!data.length){ el.innerHTML = stateEmpty('No providers waiting on verification.'); return; }
+    el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th class="check-col"></th><th>Provider</th><th>Type</th><th>Submitted</th><th></th></tr></thead><tbody>${
+      data.map(v=>`<tr>
+        <td><input type="checkbox" class="q-check" data-provider-check="${v.id}" /></td>
+        <td class="clickable" data-verif="${v.id}">${v.businessName||(v.user?v.user.fullName:'Provider')}</td>
+        <td>${typeOf(v)}</td>
+        <td>${new Date(v.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td>
+        <td><button class="pill-btn ghost sm" data-reject="${v.id}">Reject</button> <button class="pill-btn green sm" data-approve="${v.id}">Approve</button></td>
+      </tr>`).join('')
+    }</tbody></table></div>`;
+    el.querySelectorAll('[data-verif]').forEach(r=>r.addEventListener('click',()=>openProviderDrawer(r.dataset.verif)));
+    el.querySelectorAll('[data-approve]').forEach(b=>b.addEventListener('click', async (e)=>{
+      e.stopPropagation(); b.disabled=true;
+      try{ await apiFetch(`/admin/providers/${b.dataset.approve}/verify`,{method:'POST'}); await renderVerification(); }
+      catch(err){ alert(apiErrorMessage(err)); b.disabled=false; }
+    }));
+    el.querySelectorAll('[data-reject]').forEach(b=>b.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      const reason=prompt('Reason for rejecting this provider (visible to them):');
+      if(!reason||reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); return; }
+      b.disabled=true;
+      try{ await apiFetch(`/admin/providers/${b.dataset.reject}/reject`,{method:'POST',body:{reason:reason.trim()}}); await renderVerification(); }
+      catch(err){ alert(apiErrorMessage(err)); b.disabled=false; }
+    }));
+    wireVerifBulkBar();
+  }catch(e){ el.innerHTML = stateError(e); }
+}
 function wireVerifBulkBar(){
-  const bar=document.getElementById('verifBulkBar');
-  const selectAll=document.getElementById('verifSelectAll');
-  const countEl=document.getElementById('verifSelectedCount');
+  const bar=document.getElementById('verifBulkBar'), selectAll=document.getElementById('verifSelectAll'), countEl=document.getElementById('verifSelectedCount');
   function checkboxes(){ return [...document.querySelectorAll('[data-provider-check]')]; }
   function selectedIds(){ return checkboxes().filter(c=>c.checked).map(c=>c.dataset.providerCheck); }
   function syncBar(){
@@ -555,163 +1021,180 @@ function wireVerifBulkBar(){
     selectAll.checked = n>0 && n===checkboxes().length;
     selectAll.indeterminate = n>0 && n<checkboxes().length;
   }
-  checkboxes().forEach(c=>c.addEventListener('change',syncBar));
+  checkboxes().forEach(c=>{ c.addEventListener('click',e=>e.stopPropagation()); c.addEventListener('change',syncBar); });
   selectAll.onchange=()=>{ checkboxes().forEach(c=>{c.checked=selectAll.checked;}); syncBar(); };
   document.getElementById('verifBulkApproveBtn').onclick=async ()=>{
-    const ids=selectedIds();
-    if(!ids.length) return;
+    const ids=selectedIds(); if(!ids.length) return;
     if(!confirm(`Approve ${ids.length} provider${ids.length===1?'':'s'}?`)) return;
-    const results = await Promise.allSettled(ids.map(id=>apiFetch(`/admin/providers/${id}/verify`,{method:'POST'})));
-    const failed = results.filter(r=>r.status==='rejected').length;
-    if(failed) alert(`${failed} of ${ids.length} could not be approved. The rest went through.`);
-    await renderVerification();
+    const results=await Promise.allSettled(ids.map(id=>apiFetch(`/admin/providers/${id}/verify`,{method:'POST'})));
+    const failed=results.filter(r=>r.status==='rejected').length;
+    if(failed) alert(`${failed} of ${ids.length} could not be approved.`);
+    renderVerification();
   };
   document.getElementById('verifBulkRejectBtn').onclick=async ()=>{
-    const ids=selectedIds();
-    if(!ids.length) return;
-    const reason = prompt(`Reason for rejecting ${ids.length} provider${ids.length===1?'':'s'} (visible to them):`);
-    if(!reason || reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); return; }
-    const results = await Promise.allSettled(ids.map(id=>apiFetch(`/admin/providers/${id}/reject`,{method:'POST',body:{reason:reason.trim()}})));
-    const failed = results.filter(r=>r.status==='rejected').length;
-    if(failed) alert(`${failed} of ${ids.length} could not be rejected. The rest went through.`);
-    await renderVerification();
+    const ids=selectedIds(); if(!ids.length) return;
+    const reason=prompt(`Reason for rejecting ${ids.length} provider${ids.length===1?'':'s'} (visible to them):`);
+    if(!reason||reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); return; }
+    const results=await Promise.allSettled(ids.map(id=>apiFetch(`/admin/providers/${id}/reject`,{method:'POST',body:{reason:reason.trim()}})));
+    const failed=results.filter(r=>r.status==='rejected').length;
+    if(failed) alert(`${failed} of ${ids.length} could not be rejected.`);
+    renderVerification();
   };
   syncBar();
 }
 
-/* ---- disputes queue (real — GET /admin/disputes, POST .../resolve) ---- */
-const DISPUTE_STATUS_BADGE={open:'pending',proposed:'pending',contested:'cancelled',resolved:'completed'};
-const DISPUTE_STATUS_LABEL={open:'Open',proposed:'Proposed',contested:'Contested',resolved:'Resolved'};
-let disputeStatusFilter='open';
+/* ================================================================
+   REVIEWS — hide/unhide, reversible moderation
+   ================================================================ */
+let revCursor=null, revRows=[];
+let revSearchDebounce=null;
+document.getElementById('revSearch').addEventListener('input',()=>{ clearTimeout(revSearchDebounce); revSearchDebounce=setTimeout(()=>loadReviews(true),300); });
+async function loadReviews(reset){
+  if(reset){ revCursor=null; revRows=[]; document.getElementById('reviewsList').innerHTML='<div class="skel-row-sm"></div>'; }
+  const q=document.getElementById('revSearch').value.trim();
+  const params=new URLSearchParams({limit:'20'});
+  if(q) params.set('search',q);
+  if(revCursor) params.set('cursor',revCursor);
+  try{
+    const {data,meta} = await apiFetch(`/admin/reviews?${params}`);
+    revRows = reset ? data : revRows.concat(data);
+    revCursor = meta.nextCursor;
+    document.getElementById('revLoadMore').style.display = meta.hasMore ? '' : 'none';
+    renderReviewsTable();
+  }catch(e){ document.getElementById('reviewsList').innerHTML = stateError(e); }
+}
+function renderReviewsTable(){
+  const el=document.getElementById('reviewsList');
+  if(!revRows.length){ el.innerHTML = stateEmpty('No reviews match this search.'); return; }
+  el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th>Rating</th><th>Comment</th><th>Status</th><th></th></tr></thead><tbody>${
+    revRows.map(r=>`<tr>
+      <td>${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</td>
+      <td style="max-width:320px;">${(r.comment||'—').slice(0,140)}</td>
+      <td><span class="pill-status ${r.status==='visible'?'good':'neutral'}">${r.status}</span></td>
+      <td>${r.status==='visible'
+        ? `<button class="pill-btn ghost sm" data-hide="${r.id}">Hide</button>`
+        : `<button class="pill-btn green sm" data-unhide="${r.id}">Unhide</button>`}</td>
+    </tr>`).join('')
+  }</tbody></table></div>`;
+  el.querySelectorAll('[data-hide]').forEach(b=>b.addEventListener('click', async ()=>{
+    const reason=prompt('Reason for hiding this review (internal):');
+    if(!reason||reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); return; }
+    try{ await apiFetch(`/admin/reviews/${b.dataset.hide}/hide`,{method:'POST',body:{reason:reason.trim()}}); loadReviews(true); }
+    catch(e){ alert(apiErrorMessage(e)); }
+  }));
+  el.querySelectorAll('[data-unhide]').forEach(b=>b.addEventListener('click', async ()=>{
+    try{ await apiFetch(`/admin/reviews/${b.dataset.unhide}/unhide`,{method:'POST'}); loadReviews(true); }
+    catch(e){ alert(apiErrorMessage(e)); }
+  }));
+}
+document.getElementById('revLoadMore').addEventListener('click',()=>loadReviews(false));
+
+/* ================================================================
+   AUDIT LOG
+   ================================================================ */
+let auditCursor=null, auditRows=[], auditEntityType='';
+document.getElementById('auditEntityFilter').innerHTML = '<option value="">Any entity type</option>'+
+  ['Listing','ProviderProfile','User','Review','Dispute'].map(t=>`<option value="${t}">${t}</option>`).join('');
+document.getElementById('auditEntityFilter').addEventListener('change',(e)=>{ auditEntityType=e.target.value; loadAuditLog(true); });
+document.getElementById('auditClearFilter').addEventListener('click',()=>{ auditEntityType=''; document.getElementById('auditEntityFilter').value=''; loadAuditLog(true); });
+async function loadAuditLog(reset){
+  if(reset){ auditCursor=null; auditRows=[]; document.getElementById('auditList').innerHTML='<div class="skel-row-sm"></div>'; }
+  const params=new URLSearchParams({limit:'30'});
+  if(auditEntityType) params.set('entity_type',auditEntityType);
+  if(auditCursor) params.set('cursor',auditCursor);
+  try{
+    const {data,meta} = await apiFetch(`/admin/audit-log?${params}`);
+    auditRows = reset ? data : auditRows.concat(data);
+    auditCursor = meta.nextCursor;
+    document.getElementById('auditLoadMore').style.display = meta.hasMore ? '' : 'none';
+    renderAuditTable();
+  }catch(e){ document.getElementById('auditList').innerHTML = stateError(e); }
+}
+function renderAuditTable(){
+  const el=document.getElementById('auditList');
+  if(!auditRows.length){ el.innerHTML = stateEmpty('No audit entries match this filter.'); return; }
+  el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th>When</th><th>Action</th><th>Entity</th><th>Before → After</th></tr></thead><tbody>${
+    auditRows.map(a=>`<tr>
+      <td>${new Date(a.createdAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</td>
+      <td>${a.action}</td>
+      <td>${a.entityType} <span style="color:var(--op-text-faint);font-size:11px;">${a.entityId.slice(0,8)}</span></td>
+      <td style="font-size:11.5px;color:var(--op-text-faint);">${JSON.stringify(a.before||{})} → ${JSON.stringify(a.after||{})}</td>
+    </tr>`).join('')
+  }</tbody></table></div>`;
+}
+document.getElementById('auditLoadMore').addEventListener('click',()=>loadAuditLog(false));
+
+/* ================================================================
+   DISPUTES (real, carried over) — restyled onto the new table pattern.
+   ================================================================ */
+function money2(minor){ return money(Math.round((minor||0)/100)); }
+const DISPUTE_STATUS_PILL={open:'warn',proposed:'warn',contested:'bad',resolved:'good'};
+let disputeQueue=[], disputeStatusFilter='open';
 function disputeFilterTabs(){
   const tabs=[['open','Needs attention'],['contested','Contested'],['resolved','Resolved'],['all','All']];
-  document.getElementById('disputeStatusFilter').innerHTML = tabs.map(([k,l])=>
-    `<button class="${disputeStatusFilter===k?'on':''}" data-df="${k}">${l}</button>`
-  ).join('');
+  document.getElementById('disputeStatusFilter').innerHTML = tabs.map(([k,l])=>`<button class="${disputeStatusFilter===k?'on':''}" data-df="${k}">${l}</button>`).join('');
   document.querySelectorAll('[data-df]').forEach(b=>b.addEventListener('click',()=>{ disputeStatusFilter=b.dataset.df; disputeFilterTabs(); renderDisputeRows(); }));
 }
 function disputeMatchesFilter(d){
   if(disputeStatusFilter==='all') return true;
-  if(disputeStatusFilter==='open') return d.status==='open' || d.status==='proposed';
+  if(disputeStatusFilter==='open') return d.status==='open'||d.status==='proposed';
   return d.status===disputeStatusFilter;
 }
 function renderDisputeRows(){
-  const list=document.getElementById('disputesList');
+  const el=document.getElementById('disputesList');
   const rows=disputeQueue.filter(disputeMatchesFilter);
-  if(!rows.length){ list.innerHTML=`<p style="color:var(--ink-faint);font-size:13.5px;">Nothing in this view.</p>`; return; }
-  list.innerHTML = rows.map(d=>{
-    const ctx=d._ctx||{};
-    const proposedLine = d.proposedDeductionMinor!=null ? ` · Provider proposed ${money2(d.proposedDeductionMinor)} deduction` : '';
-    const finalLine = d.status==='resolved' ? ` · Resolved: ${money2(d.finalDeductionMinor||0)} deducted (${d.resolution==='agreed'?'both parties agreed':'admin decided'})` : '';
-    return `
-      <div class="queue-row">
-        <div class="q-main">
-          <div class="q-title">${ctx.listingTitle||'A booking'} <span class="badge ${DISPUTE_STATUS_BADGE[d.status]}" style="margin-left:6px;">${DISPUTE_STATUS_LABEL[d.status]}</span></div>
-          <div class="q-sub">${ctx.renterName?`Renter: ${ctx.renterName} · `:''}Opened ${new Date(d.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · "${d.description}"${proposedLine}${finalLine}</div>
-        </div>
-        <div class="q-actions">
-          ${d.status!=='resolved'?`<button class="pill-btn green sm" data-resolve-dispute="${d.id}" data-deposit="${ctx.depositMinor||0}">Resolve</button>`:''}
-        </div>
-      </div>`;
-  }).join('');
-  document.querySelectorAll('[data-resolve-dispute]').forEach(b=>b.addEventListener('click', async ()=>{
-    const depositMinor = +b.dataset.deposit || 0;
-    const amountStr = prompt(`Final deduction from the ₦${(depositMinor/100).toLocaleString()} deposit (in Naira, 0 for no deduction):`);
+  if(!rows.length){ el.innerHTML = stateEmpty('Nothing in this view.'); return; }
+  el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th>Listing</th><th>Status</th><th>Opened</th><th>Description</th><th></th></tr></thead><tbody>${
+    rows.map(d=>{
+      const ctx=d._ctx||{};
+      return `<tr>
+        <td>${ctx.listingTitle||'A booking'}</td>
+        <td><span class="pill-status ${DISPUTE_STATUS_PILL[d.status]||'neutral'}">${d.status}</span></td>
+        <td>${new Date(d.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td>
+        <td style="max-width:280px;">${d.description}</td>
+        <td>${d.status!=='resolved'?`<button class="pill-btn green sm" data-resolve-dispute="${d.id}" data-deposit="${ctx.depositMinor||0}">Resolve</button>`:''}</td>
+      </tr>`;
+    }).join('')
+  }</tbody></table></div>`;
+  el.querySelectorAll('[data-resolve-dispute]').forEach(b=>b.addEventListener('click', async ()=>{
+    const depositMinor=+b.dataset.deposit||0;
+    const amountStr=prompt(`Final deduction from the ₦${(depositMinor/100).toLocaleString()} deposit (in Naira, 0 for no deduction):`);
     if(amountStr===null) return;
-    const amountNaira = Number(amountStr);
-    if(!Number.isFinite(amountNaira) || amountNaira<0){ alert('Enter a valid, non-negative amount.'); return; }
-    const note = prompt('Note explaining this decision (visible to both parties):');
-    if(!note || note.trim().length<3){ if(note!==null) alert('Please provide a short note.'); return; }
+    const amountNaira=Number(amountStr);
+    if(!Number.isFinite(amountNaira)||amountNaira<0){ alert('Enter a valid, non-negative amount.'); return; }
+    const note=prompt('Note explaining this decision (visible to both parties):');
+    if(!note||note.trim().length<3){ if(note!==null) alert('Please provide a short note.'); return; }
     b.disabled=true;
-    try{
-      await apiFetch(`/admin/disputes/${b.dataset.resolveDispute}/resolve`,{method:'POST',body:{finalDeductionMinor:Math.round(amountNaira*100),note:note.trim()}});
-      await renderDisputes();
-    }catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
+    try{ await apiFetch(`/admin/disputes/${b.dataset.resolveDispute}/resolve`,{method:'POST',body:{finalDeductionMinor:Math.round(amountNaira*100),note:note.trim()}}); await renderDisputes(); }
+    catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
   }));
 }
 async function renderDisputes(){
+  const el=document.getElementById('disputesList');
   try{
     const {data} = await apiFetch('/admin/disputes');
-    disputeQueue = data;
+    disputeQueue=data;
     await Promise.all(disputeQueue.map(async d=>{
       try{
         const {data:b} = await apiFetch(`/bookings/${d.bookingId}`);
-        const [{data:listing},renter] = await Promise.all([
-          apiFetch(`/listings/${b.listingId}`,{auth:false}),
-          getUserCached(b.renterId),
-        ]);
-        d._ctx = {listingTitle:listing.title, renterName:renter.fullName, depositMinor:b.depositMinor};
-      }catch(e){ d._ctx = {}; }
+        const [{data:listing},renter] = await Promise.all([apiFetch(`/listings/${b.listingId}`,{auth:false}),getUserCached(b.renterId)]);
+        d._ctx={listingTitle:listing.title, renterName:renter.fullName, depositMinor:b.depositMinor};
+      }catch(e){ d._ctx={}; }
     }));
     disputeFilterTabs();
     renderDisputeRows();
-  }catch(e){
-    document.getElementById('disputesList').innerHTML = `<p style="color:var(--ink-faint)">${apiErrorMessage(e)}</p>`;
-  }
-  renderOverviewExtras();
-}
-/* ---- team & access: look up a user by email, edit their roles (super admin only) ---- */
-const ROLE_OPTIONS = ['provider','provider_staff','admin','super_admin'];
-const ROLE_LABELS = {provider:'Provider',provider_staff:'Provider staff',admin:'Admin',super_admin:'Super admin'};
-
-function renderTeamResult(user){
-  document.getElementById('teamResult').innerHTML = `
-    <div class="panel-card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:20px;">
-        <div>
-          <div style="font-size:15px;font-weight:600;">${user.fullName}</div>
-          <div style="font-size:12.5px;color:var(--ink-faint);margin-top:2px;">${user.email||user.phone||''}</div>
-        </div>
-        <span class="badge info">Renter · baseline</span>
-      </div>
-      <div style="margin-bottom:20px;">
-        ${ROLE_OPTIONS.map(r=>`
-          <label class="role-check">
-            <input type="checkbox" data-role="${r}" ${user.roles.includes(r)?'checked':''} />
-            ${ROLE_LABELS[r]}
-          </label>`).join('')}
-      </div>
-      <div id="teamSaveError" class="banner danger" style="display:none;margin-bottom:16px;"></div>
-      <button class="pill-btn blue" id="teamSaveBtn">Save roles</button>
-    </div>`;
-
-  document.getElementById('teamSaveBtn').addEventListener('click', async ()=>{
-    const errEl=document.getElementById('teamSaveError');
-    errEl.style.display='none';
-    const selected = ROLE_OPTIONS.filter(r=>document.querySelector(`[data-role="${r}"]`).checked);
-    const btn=document.getElementById('teamSaveBtn');
-    btn.disabled=true; const original=btn.textContent; btn.textContent='Saving…';
-    try{
-      const {data:updated} = await apiFetch(`/admin/users/${user.id}/roles`,{method:'PATCH',body:{roles:selected}});
-      btn.textContent='Saved';
-      setTimeout(()=>renderTeamResult(updated), 900);
-    }catch(e){
-      errEl.innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(e)}</div>`; errEl.style.display='flex';
-      btn.disabled=false; btn.textContent=original;
-    }
-  });
+  }catch(e){ el.innerHTML = stateError(e); }
 }
 
-document.getElementById('teamSearchBtn').addEventListener('click', async ()=>{
-  const errEl=document.getElementById('teamError');
-  errEl.style.display='none';
-  document.getElementById('teamResult').innerHTML='';
-  const email=document.getElementById('teamEmailInput').value.trim();
-  if(!email){ errEl.innerHTML=icon('alert',{size:15})+'<div>Enter an email to search.</div>'; errEl.style.display='flex'; return; }
-  const btn=document.getElementById('teamSearchBtn');
-  btn.disabled=true; const original=btn.textContent; btn.textContent='Searching…';
-  try{
-    const {data:user} = await apiFetch(`/admin/users/lookup?email=${encodeURIComponent(email)}`);
-    renderTeamResult(user);
-  }catch(e){
-    errEl.innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(e)}</div>`; errEl.style.display='flex';
-  }finally{
-    btn.disabled=false; btn.textContent=original;
-  }
-});
-document.getElementById('teamEmailInput').addEventListener('keydown',(e)=>{ if(e.key==='Enter') document.getElementById('teamSearchBtn').click(); });
+/* ================================================================
+   PLANNED (honest roadmap placeholder)
+   ================================================================ */
+function renderPlanned(){
+  const items=['Payments & Ledger','Transactions','Settlements','Refunds (as tracked records)','Wallets','Support / Ticketing','CMS','Promotions','Notifications (admin broadcast)','System Settings','Integrations','System Health','Granular Module→Action→Permission RBAC'];
+  document.getElementById('plannedTbody').innerHTML = items.map(i=>`<tr><td>${i}</td><td><span class="pill-status neutral">Not built yet</span></td></tr>`).join('');
+}
 
-if(session){ renderWelcome(); renderVerification(); renderModeration(); renderDisputes(); }
+if(session){ renderWelcome(); renderOverview(); renderVerification(); renderDisputes(); }
 </script>
 </body>
 </html>
