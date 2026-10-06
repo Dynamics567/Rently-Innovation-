@@ -1,10 +1,13 @@
 import * as bcrypt from 'bcrypt';
+import { createHash } from 'crypto';
 import { AuthService } from './auth.service';
 import { UserRepository } from '../repositories/user.repository';
 import { PasswordResetTokenRepository } from '../repositories/password-reset-token.repository';
+import { AdminInviteRepository } from '../repositories/admin-invite.repository';
 import { TokenService } from './token.service';
 import { OtpService } from './otp.service';
 import { EmailSender } from './email-sender.port';
+import { AuditLogService } from '@common/audit/audit-log.service';
 import { UserAccountStatus } from '../enums/verification-status.enum';
 import { UserRole } from '../enums/user-role.enum';
 
@@ -25,9 +28,11 @@ describe('AuthService', () => {
     jest.Mock
   >;
   let passwordResetTokenRepository: Record<'create' | 'save' | 'findByTokenHash', jest.Mock>;
+  let adminInviteRepository: Record<'findActiveByEmail' | 'save', jest.Mock>;
   let tokenService: Record<'issueTokenPair' | 'revokeAllForUser', jest.Mock>;
   let otpService: Record<'requestOtp', jest.Mock>;
   let configService: { get: jest.Mock };
+  let auditLogService: Record<'record', jest.Mock>;
   let emailSender: Record<'send', jest.Mock>;
 
   beforeEach(() => {
@@ -43,20 +48,27 @@ describe('AuthService', () => {
       save: jest.fn(async (entity) => ({ ...entity, id: 'reset-token-1' })),
       findByTokenHash: jest.fn(),
     };
+    adminInviteRepository = {
+      findActiveByEmail: jest.fn(async () => null),
+      save: jest.fn(async (entity) => entity),
+    };
     tokenService = {
       issueTokenPair: jest.fn(async () => ({ accessToken: 'access', refreshToken: 'refresh' })),
       revokeAllForUser: jest.fn(async () => undefined),
     };
     otpService = { requestOtp: jest.fn(async () => undefined) };
     configService = { get: jest.fn(() => ({ frontendUrl: 'https://rentlyhub.com.ng' })) };
+    auditLogService = { record: jest.fn(async () => undefined) };
     emailSender = { send: jest.fn(async () => undefined) };
 
     authService = new AuthService(
       userRepository as unknown as UserRepository,
       passwordResetTokenRepository as unknown as PasswordResetTokenRepository,
+      adminInviteRepository as unknown as AdminInviteRepository,
       tokenService as unknown as TokenService,
       otpService as unknown as OtpService,
       configService as any,
+      auditLogService as unknown as AuditLogService,
       emailSender as unknown as EmailSender,
     );
   });
@@ -117,6 +129,88 @@ describe('AuthService', () => {
 
       const created = userRepository.create.mock.calls[0][0];
       expect(created.roles).toEqual([UserRole.RENTER]);
+    });
+
+    it('redeems a valid, matching admin invite and grants its role on the new account', async () => {
+      userRepository.findByEmailOrPhone.mockResolvedValue(null);
+      const rawToken = 'a-real-invite-token';
+      const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+      adminInviteRepository.findActiveByEmail.mockResolvedValue({
+        id: 'invite-1',
+        email: 'invited@example.com',
+        tokenHash,
+        role: UserRole.ADMIN,
+        isActive: () => true,
+      });
+
+      await authService.signup({
+        email: 'invited@example.com',
+        password: 'password123',
+        fullName: 'Invited Admin',
+        inviteToken: rawToken,
+      } as any);
+
+      const created = userRepository.create.mock.calls[0][0];
+      expect(created.roles).toEqual(expect.arrayContaining([UserRole.RENTER, UserRole.ADMIN]));
+      expect(adminInviteRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'invite-1', acceptedAt: expect.any(Date) }),
+      );
+    });
+
+    it('ignores an invite token that does not match the stored hash (wrong/tampered token)', async () => {
+      userRepository.findByEmailOrPhone.mockResolvedValue(null);
+      adminInviteRepository.findActiveByEmail.mockResolvedValue({
+        id: 'invite-1',
+        email: 'invited@example.com',
+        tokenHash: createHash('sha256').update('the-real-token').digest('hex'),
+        role: UserRole.ADMIN,
+        isActive: () => true,
+      });
+
+      await authService.signup({
+        email: 'invited@example.com',
+        password: 'password123',
+        fullName: 'Invited Admin',
+        inviteToken: 'a-wrong-guessed-token',
+      } as any);
+
+      const created = userRepository.create.mock.calls[0][0];
+      expect(created.roles).toEqual([UserRole.RENTER]);
+      expect(adminInviteRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('ignores an invite that exists but is already expired/accepted/revoked (isActive() false)', async () => {
+      userRepository.findByEmailOrPhone.mockResolvedValue(null);
+      const rawToken = 'a-real-invite-token';
+      adminInviteRepository.findActiveByEmail.mockResolvedValue({
+        id: 'invite-1',
+        email: 'invited@example.com',
+        tokenHash: createHash('sha256').update(rawToken).digest('hex'),
+        role: UserRole.ADMIN,
+        isActive: () => false,
+      });
+
+      await authService.signup({
+        email: 'invited@example.com',
+        password: 'password123',
+        fullName: 'Invited Admin',
+        inviteToken: rawToken,
+      } as any);
+
+      const created = userRepository.create.mock.calls[0][0];
+      expect(created.roles).toEqual([UserRole.RENTER]);
+    });
+
+    it('does not even look up an invite when no inviteToken is provided (the common case)', async () => {
+      userRepository.findByEmailOrPhone.mockResolvedValue(null);
+
+      await authService.signup({
+        email: 'ordinary@example.com',
+        password: 'password123',
+        fullName: 'Ordinary Renter',
+      } as any);
+
+      expect(adminInviteRepository.findActiveByEmail).not.toHaveBeenCalled();
     });
   });
 

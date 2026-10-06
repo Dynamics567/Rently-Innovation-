@@ -47,6 +47,20 @@ export class UserRepository extends BaseRepository<User> {
     return { data, meta: { hasMore, nextCursor: hasMore ? encodeCursor(data[data.length - 1]) : null } };
   }
 
+  /** [Admin] Overview's "total users" stat — a real count, not a page-length approximation. */
+  async countAll(): Promise<number> {
+    return this.repository.count();
+  }
+
+  /** [Admin Team view] Every account with admin or super_admin access. */
+  async findAdmins(): Promise<User[]> {
+    return this.repository
+      .createQueryBuilder('user')
+      .where("'admin' = ANY(user.roles) OR 'super_admin' = ANY(user.roles)")
+      .orderBy('user.fullName', 'ASC')
+      .getMany();
+  }
+
   async findByEmail(email: string): Promise<User | null> {
     return this.repository.findOne({ where: { email } });
   }

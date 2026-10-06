@@ -1,7 +1,9 @@
 import { UsersService } from './users.service';
 import { UserRepository } from '../repositories/user.repository';
+import { AdminInviteRepository } from '../repositories/admin-invite.repository';
 import { AuditLogService } from '@common/audit/audit-log.service';
 import { UserAccountStatus } from '../enums/verification-status.enum';
+import { UserRole } from '../enums/user-role.enum';
 
 /**
  * Unit-level, same shape as the other *.service.spec.ts files in this repo:
@@ -9,19 +11,36 @@ import { UserAccountStatus } from '../enums/verification-status.enum';
  */
 describe('UsersService', () => {
   let service: UsersService;
-  let userRepository: Record<'findByIdOrFail' | 'save' | 'searchForAdmin', jest.Mock>;
+  let userRepository: Record<'findByIdOrFail' | 'findByEmail' | 'save' | 'searchForAdmin' | 'countAll' | 'findAdmins', jest.Mock>;
+  let adminInviteRepository: Record<'create' | 'save' | 'findByIdOrFail' | 'findPending', jest.Mock>;
   let auditLogService: Record<'record', jest.Mock>;
+  let configService: { get: jest.Mock };
+  let emailSender: Record<'send', jest.Mock>;
 
   beforeEach(() => {
     userRepository = {
-      findByIdOrFail: jest.fn(async () => ({ id: 'user-1', status: UserAccountStatus.ACTIVE })),
+      findByIdOrFail: jest.fn(async () => ({ id: 'user-1', status: UserAccountStatus.ACTIVE, roles: [UserRole.RENTER] })),
+      findByEmail: jest.fn(async () => null),
       save: jest.fn(async (u: unknown) => u),
       searchForAdmin: jest.fn(),
+      countAll: jest.fn(async () => 42),
+      findAdmins: jest.fn(async () => []),
+    };
+    adminInviteRepository = {
+      create: jest.fn((partial) => partial),
+      save: jest.fn(async (entity) => ({ ...entity, id: 'invite-1' })),
+      findByIdOrFail: jest.fn(async () => ({ id: 'invite-1', revokedAt: null })),
+      findPending: jest.fn(async () => []),
     };
     auditLogService = { record: jest.fn(async () => undefined) };
+    configService = { get: jest.fn(() => ({ frontendUrl: 'https://rentlyhub.com.ng' })) };
+    emailSender = { send: jest.fn(async () => undefined) };
     service = new UsersService(
       userRepository as unknown as UserRepository,
+      adminInviteRepository as unknown as AdminInviteRepository,
       auditLogService as unknown as AuditLogService,
+      configService as any,
+      emailSender as unknown as any,
     );
   });
 
@@ -64,6 +83,76 @@ describe('UsersService', () => {
       const result = await service.setStatus('user-1', UserAccountStatus.ACTIVE, 'admin-1');
 
       expect(result.status).toBe(UserAccountStatus.ACTIVE);
+    });
+  });
+
+  describe('getStats', () => {
+    it('reports the real total user count from the repository', async () => {
+      const result = await service.getStats();
+      expect(result).toEqual({ totalUsers: 42 });
+    });
+  });
+
+  describe('addRole', () => {
+    it('adds a role on top of existing ones, never replacing them (unlike setRoles)', async () => {
+      userRepository.findByIdOrFail.mockResolvedValue({ id: 'user-1', roles: [UserRole.RENTER, UserRole.PROVIDER] });
+
+      const result = await service.addRole('user-1', UserRole.ADMIN, 'super-admin-1');
+
+      expect(result.roles).toEqual(expect.arrayContaining([UserRole.RENTER, UserRole.PROVIDER, UserRole.ADMIN]));
+      expect(auditLogService.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'user.add_role' }));
+    });
+  });
+
+  describe('inviteAdmin', () => {
+    it('grants the role immediately when an account with that email already exists', async () => {
+      userRepository.findByEmail.mockResolvedValue({ id: 'existing-1', roles: [UserRole.RENTER] });
+      userRepository.findByIdOrFail.mockResolvedValue({ id: 'existing-1', roles: [UserRole.RENTER] });
+
+      const result = await service.inviteAdmin('existing@example.com', UserRole.ADMIN, 'super-admin-1');
+
+      expect(result.granted).toBe(true);
+      expect(emailSender.send).toHaveBeenCalledWith(
+        'existing@example.com',
+        expect.stringContaining('admin access'),
+        expect.any(String),
+      );
+      expect(adminInviteRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('creates a pending invite and emails a signup link when no account exists yet', async () => {
+      userRepository.findByEmail.mockResolvedValue(null);
+
+      const result = await service.inviteAdmin('newperson@example.com', UserRole.ADMIN, 'super-admin-1');
+
+      expect(result.granted).toBe(false);
+      expect(adminInviteRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ email: 'newperson@example.com', role: UserRole.ADMIN }),
+      );
+      expect(emailSender.send).toHaveBeenCalledWith(
+        'newperson@example.com',
+        expect.stringContaining('invited'),
+        expect.stringContaining('inviteToken='),
+      );
+    });
+
+    it('does not let an email-delivery failure block the invite/grant itself', async () => {
+      userRepository.findByEmail.mockResolvedValue(null);
+      emailSender.send.mockRejectedValue(new Error('Resend outage'));
+
+      await expect(service.inviteAdmin('newperson@example.com', UserRole.ADMIN, 'super-admin-1')).resolves.toMatchObject({
+        granted: false,
+      });
+      expect(adminInviteRepository.save).toHaveBeenCalled();
+    });
+  });
+
+  describe('revokeInvite', () => {
+    it('marks the invite revoked and audit-logs it', async () => {
+      const result = await service.revokeInvite('invite-1', 'super-admin-1');
+
+      expect(result.revokedAt).toBeInstanceOf(Date);
+      expect(auditLogService.record).toHaveBeenCalledWith(expect.objectContaining({ action: 'admin_invite.revoke' }));
     });
   });
 });

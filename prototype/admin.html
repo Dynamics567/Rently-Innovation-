@@ -77,7 +77,7 @@ h1,h2,h3{font-family:var(--sans);}
 .attn-empty{padding:28px 16px;text-align:center;color:var(--op-text-faint);font-size:13px;}
 
 /* ---- secondary KPI row: smaller, flatter than the old marketing-style cards ---- */
-.kpi-row-sm{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.kpi-row-sm{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
 .kpi-sm{background:var(--op-surface);border:1px solid var(--op-border);border-radius:8px;padding:14px 16px;}
 .kpi-sm .lbl{font-size:11px;color:var(--op-text-faint);font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
 .kpi-sm .val{font-size:22px;font-weight:700;color:var(--op-text);margin-top:4px;font-variant-numeric:tabular-nums;}
@@ -217,6 +217,7 @@ h1,h2,h3{font-family:var(--sans);}
 
     <div class="side-group-lbl">Admin</div>
     <a class="side-link" data-view="audit" id="linkAudit"></a>
+    <a class="side-link" data-view="team" id="linkTeam" style="display:none;"></a>
 
     <div class="side-group-lbl">Not built yet</div>
     <a class="side-link" data-view="planned" id="linkPlanned" style="opacity:.6;"></a>
@@ -332,6 +333,22 @@ h1,h2,h3{font-family:var(--sans);}
       <div style="margin-top:14px;text-align:center;"><button class="pill-btn ghost sm" id="auditLoadMore" style="display:none;">Load more</button></div>
     </div>
 
+    <!-- ============ TEAM & ACCESS (super admin only) ============ -->
+    <div class="d-view" id="view-team">
+      <div class="app-head">
+        <div><h1>Team &amp; access</h1><p>Everyone with admin access, and anyone invited but not yet signed up.</p></div>
+        <button class="pill-btn blue sm" id="teamInviteBtn">Invite admin</button>
+      </div>
+      <div class="section-block">
+        <div class="sb-head"><h3>Current admins</h3></div>
+        <div id="teamAdminsList"><div class="skel-row-sm"></div></div>
+      </div>
+      <div class="section-block">
+        <div class="sb-head"><h3>Pending invites</h3></div>
+        <div id="teamInvitesList"><div class="skel-row-sm"></div></div>
+      </div>
+    </div>
+
     <!-- ============ PLANNED (honest placeholder) ============ -->
     <div class="d-view" id="view-planned">
       <div class="app-head"><div><h1>Planned</h1><p>Real backend work, not yet built — listed here instead of hidden, so the roadmap is honest about what exists today.</p></div></div>
@@ -379,6 +396,19 @@ h1,h2,h3{font-family:var(--sans);}
   </div>
 </div>
 
+<!-- ============ INVITE ADMIN MODAL ============ -->
+<div class="overlay" id="teamInviteOverlay">
+  <div class="modal">
+    <button class="modal-close" id="teamInviteCloseBtn"></button>
+    <h3 style="font-size:18px;margin-bottom:6px;">Invite admin</h3>
+    <p style="font-size:12.5px;color:var(--op-text-faint);margin-bottom:18px;">An existing account gets the role immediately. A new email gets a signup link that grants it once they create an account.</p>
+    <div id="teamInviteError" class="banner danger" style="display:none;margin-bottom:14px;"></div>
+    <div class="field-sm"><label>Email</label><input type="email" id="teamInviteEmail" placeholder="person@example.com" /></div>
+    <div class="field-sm"><label>Role</label><select id="teamInviteRole"><option value="admin">Admin</option><option value="super_admin">Super admin</option></select></div>
+    <button class="pill-btn blue block" id="teamInviteSaveBtn">Send invite</button>
+  </div>
+</div>
+
 <script src="assets/rently.js"></script>
 <script src="assets/api.js"></script>
 <script>
@@ -402,7 +432,13 @@ document.getElementById('linkCustomers').innerHTML = icon('user',{size:16})+' Cu
 document.getElementById('linkVerification').innerHTML = icon('shield',{size:16})+' Verification';
 document.getElementById('linkReviews').innerHTML = icon('star',{size:16})+' Reviews';
 document.getElementById('linkAudit').innerHTML = icon('filter',{size:16})+' Audit log';
+document.getElementById('linkTeam').innerHTML = icon('user',{size:16})+' Team &amp; access';
 document.getElementById('linkPlanned').innerHTML = icon('info',{size:16})+' Roadmap';
+document.getElementById('teamInviteCloseBtn').innerHTML = icon('close',{size:15});
+/* "Team & Access" is SUPER_ADMIN-only on the backend — hide the nav entirely for a plain admin rather than show a screen that would just 403. */
+if(session && session.user.roles.includes('super_admin')){
+  document.getElementById('linkTeam').style.display='';
+}
 document.getElementById('mLinkOverview').innerHTML = icon('grid',{size:15})+' Overview';
 document.getElementById('mLinkBookings').innerHTML = icon('calendar',{size:15})+' Bookings';
 document.getElementById('mLinkDisputes').innerHTML = icon('alert',{size:15})+' Disputes';
@@ -434,6 +470,7 @@ function goView(v){
   if(v==='customers') loadCustomers(true);
   if(v==='reviews') loadReviews(true);
   if(v==='audit') loadAuditLog(true);
+  if(v==='team') loadTeam();
   if(v==='planned') renderPlanned();
 }
 document.querySelectorAll('.side-link[data-view]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goView(l.dataset.view);}));
@@ -555,11 +592,12 @@ async function countFor(path){
   }catch(e){ return { n: 0, plus:false, error:true }; }
 }
 async function renderOverview(){
-  const [listings, verif, disputes, returns] = await Promise.all([
+  const [listings, verif, disputes, returns, userStats] = await Promise.all([
     countFor('/admin/listings/moderation-queue'),
     countFor('/admin/providers/verification-queue'),
     countFor('/admin/disputes'),
     countFor('/admin/bookings?stage=returned'),
+    apiFetch('/admin/users/stats').then(r=>r.data).catch(()=>({totalUsers:null})),
   ]);
   const disputesOpen = await apiFetch('/admin/disputes').then(({data})=>data.filter(d=>d.status==='open'||d.status==='proposed').length).catch(()=>0);
 
@@ -580,6 +618,7 @@ async function renderOverview(){
   list.querySelectorAll('[data-go]').forEach(el=>el.addEventListener('click',()=>goView(el.dataset.go)));
 
   document.getElementById('kpiRowSm').innerHTML = [
+    {lbl:'Total users', val:userStats.totalUsers!=null?userStats.totalUsers:'—'},
     {lbl:'Pending listings', val:listings.n+(listings.plus?'+':'')},
     {lbl:'Pending verifications', val:verif.n+(verif.plus?'+':'')},
     {lbl:'Open disputes', val:disputesOpen},
@@ -1185,6 +1224,58 @@ async function renderDisputes(){
     renderDisputeRows();
   }catch(e){ el.innerHTML = stateError(e); }
 }
+
+/* ================================================================
+   TEAM & ACCESS (super admin only) — who currently has admin access,
+   pending invites, and the invite-by-email flow (grants immediately
+   for an existing account, sends a real signup-link email otherwise —
+   see UsersService.inviteAdmin()).
+   ================================================================ */
+async function loadTeam(){
+  const adminsEl=document.getElementById('teamAdminsList'), invitesEl=document.getElementById('teamInvitesList');
+  try{
+    const {admins, invites} = await apiFetch('/admin/team').then(r=>r.data);
+    adminsEl.innerHTML = admins.length ? `<div class="optable-wrap"><table class="optable"><thead><tr><th>Name</th><th>Email</th><th>Roles</th><th>Status</th></tr></thead><tbody>${
+      admins.map(u=>`<tr><td>${u.fullName}</td><td>${u.email||'—'}</td><td>${u.roles.filter(r=>r==='admin'||r==='super_admin').join(', ')}</td><td><span class="pill-status ${u.status==='active'?'good':'bad'}">${u.status}</span></td></tr>`).join('')
+    }</tbody></table></div>` : stateEmpty('No admin accounts yet.');
+    invitesEl.innerHTML = invites.length ? `<div class="optable-wrap"><table class="optable"><thead><tr><th>Email</th><th>Role</th><th>Sent</th><th>Expires</th><th></th></tr></thead><tbody>${
+      invites.map(i=>`<tr>
+        <td>${i.email}</td><td>${i.role}</td>
+        <td>${new Date(i.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td>
+        <td>${new Date(i.expiresAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td>
+        <td><button class="pill-btn ghost sm" data-revoke-invite="${i.id}">Revoke</button></td>
+      </tr>`).join('')
+    }</tbody></table></div>` : stateEmpty('No pending invites.');
+    invitesEl.querySelectorAll('[data-revoke-invite]').forEach(b=>b.addEventListener('click', async ()=>{
+      if(!confirm('Revoke this invite? The link will stop working.')) return;
+      try{ await apiFetch(`/admin/team/invites/${b.dataset.revokeInvite}/revoke`,{method:'POST'}); loadTeam(); }
+      catch(e){ alert(apiErrorMessage(e)); }
+    }));
+  }catch(e){ adminsEl.innerHTML = stateError(e); invitesEl.innerHTML=''; }
+}
+document.getElementById('teamInviteBtn').addEventListener('click',()=>{
+  document.getElementById('teamInviteError').style.display='none';
+  document.getElementById('teamInviteEmail').value='';
+  document.getElementById('teamInviteRole').value='admin';
+  document.getElementById('teamInviteOverlay').classList.add('open');
+});
+document.getElementById('teamInviteCloseBtn').addEventListener('click',()=>document.getElementById('teamInviteOverlay').classList.remove('open'));
+document.getElementById('teamInviteOverlay').addEventListener('click',(e)=>{ if(e.target.id==='teamInviteOverlay') document.getElementById('teamInviteOverlay').classList.remove('open'); });
+document.getElementById('teamInviteSaveBtn').addEventListener('click', async ()=>{
+  const errEl=document.getElementById('teamInviteError'); errEl.style.display='none';
+  const email=document.getElementById('teamInviteEmail').value.trim();
+  const role=document.getElementById('teamInviteRole').value;
+  if(!email){ errEl.textContent='Enter an email address.'; errEl.style.display='block'; return; }
+  const btn=document.getElementById('teamInviteSaveBtn');
+  btn.disabled=true; const original=btn.textContent; btn.textContent='Sending…';
+  try{
+    const {data} = await apiFetch('/admin/team/invite',{method:'POST',body:{email,role}});
+    document.getElementById('teamInviteOverlay').classList.remove('open');
+    alert(data.granted ? `${email} already had an account — admin access granted immediately.` : `Invite sent to ${email}.`);
+    loadTeam();
+  }catch(e){ errEl.textContent=apiErrorMessage(e); errEl.style.display='block'; }
+  finally{ btn.disabled=false; btn.textContent=original; }
+});
 
 /* ================================================================
    PLANNED (honest roadmap placeholder)

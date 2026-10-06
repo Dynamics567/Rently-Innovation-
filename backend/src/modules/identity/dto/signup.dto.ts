@@ -50,4 +50,16 @@ export class SignupDto {
   @IsOptional()
   @IsIn(SELF_SERVICE_ROLES, { each: true })
   roles?: UserRole[];
+
+  /**
+   * The one legitimate way admin/super_admin ends up on a *new* account —
+   * redeemed in AuthService.signup() against a matching, unexpired
+   * AdminInvite row for this exact email. Absent or non-matching, this
+   * does nothing; it is never a way to self-grant a role, only to redeem
+   * one a super admin already created via UsersService.inviteAdmin().
+   */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  inviteToken?: string;
 }

@@ -12,11 +12,13 @@ import { ProviderProfile } from './entities/provider-profile.entity';
 import { VerificationDocument } from './entities/verification-document.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { PasswordResetToken } from './entities/password-reset-token.entity';
+import { AdminInvite } from './entities/admin-invite.entity';
 
 import { UserRepository } from './repositories/user.repository';
 import { ProviderProfileRepository } from './repositories/provider-profile.repository';
 import { VerificationDocumentRepository } from './repositories/verification-document.repository';
 import { PasswordResetTokenRepository } from './repositories/password-reset-token.repository';
+import { AdminInviteRepository } from './repositories/admin-invite.repository';
 
 import { AuthService } from './services/auth.service';
 import { TokenService } from './services/token.service';
@@ -33,6 +35,7 @@ import { UsersController } from './controllers/users.controller';
 import { ProvidersController } from './controllers/providers.controller';
 import { AdminProvidersController } from './controllers/admin-providers.controller';
 import { AdminUsersController } from './controllers/admin-users.controller';
+import { AdminTeamController } from './controllers/admin-team.controller';
 
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { IsSelfOrAdminPolicy } from './policies/is-self-or-admin.policy';
@@ -53,6 +56,7 @@ import { IsSelfOrAdminPolicy } from './policies/is-self-or-admin.policy';
       VerificationDocument,
       RefreshToken,
       PasswordResetToken,
+      AdminInvite,
     ]),
     StorageModule,
     AuditLogModule,
@@ -72,12 +76,14 @@ import { IsSelfOrAdminPolicy } from './policies/is-self-or-admin.policy';
     ProvidersController,
     AdminProvidersController,
     AdminUsersController,
+    AdminTeamController,
   ],
   providers: [
     UserRepository,
     ProviderProfileRepository,
     VerificationDocumentRepository,
     PasswordResetTokenRepository,
+    AdminInviteRepository,
     AuthService,
     TokenService,
     OtpService,

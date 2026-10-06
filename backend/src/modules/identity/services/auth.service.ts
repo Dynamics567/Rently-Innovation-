@@ -5,8 +5,11 @@ import { randomBytes, createHash } from 'crypto';
 import { DomainException } from '@common/errors/domain.exception';
 import { ErrorCode } from '@common/errors/error-codes.enum';
 import { AppConfig } from '@config/configuration';
+import { AuditLogService } from '@common/audit/audit-log.service';
+import { AuditActorType } from '@common/audit/audit-actor-type.enum';
 import { UserRepository } from '../repositories/user.repository';
 import { PasswordResetTokenRepository } from '../repositories/password-reset-token.repository';
+import { AdminInviteRepository } from '../repositories/admin-invite.repository';
 import { TokenService, TokenPair } from './token.service';
 import { OtpService } from './otp.service';
 import { EMAIL_SENDER, EmailSender } from './email-sender.port';
@@ -26,9 +29,11 @@ export class AuthService {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly passwordResetTokenRepository: PasswordResetTokenRepository,
+    private readonly adminInviteRepository: AdminInviteRepository,
     private readonly tokenService: TokenService,
     private readonly otpService: OtpService,
     private readonly configService: ConfigService,
+    private readonly auditLogService: AuditLogService,
     @Inject(EMAIL_SENDER) private readonly emailSender: EmailSender,
   ) {}
 
@@ -58,6 +63,22 @@ export class AuthService {
       (SELF_SERVICE_ROLES as readonly UserRole[]).includes(r),
     );
     const roles = new Set([UserRole.RENTER, ...requestedRoles]);
+
+    // The one legitimate way admin/super_admin reaches a brand-new account —
+    // redeeming a real AdminInvite a super admin already created (see
+    // UsersService.inviteAdmin()), never dto.roles itself (SELF_SERVICE_ROLES
+    // never includes admin/super_admin — see the filter above). Silently
+    // ignored if absent, revoked, expired, or for a different email: an
+    // invalid token must never block an otherwise-normal signup.
+    let redeemedInvite = null as Awaited<ReturnType<AdminInviteRepository['findActiveByEmail']>>;
+    if (dto.inviteToken && dto.email) {
+      const candidate = await this.adminInviteRepository.findActiveByEmail(dto.email);
+      if (candidate && candidate.isActive() && this.hashToken(dto.inviteToken) === candidate.tokenHash) {
+        redeemedInvite = candidate;
+        roles.add(candidate.role);
+      }
+    }
+
     const user = this.userRepository.create({
       email: dto.email,
       phone: dto.phone,
@@ -66,6 +87,20 @@ export class AuthService {
       roles: [...roles],
     });
     await this.userRepository.save(user);
+
+    if (redeemedInvite) {
+      redeemedInvite.acceptedAt = new Date();
+      await this.adminInviteRepository.save(redeemedInvite);
+      await this.auditLogService.record({
+        actorId: user.id,
+        actorType: AuditActorType.ADMIN,
+        action: 'admin_invite.accept',
+        entityType: 'AdminInvite',
+        entityId: redeemedInvite.id,
+        before: { acceptedAt: null },
+        after: { acceptedAt: redeemedInvite.acceptedAt, grantedTo: user.id },
+      });
+    }
 
     if (dto.phone) {
       await this.otpService.requestOtp(dto.phone);

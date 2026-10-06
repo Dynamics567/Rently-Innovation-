@@ -60,6 +60,13 @@ export class AdminUsersController {
     return this.usersService.searchForAdmin(query.search, query.cursor, query.limit);
   }
 
+  /** Overview's "total users" stat — registered before :id so "stats" is never parsed as a user id. */
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Get('stats')
+  async stats() {
+    return this.usersService.getStats();
+  }
+
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Get(':id')
   async findOne(@Param('id', ParseUUIDPipe) id: string) {

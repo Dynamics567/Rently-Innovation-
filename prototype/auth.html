@@ -142,12 +142,14 @@ body{min-height:100vh;}
 <script>
 const params=new URLSearchParams(window.location.search);
 const initialProvider = params.get('role')==='provider';
+const inviteToken = params.get('inviteToken');
+const inviteEmail = params.get('inviteEmail');
 
 // Already signed in — send straight to the right dashboard. Skipped when
 // landing via a password-reset link: that flow must work even with a
 // stale/logged-in session already in this browser.
 (function(){
-  if(params.get('resetToken')) return;
+  if(params.get('resetToken') || inviteToken) return;
   const session=getSession();
   if(session) window.location.href = session.user.roles.includes('provider') ? 'dashboard-provider' : 'dashboard-renter';
 })();
@@ -158,7 +160,7 @@ document.getElementById('roleProviderIcon').innerHTML=icon('building',{size:16})
 document.getElementById('googleBtn').innerHTML='<span style="font-weight:800;color:#4285F4">G</span> Continue with Google';
 document.getElementById('appleBtn').innerHTML=icon('shield',{size:15})+' Continue with Apple';
 
-let mode='login'; // 'login' | 'signup'
+let mode = inviteToken ? 'signup' : 'login'; // 'login' | 'signup'
 let role= initialProvider ? 'provider' : 'renter';
 
 function paintBrand(){
@@ -205,6 +207,11 @@ document.getElementById('tabLogin').addEventListener('click',()=>{mode='login';r
 document.getElementById('tabSignup').addEventListener('click',()=>{mode='signup';renderMode();});
 if(initialProvider){ mode='signup'; }
 renderMode();
+if(inviteToken && inviteEmail){
+  document.getElementById('emailInput').value = inviteEmail;
+  document.getElementById('emailInput').readOnly = true;
+  document.getElementById('formSub').textContent = "You've been invited to join Rently's admin team — create your account to accept.";
+}
 
 function showAuthError(msg){
   const el=document.getElementById('authError');
@@ -230,14 +237,18 @@ document.getElementById('submitAuthBtn').addEventListener('click', async ()=>{
   try{
     if(mode==='signup'){
       const {data} = await apiFetch('/auth/signup',{method:'POST',auth:false,body:{
-        email, password, fullName, roles:[role],
+        email, password, fullName, roles:[role], inviteToken: inviteToken||undefined,
       }});
       setSession(data.user, data);
       if(role==='provider'){
         const businessName=document.getElementById('businessNameInput').value.trim();
         await apiFetch('/providers/profile',{method:'POST',body:{businessName: businessName||undefined}}).catch(()=>{});
       }
-      window.location.href = role==='provider' ? 'dashboard-provider' : 'dashboard-renter';
+      // A redeemed admin invite (see AuthService.signup()) lands the new
+      // account straight in the admin dashboard — that's the only reason
+      // they were signing up via this link in the first place.
+      const isNewAdmin = data.user.roles.includes('admin') || data.user.roles.includes('super_admin');
+      window.location.href = isNewAdmin ? 'admin' : (role==='provider' ? 'dashboard-provider' : 'dashboard-renter');
     } else {
       const {data} = await apiFetch('/auth/login',{method:'POST',auth:false,body:{email,password}});
       setSession(data.user, data);
