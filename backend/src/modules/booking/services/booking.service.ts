@@ -24,10 +24,12 @@ import { ExtensionRequestStatus } from '../enums/extension-request-status.enum';
 import { DisputeStatus } from '../enums/dispute-status.enum';
 import { CreateBookingDto } from '../dto/create-booking.dto';
 import { QueryBookingsDto } from '../dto/query-bookings.dto';
+import { QueryAdminBookingsDto } from '../dto/query-admin-bookings.dto';
 import { RecordInspectionDto } from '../dto/record-inspection.dto';
 import { PAYMENT_PORT, PaymentPort } from './payment.port';
 import { computeCancellationRefund, CancellationRefund } from './cancellation-refund.util';
 import { ProviderProfileService } from '@modules/identity/services/provider-profile.service';
+import { UsersService } from '@modules/identity/services/users.service';
 
 interface StageStep {
   stage: BookingStage;
@@ -48,6 +50,7 @@ export class BookingService {
     private readonly availabilityService: AvailabilityService,
     private readonly assetsService: AssetsService,
     private readonly providerProfileService: ProviderProfileService,
+    private readonly usersService: UsersService,
     @Inject(PAYMENT_PORT) private readonly paymentPort: PaymentPort,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -115,6 +118,61 @@ export class BookingService {
       cursor: query.cursor,
       limit: query.limit,
     });
+  }
+
+  /**
+   * [Admin] Platform-wide search, no renter/provider ownership scoping —
+   * only AdminBookingsController may call this. "Returns" in the admin nav
+   * is just this same method with `stage` set to one of
+   * returnsched/returned/inspected; there's no separate Returns entity.
+   */
+  async searchAsAdmin(query: QueryAdminBookingsDto): Promise<CursorPage<Booking>> {
+    return this.bookingRepository.search({
+      role: 'admin',
+      renterId: query.renterId,
+      status: query.status,
+      stage: query.stage,
+      from: query.from ? new Date(query.from) : undefined,
+      to: query.to ? new Date(query.to) : undefined,
+      cursor: query.cursor,
+      limit: query.limit,
+    });
+  }
+
+  /**
+   * [Admin] Everything the record-detail drawer needs in one call: the
+   * booking, its full status-history timeline, and the resolved listing/
+   * renter/provider names a bare booking row can't show on its own (Booking
+   * only stores ids — module-boundary rule, see the entity's doc comment).
+   * Each cross-module lookup is best-effort (`.catch(() => null)`): a
+   * listing/user that's since been soft-deleted shouldn't break the whole
+   * detail view, same philosophy as emitBookingEvent's try/catch above.
+   */
+  async getDetailForAdmin(id: string): Promise<{
+    booking: Booking;
+    history: BookingStatusHistory[];
+    listingTitle: string | null;
+    renterName: string | null;
+    renterEmail: string | null;
+    providerName: string | null;
+  }> {
+    const booking = await this.findByIdOrFail(id);
+    const [history, listing, renter] = await Promise.all([
+      this.getHistory(id),
+      this.listingsService.findByIdOrFail(booking.listingId).catch(() => null),
+      this.usersService.getById(booking.renterId).catch(() => null),
+    ]);
+    const provider = listing
+      ? await this.providerProfileService.getById(listing.providerId).catch(() => null)
+      : null;
+    return {
+      booking,
+      history,
+      listingTitle: listing?.title ?? null,
+      renterName: renter?.fullName ?? null,
+      renterEmail: renter?.email ?? null,
+      providerName: provider?.businessName ?? null,
+    };
   }
 
   /**

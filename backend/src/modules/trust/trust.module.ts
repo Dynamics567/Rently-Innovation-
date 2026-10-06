@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { IdentityModule } from '@modules/identity/identity.module';
 import { CatalogModule } from '@modules/catalog/catalog.module';
 import { BookingModule } from '@modules/booking/booking.module';
+import { AuditLogModule } from '@common/audit/audit-log.module';
 import { Review } from './entities/review.entity';
 import { ReviewRepository } from './repositories/review.repository';
 import { ReviewsService } from './services/reviews.service';
@@ -10,6 +11,7 @@ import { BookingReviewsController } from './controllers/booking-reviews.controll
 import { ListingReviewsController } from './controllers/listing-reviews.controller';
 import { ProviderReviewsController } from './controllers/provider-reviews.controller';
 import { ReviewsController } from './controllers/reviews.controller';
+import { AdminReviewsController } from './controllers/admin-reviews.controller';
 
 /**
  * One-directional: reads Booking (to confirm completion + resolve parties),
@@ -20,12 +22,19 @@ import { ReviewsController } from './controllers/reviews.controller';
  * exactly this reason).
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([Review]), IdentityModule, CatalogModule, BookingModule],
+  imports: [
+    TypeOrmModule.forFeature([Review]),
+    IdentityModule,
+    CatalogModule,
+    BookingModule,
+    AuditLogModule,
+  ],
   controllers: [
     BookingReviewsController,
     ListingReviewsController,
     ProviderReviewsController,
     ReviewsController,
+    AdminReviewsController,
   ],
   providers: [ReviewRepository, ReviewsService],
   exports: [ReviewsService],

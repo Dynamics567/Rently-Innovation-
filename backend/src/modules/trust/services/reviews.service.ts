@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { DomainException } from '@common/errors/domain.exception';
 import { ErrorCode } from '@common/errors/error-codes.enum';
 import { CursorPage } from '@common/dto/cursor-pagination.dto';
+import { AuditLogService } from '@common/audit/audit-log.service';
+import { AuditActorType } from '@common/audit/audit-actor-type.enum';
 import { BookingService } from '@modules/booking/services/booking.service';
 import { BookingStatus } from '@modules/booking/enums/booking.enums';
 import { ListingsService } from '@modules/catalog/services/listings.service';
@@ -9,6 +11,7 @@ import { ProviderProfileService } from '@modules/identity/services/provider-prof
 import { Review } from '../entities/review.entity';
 import { ReviewRepository } from '../repositories/review.repository';
 import { ReviewDirection } from '../enums/review-direction.enum';
+import { ReviewStatus } from '../enums/review-status.enum';
 import { CreateReviewDto } from '../dto/create-review.dto';
 
 @Injectable()
@@ -18,6 +21,7 @@ export class ReviewsService {
     private readonly bookingService: BookingService,
     private readonly listingsService: ListingsService,
     private readonly providerProfileService: ProviderProfileService,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   /**
@@ -91,6 +95,62 @@ export class ReviewsService {
 
   async listForListing(listingId: string, pagination: { cursor?: string; limit?: number }) {
     return this.reviewRepository.searchForListing(listingId, pagination);
+  }
+
+  /** [Admin] Every review regardless of status — the Reviews view's search. */
+  async searchForAdmin(
+    query: string | undefined,
+    pagination: { cursor?: string; limit?: number },
+  ): Promise<CursorPage<Review>> {
+    return this.reviewRepository.searchForAdmin(query, pagination);
+  }
+
+  /**
+   * [Admin] Hides a review from the public listing/provider pages without
+   * deleting it — reversible via unhide(). Does NOT recompute the rating
+   * aggregates: a hidden review being abusive/off-topic doesn't mean its
+   * star rating was inaccurate, and silently shifting a provider's public
+   * rating as a side effect of a moderation action would be a surprising,
+   * undocumented behavior change — out of scope for this pass.
+   */
+  async hide(id: string, adminId: string, reason: string): Promise<Review> {
+    const review = await this.reviewRepository.findByIdOrFail(id, 'Review');
+    const before = { status: review.status };
+    review.status = ReviewStatus.HIDDEN;
+    review.moderatedBy = adminId;
+    review.moderatedAt = new Date();
+    review.moderationReason = reason;
+    const saved = await this.reviewRepository.save(review);
+    await this.auditLogService.record({
+      actorId: adminId,
+      actorType: AuditActorType.ADMIN,
+      action: 'review.hide',
+      entityType: 'Review',
+      entityId: id,
+      before,
+      after: { status: saved.status, reason },
+    });
+    return saved;
+  }
+
+  async unhide(id: string, adminId: string): Promise<Review> {
+    const review = await this.reviewRepository.findByIdOrFail(id, 'Review');
+    const before = { status: review.status };
+    review.status = ReviewStatus.VISIBLE;
+    review.moderatedBy = adminId;
+    review.moderatedAt = new Date();
+    review.moderationReason = null;
+    const saved = await this.reviewRepository.save(review);
+    await this.auditLogService.record({
+      actorId: adminId,
+      actorType: AuditActorType.ADMIN,
+      action: 'review.unhide',
+      entityType: 'Review',
+      entityId: id,
+      before,
+      after: { status: saved.status },
+    });
+    return saved;
   }
 
   async listForProviderTarget(

@@ -87,8 +87,22 @@ export class ProviderProfileService {
     return this.providerRepository.findPendingVerification();
   }
 
+  /** [Admin] Providers view — all providers regardless of verification status, unlike getVerificationQueue(). */
+  async searchForAdmin(query: string | undefined, cursor?: string, limit?: number) {
+    return this.providerRepository.searchForAdmin(query, cursor, limit);
+  }
+
   async getById(id: string): Promise<ProviderProfile> {
     return this.providerRepository.findByIdOrFail(id, 'Provider profile');
+  }
+
+  /** [Admin] Full profile + the linked user (email, status, roles) for the Providers detail drawer — unlike getPublicProfile()'s narrow projection. */
+  async getDetailForAdmin(id: string): Promise<ProviderProfile> {
+    const profile = await this.providerRepository.findByIdWithUser(id);
+    if (!profile) {
+      throw DomainException.notFound(ErrorCode.RESOURCE_NOT_FOUND, 'Provider was not found.');
+    }
+    return profile;
   }
 
   /** [Trust] Recomputes the denormalized avgRating from a fresh aggregate over Review rows — never written directly by review submission itself. */

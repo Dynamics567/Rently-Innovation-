@@ -64,7 +64,8 @@ export class ReviewRepository extends BaseRepository<Review> {
       (qb) =>
         qb
           .where('r.listingId = :listingId', { listingId })
-          .andWhere('r.direction = :direction', { direction: ReviewDirection.RENTER_TO_PROVIDER }),
+          .andWhere('r.direction = :direction', { direction: ReviewDirection.RENTER_TO_PROVIDER })
+          .andWhere("r.status = 'visible'"),
       params,
     );
   }
@@ -77,9 +78,22 @@ export class ReviewRepository extends BaseRepository<Review> {
       (qb) =>
         qb
           .where('r.targetId = :targetId', { targetId })
-          .andWhere('r.direction = :direction', { direction: ReviewDirection.RENTER_TO_PROVIDER }),
+          .andWhere('r.direction = :direction', { direction: ReviewDirection.RENTER_TO_PROVIDER })
+          .andWhere("r.status = 'visible'"),
       params,
     );
+  }
+
+  /** [Admin] Every review regardless of status — unlike the two public-facing methods above, which only ever show status='visible'. */
+  async searchForAdmin(
+    query: string | undefined,
+    params: { cursor?: string; limit?: number },
+  ): Promise<CursorPage<Review>> {
+    return this.searchBy((qb) => {
+      if (query) {
+        qb.where('r.comment ILIKE :q', { q: `%${query}%` });
+      }
+    }, params);
   }
 
   private async searchBy(

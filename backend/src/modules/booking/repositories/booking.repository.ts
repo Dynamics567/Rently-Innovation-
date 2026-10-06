@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { BaseRepository } from '@common/base/base.repository';
 import { CursorPage } from '@common/dto/cursor-pagination.dto';
 import { Booking } from '../entities/booking.entity';
-import { BookingStatus } from '../enums/booking.enums';
+import { BookingStage, BookingStatus } from '../enums/booking.enums';
 
 interface Cursor {
   createdAt: string;
@@ -118,15 +118,20 @@ export class BookingRepository extends BaseRepository<Booking> {
 
   /**
    * `role` picks which column to filter by: a renter sees bookings they
-   * made, a provider sees bookings against their listings. `listingIds` is
-   * supplied by the caller (resolved via CatalogService — Booking doesn't
-   * query Catalog's tables directly) when role is 'provider'.
+   * made, a provider sees bookings against their listings, 'admin' sees
+   * everything platform-wide (no ownership filter at all — only an admin
+   * controller may construct this call). `listingIds` is supplied by the
+   * caller (resolved via CatalogService — Booking doesn't query Catalog's
+   * tables directly) when role is 'provider'.
    */
   async search(params: {
-    role: 'renter' | 'provider';
+    role: 'renter' | 'provider' | 'admin';
     renterId?: string;
     listingIds?: string[];
     status?: BookingStatus;
+    stage?: BookingStage;
+    from?: Date;
+    to?: Date;
     cursor?: string;
     limit?: number;
   }): Promise<CursorPage<Booking>> {
@@ -134,14 +139,27 @@ export class BookingRepository extends BaseRepository<Booking> {
 
     if (params.role === 'renter') {
       qb.where('booking.renterId = :renterId', { renterId: params.renterId });
-    } else {
+    } else if (params.role === 'provider') {
       qb.where('booking.listingId IN (:...listingIds)', {
         listingIds: params.listingIds?.length ? params.listingIds : [null],
       });
+    } else if (params.renterId) {
+      // Admin, optionally narrowed to one customer — backs the Customers
+      // detail drawer's Activity tab.
+      qb.where('booking.renterId = :renterId', { renterId: params.renterId });
     }
 
     if (params.status) {
       qb.andWhere('booking.status = :status', { status: params.status });
+    }
+    if (params.stage) {
+      qb.andWhere('booking.stage = :stage', { stage: params.stage });
+    }
+    if (params.from) {
+      qb.andWhere('booking.startsAt >= :from', { from: params.from });
+    }
+    if (params.to) {
+      qb.andWhere('booking.startsAt <= :to', { to: params.to });
     }
 
     qb.orderBy('booking.createdAt', 'DESC').addOrderBy('booking.id', 'DESC');

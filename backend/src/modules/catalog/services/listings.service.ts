@@ -113,6 +113,18 @@ export class ListingsService {
     return this.listingRepository.search(dto, ALL_STATUSES);
   }
 
+  /**
+   * [Admin] Every listing platform-wide, any status, no provider-ownership
+   * restriction — the Listings view's search, and also what backs the
+   * "pending review" filter that replaces the old standalone moderation
+   * screen (same query, `status: PENDING_REVIEW`). `dto.status` narrows to
+   * one status; omitted, every status is included (same as searchOwn()).
+   */
+  async searchForAdmin(dto: QueryListingsDto & { status?: ListingStatus }): Promise<CursorPage<Listing>> {
+    const statuses = dto.status ? [dto.status] : ALL_STATUSES;
+    return this.listingRepository.search(dto, statuses);
+  }
+
   /** [Admin] Every listing awaiting moderation, across all providers — GET /admin/listings/moderation-queue. */
   async getModerationQueue(): Promise<Listing[]> {
     return this.listingRepository.findPendingReview();
@@ -120,6 +132,48 @@ export class ListingsService {
 
   async softDelete(id: string): Promise<void> {
     await this.listingRepository.softDelete(id);
+  }
+
+  /** [Admin] Pulls a LIVE listing off the marketplace without rejecting/deleting it — the provider can republish via the normal publish() flow (PAUSED → LIVE) once the issue is resolved. Unlike pause() (self-service, unaudited), this records who and why. */
+  async pauseAsAdmin(id: string, adminId: string, reason?: string): Promise<Listing> {
+    const listing = await this.findByIdOrFail(id);
+    const before = { status: listing.status };
+    listing.status = ListingStatus.PAUSED;
+    const saved = await this.listingRepository.save(listing);
+    await this.auditLogService.record({
+      actorId: adminId,
+      actorType: AuditActorType.ADMIN,
+      action: 'listing.pause',
+      entityType: 'Listing',
+      entityId: id,
+      before,
+      after: { status: saved.status, reason },
+    });
+    return saved;
+  }
+
+  /** [Admin] Reverses pauseAsAdmin() — PAUSED back to LIVE. */
+  async reinstateAsAdmin(id: string, adminId: string): Promise<Listing> {
+    const listing = await this.findByIdOrFail(id);
+    if (listing.status !== ListingStatus.PAUSED) {
+      throw DomainException.conflict(
+        ErrorCode.BOOKING_INVALID_STATE_TRANSITION,
+        `Only a paused listing can be reinstated (current status: "${listing.status}").`,
+      );
+    }
+    const before = { status: listing.status };
+    listing.status = ListingStatus.LIVE;
+    const saved = await this.listingRepository.save(listing);
+    await this.auditLogService.record({
+      actorId: adminId,
+      actorType: AuditActorType.ADMIN,
+      action: 'listing.reinstate',
+      entityType: 'Listing',
+      entityId: id,
+      before,
+      after: { status: saved.status },
+    });
+    return saved;
   }
 
   /** [Admin] Removes a listing (e.g. test/junk data) — soft delete, reversible via the DB's deleted_at column, never a hard delete. */

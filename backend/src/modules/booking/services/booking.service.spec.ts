@@ -10,6 +10,7 @@ import { ListingsService } from '@modules/catalog/services/listings.service';
 import { AvailabilityService } from '@modules/catalog/services/availability.service';
 import { AssetsService } from '@modules/catalog/services/assets.service';
 import { ProviderProfileService } from '@modules/identity/services/provider-profile.service';
+import { UsersService } from '@modules/identity/services/users.service';
 import { DisputeRepository } from '../repositories/dispute.repository';
 import {
   BookingMode,
@@ -45,6 +46,7 @@ describe('BookingService', () => {
   let availabilityService: Record<'isBlocked', jest.Mock>;
   let assetsService: Record<'getActiveForListing', jest.Mock>;
   let providerProfileService: Record<'incrementCompletedBookings' | 'getById', jest.Mock>;
+  let usersService: Record<'getById', jest.Mock>;
   let paymentPort: Record<'charge' | 'refund' | 'release', jest.Mock>;
   let eventEmitter: Record<'emit', jest.Mock>;
   let dataSource: { transaction: jest.Mock };
@@ -107,6 +109,9 @@ describe('BookingService', () => {
       incrementCompletedBookings: jest.fn(async () => undefined),
       getById: jest.fn(async () => ({ id: 'provider-1', userId: 'provider-user-1' })),
     };
+    usersService = {
+      getById: jest.fn(async () => ({ id: 'renter-1', fullName: 'Test Renter', email: 'renter@example.com' })),
+    };
     paymentPort = {
       charge: jest.fn(async () => ({ providerReference: 'MOCK-REF' })),
       refund: jest.fn(async () => undefined),
@@ -140,6 +145,7 @@ describe('BookingService', () => {
       availabilityService as unknown as AvailabilityService,
       assetsService as unknown as AssetsService,
       providerProfileService as unknown as ProviderProfileService,
+      usersService as unknown as UsersService,
       paymentPort as unknown as PaymentPort,
       eventEmitter as unknown as EventEmitter2,
     );
@@ -442,6 +448,58 @@ describe('BookingService', () => {
       expect(paymentPort.release).not.toHaveBeenCalled();
       expect(result.status).toBe(BookingStatus.DISPUTED);
       expect(result.stage).toBe(BookingStage.INSPECTED);
+    });
+  });
+
+  describe('searchAsAdmin', () => {
+    it("searches with role 'admin' and no renter/listing ownership scoping, passing stage and date filters through", async () => {
+      bookingRepository.search.mockResolvedValue({ data: [], meta: { hasMore: false, nextCursor: null } });
+
+      await service.searchAsAdmin({
+        stage: BookingStage.RETURNED,
+        from: '2026-01-01',
+        to: '2026-01-31',
+        limit: 20,
+      } as any);
+
+      expect(bookingRepository.search).toHaveBeenCalledWith(
+        expect.objectContaining({
+          role: 'admin',
+          stage: BookingStage.RETURNED,
+          from: new Date('2026-01-01'),
+          to: new Date('2026-01-31'),
+        }),
+      );
+    });
+  });
+
+  describe('getDetailForAdmin', () => {
+    it('resolves the listing title, renter name/email, and provider name alongside the booking and its history', async () => {
+      bookingRepository.findByIdOrFail.mockResolvedValue({ id: 'booking-1', listingId: 'listing-1', renterId: 'renter-1' });
+      historyRepository.findByBooking.mockResolvedValue([{ id: 'hist-1' }]);
+      listingsService.findByIdOrFail.mockResolvedValue({ ...liveListing, title: 'Premium Event Tent' });
+      providerProfileService.getById.mockResolvedValue({ id: 'provider-1', userId: 'provider-user-1', businessName: 'EventCraft NG' });
+
+      const result = await service.getDetailForAdmin('booking-1');
+
+      expect(result.history).toEqual([{ id: 'hist-1' }]);
+      expect(result.listingTitle).toBe('Premium Event Tent');
+      expect(result.renterName).toBe('Test Renter');
+      expect(result.renterEmail).toBe('renter@example.com');
+      expect(result.providerName).toBe('EventCraft NG');
+    });
+
+    it('degrades gracefully instead of throwing when the listing has been soft-deleted', async () => {
+      bookingRepository.findByIdOrFail.mockResolvedValue({ id: 'booking-1', listingId: 'listing-1', renterId: 'renter-1' });
+      historyRepository.findByBooking.mockResolvedValue([]);
+      listingsService.findByIdOrFail.mockRejectedValue(new Error('not found'));
+
+      const result = await service.getDetailForAdmin('booking-1');
+
+      expect(result.listingTitle).toBeNull();
+      expect(result.providerName).toBeNull();
+      expect(result.renterName).toBe('Test Renter');
+      expect(result.renterEmail).toBe('renter@example.com');
     });
   });
 });

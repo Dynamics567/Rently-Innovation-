@@ -22,6 +22,8 @@ import { BookingsController } from './controllers/bookings.controller';
 import { BookingExtensionsController } from './controllers/booking-extensions.controller';
 import { DisputesController } from './controllers/disputes.controller';
 import { AdminDisputesController } from './controllers/admin-disputes.controller';
+import { AdminBookingsController } from './controllers/admin-bookings.controller';
+import { AdminSearchController } from './controllers/admin-search.controller';
 
 import { IsBookingProviderPolicy } from './policies/is-booking-provider.policy';
 import { IsBookingPartyPolicy } from './policies/is-booking-party.policy';
@@ -51,6 +53,8 @@ import { IsDisputePartyPolicy } from './policies/is-dispute-party.policy';
     BookingExtensionsController,
     DisputesController,
     AdminDisputesController,
+    AdminBookingsController,
+    AdminSearchController,
   ],
   providers: [
     BookingRepository,

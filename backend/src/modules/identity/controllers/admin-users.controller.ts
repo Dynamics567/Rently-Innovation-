@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsEmail } from 'class-validator';
 import { Roles } from '@common/decorators/roles.decorator';
@@ -6,6 +6,8 @@ import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { UserRole } from '../enums/user-role.enum';
 import { UsersService } from '../services/users.service';
 import { SetUserRolesDto } from '../dto/set-user-roles.dto';
+import { SetUserStatusDto } from '../dto/set-user-status.dto';
+import { QueryAdminUsersDto } from '../dto/query-admin-users.dto';
 import { AuthenticatedUser } from '../strategies/jwt.strategy';
 
 class LookupUserQueryDto {
@@ -42,5 +44,35 @@ export class AdminUsersController {
     @CurrentUser() admin: AuthenticatedUser,
   ) {
     return this.usersService.setRoles(id, dto.roles, admin.id);
+  }
+
+  /**
+   * Customers view: search/detail/suspend are routine operational actions
+   * (same tier as approving a listing or verifying a provider), unlike
+   * role-granting above — so these are deliberately loosened to ADMIN or
+   * SUPER_ADMIN via a method-level @Roles() override of this controller's
+   * SUPER_ADMIN-only default (RolesGuard checks the handler before the
+   * class, via Reflector.getAllAndOverride).
+   */
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Get()
+  async search(@Query() query: QueryAdminUsersDto) {
+    return this.usersService.searchForAdmin(query.search, query.cursor, query.limit);
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Get(':id')
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.getById(id);
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Post(':id/status')
+  async setStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetUserStatusDto,
+    @CurrentUser() admin: AuthenticatedUser,
+  ) {
+    return this.usersService.setStatus(id, dto.status, admin.id, dto.reason);
   }
 }

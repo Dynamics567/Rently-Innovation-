@@ -15,6 +15,7 @@ interface ErrorBody {
   code: ErrorCode | string;
   message: string;
   details?: Record<string, unknown>;
+  requestId?: string;
 }
 
 /**
@@ -35,15 +36,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     const { status, body } = this.resolve(exception);
+    // RequestIdMiddleware stamps every request; surfacing it in the body
+    // (not just the X-Request-Id response header) is what lets an admin
+    // operator quote a single reference id for support/debugging without
+    // needing to inspect response headers themselves.
+    body.requestId = request.requestId;
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       this.logger.error(
-        `${request.method} ${request.url} -> ${status} [${body.code}] ${body.message}`,
+        `${request.method} ${request.url} -> ${status} [${body.code}] ${body.message} requestId=${body.requestId}`,
         exception instanceof Error ? exception.stack : undefined,
       );
     } else {
       this.logger.warn(
-        `${request.method} ${request.url} -> ${status} [${body.code}] ${body.message}`,
+        `${request.method} ${request.url} -> ${status} [${body.code}] ${body.message} requestId=${body.requestId}`,
       );
     }
 
