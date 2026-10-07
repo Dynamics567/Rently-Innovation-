@@ -236,6 +236,84 @@ function renderLineChart(container, dataPoints, opts = {}) {
   showAt(svg.getBoundingClientRect().left + svg.getBoundingClientRect().width);
 }
 
+/* ---------------- PIE / DONUT CHART ----------------
+   For composition breakdowns (e.g. bookings by status) — a donut (not a
+   pie) so the center can carry a real headline number, a fixed color per
+   category supplied by the caller (never auto-cycled — identity should
+   match the same entity's color everywhere else in the UI), a thin
+   surface-colored gap between slices, and a legend doing the actual
+   labeling since color alone never carries identity on its own (see
+   dataviz skill). Hovering a slice or its legend row highlights it and
+   swaps the center label — same "land on something real, not empty"
+   instinct as renderLineChart's default point. Plain inline SVG, no
+   chart library. */
+function renderPieChart(container, dataPoints, opts = {}) {
+  const el = typeof container === 'string' ? document.getElementById(container) : container;
+  if (!el) return;
+  const { formatValue = (v) => v, colors = {}, defaultColor = 'var(--blue)', centerLabel = 'Total' } = opts;
+  const points = dataPoints.filter((p) => p.value > 0);
+  const total = points.reduce((sum, p) => sum + p.value, 0);
+  if (!points.length || !total) {
+    el.className = '';
+    el.innerHTML = '<div class="lc-empty">Not enough data yet.</div>';
+    return;
+  }
+  const gap = points.length > 1 ? 1 : 0; // percent-of-circumference gap between adjacent slices
+  let cursor = 0;
+  const arcs = points.map((p, i) => {
+    const pct = (p.value / total) * 100;
+    const visible = Math.max(pct - gap, 0);
+    const color = colors[p.label] || defaultColor;
+    const arc = `<circle class="pc-slice" data-i="${i}" cx="21" cy="21" r="15.9155" fill="none" stroke="${color}" stroke-width="7" stroke-dasharray="${visible} ${100 - visible}" stroke-dashoffset="${-cursor}" pathLength="100"/>`;
+    cursor += pct;
+    return arc;
+  }).join('');
+
+  el.className = 'pie-chart-wrap';
+  el.innerHTML = `
+    <div class="pc-donut">
+      <svg viewBox="0 0 42 42" class="pc-svg">
+        <circle cx="21" cy="21" r="15.9155" fill="none" stroke="var(--bg-alt)" stroke-width="7"/>
+        <g>${arcs}</g>
+      </svg>
+      <div class="pc-center">
+        <div class="pc-center-val">${formatValue(total)}</div>
+        <div class="pc-center-lbl">${centerLabel}</div>
+      </div>
+    </div>
+    <div class="pc-legend">
+      ${points.map((p, i) => `
+        <div class="pc-legend-row" data-i="${i}">
+          <span class="pc-swatch" style="background:${colors[p.label] || defaultColor};"></span>
+          <span class="pc-legend-lbl">${p.label}</span>
+          <span class="pc-legend-val">${formatValue(p.value)}</span>
+          <span class="pc-legend-pct">${Math.round((p.value / total) * 100)}%</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  const centerVal = el.querySelector('.pc-center-val');
+  const centerLbl = el.querySelector('.pc-center-lbl');
+  const slices = [...el.querySelectorAll('.pc-slice')];
+  const legendRows = [...el.querySelectorAll('.pc-legend-row')];
+  function highlight(i) {
+    slices.forEach((s) => { s.style.opacity = i === null || Number(s.dataset.i) === i ? '1' : '0.3'; });
+    legendRows.forEach((r) => r.classList.toggle('active', Number(r.dataset.i) === i));
+    if (i === null) {
+      centerVal.textContent = formatValue(total);
+      centerLbl.textContent = centerLabel;
+    } else {
+      centerVal.textContent = formatValue(points[i].value);
+      centerLbl.textContent = points[i].label;
+    }
+  }
+  [...slices, ...legendRows].forEach((node) => {
+    node.addEventListener('mouseenter', () => highlight(Number(node.dataset.i)));
+    node.addEventListener('mouseleave', () => highlight(null));
+  });
+}
+
 /* ---------------- KPI / STAT CARD ----------------
    `accent` picks the icon-chip color (green/blue/amber/red, matching the
    role palette in rently.css); pass `delta` (see setKpiDelta) once the

@@ -86,6 +86,12 @@ h1,h2,h3{font-family:var(--sans);}
 .section-block{margin-bottom:32px;}
 .section-block .sb-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
 .section-block .sb-head h3{font-size:13px;font-weight:700;color:var(--op-text);text-transform:uppercase;letter-spacing:.03em;}
+.section-block .sb-head p{font-size:12px;color:var(--op-text-faint);margin-top:2px;}
+
+/* ---- Overview charts: real signup/booking/price data, never fabricated ---- */
+.chart-card{background:var(--op-surface);border:1px solid var(--op-border);border-radius:10px;padding:18px 20px;}
+.chart-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;}
+@media(max-width:860px){.chart-grid-2{grid-template-columns:1fr;}}
 
 /* ---- filter bar: search input + status chips + date range, shared across every list view ---- */
 .filter-bar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
@@ -186,8 +192,10 @@ h1,h2,h3{font-family:var(--sans);}
 <div class="mobile-tabbar">
   <a class="side-link active" data-view="overview" id="mLinkOverview"></a>
   <a class="side-link" data-view="bookings" id="mLinkBookings"></a>
+  <a class="side-link" data-view="returns" id="mLinkReturns"></a>
   <a class="side-link" data-view="disputes" id="mLinkDisputes"></a>
   <a class="side-link" data-view="listings" id="mLinkListings"></a>
+  <a class="side-link" data-view="categories" id="mLinkCategories"></a>
   <a class="side-link" data-view="providers" id="mLinkProviders"></a>
   <a class="side-link" data-view="customers" id="mLinkCustomers"></a>
   <a class="side-link" data-view="verification" id="mLinkVerification"></a>
@@ -236,6 +244,24 @@ h1,h2,h3{font-family:var(--sans);}
       <div class="section-block">
         <div class="sb-head"><h3>At a glance</h3></div>
         <div class="kpi-row-sm" id="kpiRowSm"></div>
+      </div>
+
+      <div class="section-block">
+        <div class="sb-head"><div><h3>Signups</h3><p>New accounts created per day, last 30 days.</p></div></div>
+        <div class="chart-card"><div id="signupsChart"></div></div>
+      </div>
+
+      <div class="section-block">
+        <div class="chart-grid-2">
+          <div>
+            <div class="sb-head"><h3>Bookings by status</h3></div>
+            <div class="chart-card"><div id="bookingStatusChart"></div></div>
+          </div>
+          <div>
+            <div class="sb-head"><h3>Live listing prices</h3></div>
+            <div class="chart-card"><div id="priceDistChart"></div></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -441,8 +467,10 @@ if(session && session.user.roles.includes('super_admin')){
 }
 document.getElementById('mLinkOverview').innerHTML = icon('grid',{size:15})+' Overview';
 document.getElementById('mLinkBookings').innerHTML = icon('calendar',{size:15})+' Bookings';
+document.getElementById('mLinkReturns').innerHTML = icon('arrowRight',{size:15})+' Returns';
 document.getElementById('mLinkDisputes').innerHTML = icon('alert',{size:15})+' Disputes';
 document.getElementById('mLinkListings').innerHTML = icon('list',{size:15})+' Listings';
+document.getElementById('mLinkCategories').innerHTML = icon('grid',{size:15})+' Categories';
 document.getElementById('mLinkProviders').innerHTML = icon('building',{size:15})+' Providers';
 document.getElementById('mLinkCustomers').innerHTML = icon('user',{size:15})+' Customers';
 document.getElementById('mLinkVerification').innerHTML = icon('shield',{size:15})+' Verify';
@@ -521,6 +549,69 @@ document.getElementById('drawerOverlay').addEventListener('click',closeDrawer);
 
 function dkv(k,v){ return `<div class="dkv"><span class="k">${k}</span><span class="v">${v}</span></div>`; }
 
+/**
+ * Single delegated listener for every action button any drawer tab ever
+ * renders, attached once to the stable #drawerBody container rather than
+ * per-button inside each openXDrawer() call. That used to be a real bug:
+ * selectDrawerTab() replaces #drawerBody's innerHTML on every tab switch,
+ * which silently destroyed a one-time-attached listener (and the button
+ * it was on) the moment a user switched away from a tab and back — the
+ * re-rendered button looked identical but had nothing wired to it. Every
+ * action reads its target id (and any other context) from the button's own
+ * data-* attributes rather than a closure variable, since the closure the
+ * button was originally created in may no longer be "current" by the time
+ * it's clicked.
+ */
+document.getElementById('drawerBody').addEventListener('click', async (e)=>{
+  const btn = e.target.closest('[data-admin-action]');
+  if(!btn || btn.disabled) return;
+  const action = btn.dataset.adminAction;
+  const id = btn.dataset.id;
+  btn.disabled = true;
+  try{
+    if(action==='listing-approve'){
+      await apiFetch(`/admin/listings/${id}/approve`,{method:'POST'}); closeDrawer(); loadListings(true);
+    } else if(action==='listing-reject'){
+      if(!confirm('Reject this listing?')){ btn.disabled=false; return; }
+      await apiFetch(`/admin/listings/${id}/reject`,{method:'POST'}); closeDrawer(); loadListings(true);
+    } else if(action==='listing-pause'){
+      const reason=prompt('Reason for pausing this listing (optional):');
+      await apiFetch(`/admin/listings/${id}/pause`,{method:'POST',body:{reason:reason||undefined}}); closeDrawer(); loadListings(true);
+    } else if(action==='listing-reinstate'){
+      await apiFetch(`/admin/listings/${id}/reinstate`,{method:'POST'}); closeDrawer(); loadListings(true);
+    } else if(action==='provider-toggle-status'){
+      const isActive = btn.dataset.active==='true';
+      const reason = isActive ? prompt('Reason for suspending this provider (visible in the audit log):') : undefined;
+      if(isActive && (!reason || reason.trim().length<5)){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); btn.disabled=false; return; }
+      await apiFetch(`/admin/providers/${id}/status`,{method:'POST',body:{status:isActive?'suspended':'active',reason}});
+      closeDrawer(); loadProviders(true);
+    } else if(action==='provider-doc-approve'){
+      await apiFetch(`/admin/providers/verification-documents/${id}/approve`,{method:'POST',body:{}});
+      await selectDrawerTab('documents');
+    } else if(action==='provider-doc-reject'){
+      const reason=prompt('Reason for rejecting this document (visible to the provider):');
+      if(!reason||reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); btn.disabled=false; return; }
+      await apiFetch(`/admin/providers/verification-documents/${id}/reject`,{method:'POST',body:{reason:reason.trim()}});
+      await selectDrawerTab('documents');
+    } else if(action==='user-toggle-status'){
+      const isActive = btn.dataset.active==='true';
+      const reason = isActive ? prompt('Reason for suspending this account (visible in the audit log):') : undefined;
+      if(isActive && (!reason || reason.trim().length<5)){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); btn.disabled=false; return; }
+      await apiFetch(`/admin/users/${id}/status`,{method:'POST',body:{status:isActive?'suspended':'active',reason}});
+      closeDrawer(); loadCustomers(true);
+    } else if(action==='user-save-roles'){
+      const errEl=document.getElementById('roleSaveError'); if(errEl) errEl.style.display='none';
+      const selected=ROLE_OPTIONS.filter(r=>document.querySelector(`[data-role="${r}"]`).checked);
+      await apiFetch(`/admin/users/${id}/roles`,{method:'PATCH',body:{roles:selected}});
+      btn.textContent='Saved'; setTimeout(()=>{ closeDrawer(); loadCustomers(true); },700);
+      return; // skip the generic re-enable below — button is intentionally left disabled showing "Saved"
+    }
+  }catch(err){
+    alert(apiErrorMessage(err));
+  }
+  btn.disabled=false;
+});
+
 /** Deep-links a drawer tab into the Audit Log view, filtered to one entity — reused by every entity's Audit tab. */
 function auditTabFor(entityType, entityId){
   return { key:'audit', label:'Audit', render: async ()=>{
@@ -592,14 +683,22 @@ async function countFor(path){
   }catch(e){ return { n: 0, plus:false, error:true }; }
 }
 async function renderOverview(){
-  const [listings, verif, disputes, returns, userStats] = await Promise.all([
+  const [listings, verif, disputesData, returnCounts, userStats] = await Promise.all([
     countFor('/admin/listings/moderation-queue'),
     countFor('/admin/providers/verification-queue'),
-    countFor('/admin/disputes'),
-    countFor('/admin/bookings?stage=returned'),
+    apiFetch('/admin/disputes').then(r=>r.data).catch(()=>[]),
+    // Matches RETURN_STAGES exactly (returnsched/returned/inspected) — a
+    // single-stage count here previously undercounted against what the
+    // Returns view itself shows.
+    Promise.all(RETURN_STAGES.map(st=>countFor(`/admin/bookings?stage=${st}`))),
     apiFetch('/admin/users/stats').then(r=>r.data).catch(()=>({totalUsers:null})),
   ]);
-  const disputesOpen = await apiFetch('/admin/disputes').then(({data})=>data.filter(d=>d.status==='open'||d.status==='proposed').length).catch(()=>0);
+  renderOverviewCharts();
+  const disputesOpen = disputesData.filter(d=>d.status==='open'||d.status==='proposed').length;
+  const returns = {
+    n: returnCounts.reduce((sum,c)=>sum+c.n, 0),
+    plus: returnCounts.some(c=>c.plus),
+  };
 
   const rows=[
     {n:listings.n, plus:listings.plus, ic:'list', cls:'blue', t:'Listings pending review', s:'New submissions waiting on approval', go:'listings'},
@@ -626,6 +725,27 @@ async function renderOverview(){
   ].map(k=>`<div class="kpi-sm"><div class="lbl">${k.lbl}</div><div class="val">${k.val}</div></div>`).join('');
 }
 
+/**
+ * Overview's three real-data charts. Independent of the needs-attention/KPI
+ * fetch above (own endpoints, own failure mode) so a slow or failing
+ * analytics call never blocks the headline queue counts from rendering.
+ * Each chart function already renders its own "not enough data yet" empty
+ * state, so a zeroed response just shows that — never a fabricated trend.
+ */
+async function renderOverviewCharts(){
+  apiFetch('/admin/users/analytics/signups?days=30').then(r=>r.data).then(rows=>{
+    renderLineChart('signupsChart', rows.map(r=>({label:r.date.slice(5), value:r.count})), {formatValue:v=>`${v} signup${v===1?'':'s'}`, color:'var(--blue)'});
+  }).catch(()=>renderLineChart('signupsChart', [], {}));
+
+  apiFetch('/admin/bookings/analytics/by-status').then(r=>r.data).then(rows=>{
+    renderPieChart('bookingStatusChart', rows.map(r=>({label:r.status, value:r.count})), {colors:BOOKING_STATUS_COLOR, centerLabel:'Bookings'});
+  }).catch(()=>renderPieChart('bookingStatusChart', [], {}));
+
+  apiFetch('/admin/listings/analytics/price-distribution').then(r=>r.data).then(rows=>{
+    renderBarChart('priceDistChart', rows.map(r=>({label:r.bucket, value:r.count})), {color:'var(--green)', formatValue:v=>`${v}`});
+  }).catch(()=>renderBarChart('priceDistChart', [], {}));
+}
+
 /* ================================================================
    BOOKINGS / RETURNS — admin-wide search, cursor-paginated. Returns
    is this exact same list pre-filtered to stage=returnsched/returned/
@@ -634,6 +754,11 @@ async function renderOverview(){
 const RETURN_STAGES=['returnsched','returned','inspected'];
 const BOOKING_STAGE_LABEL={requested:'Requested',accepted:'Accepted',payment:'Payment',reserved:'Reserved',ready:'Ready',pickedup:'Picked up',active:'Active',returnsched:'Return scheduled',returned:'Returned',inspected:'Inspected',depositreleased:'Deposit released',completed:'Completed'};
 const BOOKING_STATUS_PILL={pending:'warn',confirmed:'good',declined:'bad',cancelled:'neutral',completed:'good',disputed:'bad'};
+// Fixed per-status hue for the Overview donut — distinct from BOOKING_STATUS_PILL's
+// 4-bucket semantic colors (pill badges only need good/warn/bad/neutral), since a
+// chart needs every status visually distinguishable from every other. Validated
+// colorblind-safe via the dataviz skill's palette checker.
+const BOOKING_STATUS_COLOR={pending:'#C6820B',confirmed:'#155EEF',completed:'#00A896',declined:'#C4392B',cancelled:'#8A5FBF',disputed:'#A8325E'};
 let bkCursor=null, bkRows=[], bkReturnsMode=false;
 document.getElementById('bkStatusFilter').innerHTML = '<option value="">Any status</option>'+['pending','confirmed','declined','cancelled','completed','disputed'].map(s=>`<option value="${s}">${s}</option>`).join('');
 async function loadBookings(reset, forcedStages){
@@ -794,11 +919,11 @@ async function openListingDrawer(id){
   if(!l){ alert('Could not load this listing.'); return; }
   const actions=[];
   if(l.status==='pending_review') actions.push(
-    `<button class="pill-btn ghost sm" id="dwReject">Reject</button>`,
-    `<button class="pill-btn green sm" id="dwApprove">Approve</button>`,
+    `<button class="pill-btn ghost sm" data-admin-action="listing-reject" data-id="${id}">Reject</button>`,
+    `<button class="pill-btn green sm" data-admin-action="listing-approve" data-id="${id}">Approve</button>`,
   );
-  if(l.status==='live') actions.push(`<button class="pill-btn ghost sm" id="dwPause">Pause</button>`);
-  if(l.status==='paused') actions.push(`<button class="pill-btn green sm" id="dwReinstate">Reinstate</button>`);
+  if(l.status==='live') actions.push(`<button class="pill-btn ghost sm" data-admin-action="listing-pause" data-id="${id}">Pause</button>`);
+  if(l.status==='paused') actions.push(`<button class="pill-btn green sm" data-admin-action="listing-reinstate" data-id="${id}">Reinstate</button>`);
   openDrawer(l.title, l.locationText, [
     { key:'overview', label:'Overview', render: async ()=> {
       const html = dkv('Status', l.status.replace('_',' '))+dkv('Price', money(Math.round(l.priceMinor/100))+'/'+l.priceUnit)
@@ -809,16 +934,6 @@ async function openListingDrawer(id){
     }},
     auditTabFor('Listing', id),
   ]);
-  setTimeout(()=>{
-    const approveBtn=document.getElementById('dwApprove');
-    if(approveBtn) approveBtn.addEventListener('click', async ()=>{ await apiFetch(`/admin/listings/${id}/approve`,{method:'POST'}).catch(e=>alert(apiErrorMessage(e))); closeDrawer(); loadListings(true); });
-    const rejectBtn=document.getElementById('dwReject');
-    if(rejectBtn) rejectBtn.addEventListener('click', async ()=>{ if(!confirm('Reject this listing?')) return; await apiFetch(`/admin/listings/${id}/reject`,{method:'POST'}).catch(e=>alert(apiErrorMessage(e))); closeDrawer(); loadListings(true); });
-    const pauseBtn=document.getElementById('dwPause');
-    if(pauseBtn) pauseBtn.addEventListener('click', async ()=>{ const reason=prompt('Reason for pausing this listing (optional):'); await apiFetch(`/admin/listings/${id}/pause`,{method:'POST',body:{reason:reason||undefined}}).catch(e=>alert(apiErrorMessage(e))); closeDrawer(); loadListings(true); });
-    const reinstateBtn=document.getElementById('dwReinstate');
-    if(reinstateBtn) reinstateBtn.addEventListener('click', async ()=>{ await apiFetch(`/admin/listings/${id}/reinstate`,{method:'POST'}).catch(e=>alert(apiErrorMessage(e))); closeDrawer(); loadListings(true); });
-  },0);
 }
 
 /* ================================================================
@@ -909,25 +1024,24 @@ async function openProviderDrawer(id){
     { key:'overview', label:'Overview', render: async ()=> dkv('Owner', p.user?p.user.fullName:'—')+dkv('Email', p.user?p.user.email:'—')
         +dkv('Verification', p.verificationStatus)+dkv('Account status', p.user?p.user.status:'—')
         +dkv('Avg rating', p.avgRating)+dkv('Completed bookings', p.totalCompletedBookings)
-        +`<div style="margin-top:18px;"><button class="pill-btn ${isActive?'ghost':'green'} sm" id="dwProvStatus">${isActive?'Suspend account':'Reinstate account'}</button></div>` },
+        +`<div style="margin-top:18px;"><button class="pill-btn ${isActive?'ghost':'green'} sm" data-admin-action="provider-toggle-status" data-id="${id}" data-active="${isActive}">${isActive?'Suspend account':'Reinstate account'}</button></div>` },
     { key:'documents', label:'Documents', render: async ()=>{
       const docs = await apiFetch(`/admin/providers/${id}/verification-documents`).then(r=>r.data).catch(()=>[]);
       if(!docs.length) return stateEmpty('No verification documents uploaded.');
-      return docs.map(d=>`<div class="dkv"><span class="k">${d.docType.replace('_',' ')}</span><span class="v"><a href="${d.url}" target="_blank" rel="noopener">View</a> · ${d.status}</span></div>`).join('');
+      // A document can arrive here pending review even outside the main
+      // Verification queue (e.g. re-uploaded after a prior rejection) — it
+      // needs its own approve/reject, distinct from approving the whole
+      // provider profile above.
+      return docs.map(d=>`<div class="dkv">
+        <span class="k">${DOC_TYPE_LABEL[d.docType]||d.docType} <span class="pill-status ${d.status==='approved'?'good':d.status==='rejected'?'bad':'warn'}" style="margin-left:6px;">${d.status}</span></span>
+        <span class="v" style="display:flex;gap:8px;align-items:center;">
+          <a href="${d.url}" target="_blank" rel="noopener">View</a>
+          ${d.status==='pending' ? `<button class="pill-btn ghost sm" data-admin-action="provider-doc-reject" data-id="${d.id}">Reject</button><button class="pill-btn green sm" data-admin-action="provider-doc-approve" data-id="${d.id}">Approve</button>` : ''}
+        </span>
+      </div>`).join('');
     }},
     auditTabFor('ProviderProfile', id),
   ]);
-  setTimeout(()=>{
-    const btn=document.getElementById('dwProvStatus');
-    if(btn) btn.addEventListener('click', async ()=>{
-      const reason = isActive ? prompt('Reason for suspending this provider (visible in the audit log):') : undefined;
-      if(isActive && (!reason || reason.trim().length<5)){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); return; }
-      try{
-        await apiFetch(`/admin/providers/${id}/status`,{method:'POST',body:{status:isActive?'suspended':'active',reason}});
-        closeDrawer(); loadProviders(true);
-      }catch(e){ alert(apiErrorMessage(e)); }
-    });
-  },0);
 }
 
 /* ================================================================
@@ -976,7 +1090,7 @@ async function openCustomerDrawer(id){
     { key:'overview', label:'Overview', render: async ()=> dkv('Email', u.email||'—')+dkv('Phone', u.phone||'—')
         +dkv('Roles', u.roles.join(', '))+dkv('Status', u.status)+dkv('Joined', new Date(u.createdAt).toLocaleDateString())
         +dkv('Last seen', u.lastLoginAt?new Date(u.lastLoginAt).toLocaleDateString():'Never')
-        +`<div style="margin-top:18px;"><button class="pill-btn ${isActive?'ghost':'green'} sm" id="dwCustStatus">${isActive?'Suspend account':'Reinstate account'}</button></div>` },
+        +`<div style="margin-top:18px;"><button class="pill-btn ${isActive?'ghost':'green'} sm" data-admin-action="user-toggle-status" data-id="${id}" data-active="${isActive}">${isActive?'Suspend account':'Reinstate account'}</button></div>` },
     { key:'activity', label:'Activity', render: async ()=>{
       const {data} = await apiFetch(`/admin/bookings?renterId=${id}&limit=20`);
       if(!data.length) return stateEmpty('No bookings as a renter yet.');
@@ -986,30 +1100,10 @@ async function openCustomerDrawer(id){
       if(!canGrantRoles) return stateEmpty('Only a super admin can grant or remove roles.');
       return `${ROLE_OPTIONS.map(r=>`<label class="role-check"><input type="checkbox" data-role="${r}" ${u.roles.includes(r)?'checked':''} />${ROLE_LABELS[r]}</label>`).join('')}
         <div id="roleSaveError" class="banner danger" style="display:none;margin:12px 0;"></div>
-        <button class="pill-btn blue sm" id="roleSaveBtn">Save roles</button>`;
+        <button class="pill-btn blue sm" data-admin-action="user-save-roles" data-id="${id}">Save roles</button>`;
     }},
     auditTabFor('User', id),
   ]);
-  setTimeout(()=>{
-    const btn=document.getElementById('dwCustStatus');
-    if(btn) btn.addEventListener('click', async ()=>{
-      const reason = isActive ? prompt('Reason for suspending this account (visible in the audit log):') : undefined;
-      if(isActive && (!reason || reason.trim().length<5)){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); return; }
-      try{
-        await apiFetch(`/admin/users/${id}/status`,{method:'POST',body:{status:isActive?'suspended':'active',reason}});
-        closeDrawer(); loadCustomers(true);
-      }catch(e){ alert(apiErrorMessage(e)); }
-    });
-    const saveBtn=document.getElementById('roleSaveBtn');
-    if(saveBtn) saveBtn.addEventListener('click', async ()=>{
-      const errEl=document.getElementById('roleSaveError'); errEl.style.display='none';
-      const selected=ROLE_OPTIONS.filter(r=>document.querySelector(`[data-role="${r}"]`).checked);
-      try{
-        await apiFetch(`/admin/users/${id}/roles`,{method:'PATCH',body:{roles:selected}});
-        saveBtn.textContent='Saved'; setTimeout(()=>{ closeDrawer(); loadCustomers(true); },700);
-      }catch(e){ errEl.textContent=apiErrorMessage(e); errEl.style.display='block'; }
-    });
-  },0);
 }
 
 /* ================================================================
@@ -1197,12 +1291,13 @@ function renderDisputeRows(){
   }</tbody></table></div>`;
   el.querySelectorAll('[data-resolve-dispute]').forEach(b=>b.addEventListener('click', async ()=>{
     const depositMinor=+b.dataset.deposit||0;
-    const amountStr=prompt(`Final deduction from the ₦${(depositMinor/100).toLocaleString()} deposit (in Naira, 0 for no deduction):`);
+    const amountStr=prompt(`Final deduction from the ${money2(depositMinor)} deposit (in Naira, 0 for no deduction):`);
     if(amountStr===null) return;
     const amountNaira=Number(amountStr);
     if(!Number.isFinite(amountNaira)||amountNaira<0){ alert('Enter a valid, non-negative amount.'); return; }
     const note=prompt('Note explaining this decision (visible to both parties):');
-    if(!note||note.trim().length<3){ if(note!==null) alert('Please provide a short note.'); return; }
+    // 5, not 3 — matches AdminResolveDisputeDto's real @MinLength(5) server-side; a 3-4 char note used to pass here and then 400 on submit.
+    if(!note||note.trim().length<5){ if(note!==null) alert('Please provide a note of at least 5 characters.'); return; }
     b.disabled=true;
     try{ await apiFetch(`/admin/disputes/${b.dataset.resolveDispute}/resolve`,{method:'POST',body:{finalDeductionMinor:Math.round(amountNaira*100),note:note.trim()}}); await renderDisputes(); }
     catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
