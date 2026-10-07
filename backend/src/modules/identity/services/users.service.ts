@@ -115,6 +115,21 @@ export class UsersService {
     return saved;
   }
 
+  /** [Admin] Soft-deletes an account (e.g. test/junk data cleanup) — reversible via deleted_at, audit-logged. Mirrors ListingsService.removeAsAdmin(). */
+  async removeAsAdmin(id: string, adminId: string): Promise<void> {
+    const user = await this.userRepository.findByIdOrFail(id, 'User');
+    await this.userRepository.softDelete(id);
+    await this.auditLogService.record({
+      actorId: adminId,
+      actorType: AuditActorType.ADMIN,
+      action: 'user.remove',
+      entityType: 'User',
+      entityId: id,
+      before: { email: user.email, fullName: user.fullName, status: user.status },
+      after: { deleted: true },
+    });
+  }
+
   /** [Admin] Overview's "total users" stat. */
   async getStats(): Promise<{ totalUsers: number }> {
     const totalUsers = await this.userRepository.countAll();

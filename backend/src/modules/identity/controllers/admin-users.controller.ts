@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { IsEmail } from 'class-validator';
 import { Roles } from '@common/decorators/roles.decorator';
@@ -87,5 +87,18 @@ export class AdminUsersController {
     @CurrentUser() admin: AuthenticatedUser,
   ) {
     return this.usersService.setStatus(id, dto.status, admin.id, dto.reason);
+  }
+
+  /**
+   * Soft-deletes an account (e.g. test/junk data cleanup) — reversible via
+   * deleted_at, audit-logged. Deliberately left at this controller's
+   * SUPER_ADMIN-only default rather than loosened to ADMIN like the routes
+   * above: removing an account outright is a bigger blast radius than a
+   * reversible suspend.
+   */
+  @Delete(':id')
+  async remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() admin: AuthenticatedUser) {
+    await this.usersService.removeAsAdmin(id, admin.id);
+    return { removed: true };
   }
 }

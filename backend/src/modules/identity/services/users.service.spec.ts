@@ -11,7 +11,7 @@ import { UserRole } from '../enums/user-role.enum';
  */
 describe('UsersService', () => {
   let service: UsersService;
-  let userRepository: Record<'findByIdOrFail' | 'findByEmail' | 'save' | 'searchForAdmin' | 'countAll' | 'findAdmins' | 'countSignupsByDay', jest.Mock>;
+  let userRepository: Record<'findByIdOrFail' | 'findByEmail' | 'save' | 'searchForAdmin' | 'countAll' | 'findAdmins' | 'countSignupsByDay' | 'softDelete', jest.Mock>;
   let adminInviteRepository: Record<'create' | 'save' | 'findByIdOrFail' | 'findPending', jest.Mock>;
   let auditLogService: Record<'record', jest.Mock>;
   let configService: { get: jest.Mock };
@@ -26,6 +26,7 @@ describe('UsersService', () => {
       countAll: jest.fn(async () => 42),
       findAdmins: jest.fn(async () => []),
       countSignupsByDay: jest.fn(async () => [{ date: '2026-10-01', count: 3 }]),
+      softDelete: jest.fn(async () => undefined),
     };
     adminInviteRepository = {
       create: jest.fn((partial) => partial),
@@ -84,6 +85,30 @@ describe('UsersService', () => {
       const result = await service.setStatus('user-1', UserAccountStatus.ACTIVE, 'admin-1');
 
       expect(result.status).toBe(UserAccountStatus.ACTIVE);
+    });
+  });
+
+  describe('removeAsAdmin', () => {
+    it('soft-deletes the account and audit-logs the before state', async () => {
+      userRepository.findByIdOrFail.mockResolvedValue({
+        id: 'user-1',
+        email: 'junk@example.com',
+        fullName: 'Junk Test',
+        status: UserAccountStatus.ACTIVE,
+      });
+
+      await service.removeAsAdmin('user-1', 'admin-1');
+
+      expect(userRepository.softDelete).toHaveBeenCalledWith('user-1');
+      expect(auditLogService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'user.remove',
+          entityType: 'User',
+          entityId: 'user-1',
+          before: { email: 'junk@example.com', fullName: 'Junk Test', status: UserAccountStatus.ACTIVE },
+          after: { deleted: true },
+        }),
+      );
     });
   });
 
