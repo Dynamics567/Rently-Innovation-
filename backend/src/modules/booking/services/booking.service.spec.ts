@@ -36,6 +36,7 @@ describe('BookingService', () => {
     | 'findByIdOrFail'
     | 'findByIdempotencyKey'
     | 'search'
+    | 'countByStatus'
     | 'hasOverlapWithBuffer'
     | 'hasOverlapForAssetWithBuffer'
     | 'getBookedQuantity',
@@ -90,6 +91,7 @@ describe('BookingService', () => {
       findByIdOrFail: jest.fn(),
       findByIdempotencyKey: jest.fn(async () => null),
       search: jest.fn(),
+      countByStatus: jest.fn(async () => [{ status: BookingStatus.CONFIRMED, count: 7 }]),
       hasOverlapWithBuffer: jest.fn(async () => false),
       hasOverlapForAssetWithBuffer: jest.fn(async () => false),
       getBookedQuantity: jest.fn(async () => 0),
@@ -448,6 +450,13 @@ describe('BookingService', () => {
       expect(paymentPort.release).not.toHaveBeenCalled();
       expect(result.status).toBe(BookingStatus.DISPUTED);
       expect(result.stage).toBe(BookingStage.INSPECTED);
+    });
+  });
+
+  describe('getStatusBreakdown', () => {
+    it('delegates straight through to the repository', async () => {
+      const result = await service.getStatusBreakdown();
+      expect(result).toEqual([{ status: BookingStatus.CONFIRMED, count: 7 }]);
     });
   });
 

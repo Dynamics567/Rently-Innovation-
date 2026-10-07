@@ -68,6 +68,12 @@ export class AdminUsersController {
   }
 
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Get('analytics/signups')
+  async signupTrend(@Query('days') days?: string) {
+    return this.usersService.getSignupTrend(days ? Number(days) : 30);
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @Get(':id')
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.getById(id);

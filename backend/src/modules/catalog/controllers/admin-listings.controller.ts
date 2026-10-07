@@ -41,6 +41,12 @@ export class AdminListingsController {
     return this.listingsService.searchForAdmin(query);
   }
 
+  /** Overview's price-distribution histogram — registered before :id. */
+  @Get('analytics/price-distribution')
+  async priceDistribution() {
+    return this.listingsService.getPriceDistribution();
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return this.listingsService.findByIdOrFail(id);

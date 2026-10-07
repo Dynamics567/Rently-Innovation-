@@ -11,7 +11,7 @@ import { UserRole } from '../enums/user-role.enum';
  */
 describe('UsersService', () => {
   let service: UsersService;
-  let userRepository: Record<'findByIdOrFail' | 'findByEmail' | 'save' | 'searchForAdmin' | 'countAll' | 'findAdmins', jest.Mock>;
+  let userRepository: Record<'findByIdOrFail' | 'findByEmail' | 'save' | 'searchForAdmin' | 'countAll' | 'findAdmins' | 'countSignupsByDay', jest.Mock>;
   let adminInviteRepository: Record<'create' | 'save' | 'findByIdOrFail' | 'findPending', jest.Mock>;
   let auditLogService: Record<'record', jest.Mock>;
   let configService: { get: jest.Mock };
@@ -25,6 +25,7 @@ describe('UsersService', () => {
       searchForAdmin: jest.fn(),
       countAll: jest.fn(async () => 42),
       findAdmins: jest.fn(async () => []),
+      countSignupsByDay: jest.fn(async () => [{ date: '2026-10-01', count: 3 }]),
     };
     adminInviteRepository = {
       create: jest.fn((partial) => partial),
@@ -90,6 +91,14 @@ describe('UsersService', () => {
     it('reports the real total user count from the repository', async () => {
       const result = await service.getStats();
       expect(result).toEqual({ totalUsers: 42 });
+    });
+  });
+
+  describe('getSignupTrend', () => {
+    it('delegates to the repository with the given day window', async () => {
+      const result = await service.getSignupTrend(14);
+      expect(userRepository.countSignupsByDay).toHaveBeenCalledWith(14);
+      expect(result).toEqual([{ date: '2026-10-01', count: 3 }]);
     });
   });
 

@@ -363,6 +363,11 @@ export class ListingsService {
     return this.computeQuote(listing, from, to, category.commissionRateBps, quantity);
   }
 
+  /** [Admin] Overview's price-distribution histogram. */
+  async getPriceDistribution(): Promise<{ bucket: string; count: number }[]> {
+    return this.listingRepository.getPriceDistribution();
+  }
+
   /** [Trust] Recomputes the denormalized avgRating/reviewCount from a fresh aggregate over Review rows — never written directly by review submission itself. */
   async recomputeRatingAggregate(
     listingId: string,

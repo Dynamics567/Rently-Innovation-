@@ -61,6 +61,20 @@ export class UserRepository extends BaseRepository<User> {
       .getMany();
   }
 
+  /** [Overview line chart] Real daily signup counts — never a fabricated trend. Days with zero signups are simply absent; the caller fills gaps for a continuous x-axis. */
+  async countSignupsByDay(days: number): Promise<{ date: string; count: number }[]> {
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const rows = await this.repository
+      .createQueryBuilder('user')
+      .select("to_char(user.createdAt, 'YYYY-MM-DD')", 'date')
+      .addSelect('COUNT(*)', 'count')
+      .where('user.createdAt >= :since', { since })
+      .groupBy('date')
+      .orderBy('date', 'ASC')
+      .getRawMany<{ date: string; count: string }>();
+    return rows.map((r) => ({ date: r.date, count: Number(r.count) }));
+  }
+
   async findByEmail(email: string): Promise<User | null> {
     return this.repository.findOne({ where: { email } });
   }

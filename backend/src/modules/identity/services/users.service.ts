@@ -121,6 +121,11 @@ export class UsersService {
     return { totalUsers };
   }
 
+  /** [Admin] Overview's signup line chart. */
+  async getSignupTrend(days: number): Promise<{ date: string; count: number }[]> {
+    return this.userRepository.countSignupsByDay(days);
+  }
+
   /** [Super Admin] Admin Team view — everyone who currently has admin access, plus invites still awaiting a signup. */
   async listAdminTeam(): Promise<{ admins: User[]; invites: AdminInvite[] }> {
     const [admins, invites] = await Promise.all([

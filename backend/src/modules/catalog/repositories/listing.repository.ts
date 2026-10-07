@@ -130,4 +130,34 @@ export class ListingRepository extends BaseRepository<Listing> {
       order: { createdAt: 'ASC' },
     });
   }
+
+  /**
+   * [Overview histogram] Price spread across live listings, bucketed into
+   * fixed ₦ ranges. Scoped to LIVE only — a draft/rejected listing's price
+   * isn't a real market data point yet. Buckets are returned pre-ordered
+   * (the CASE index), not alphabetically, so "Under ₦10k" never sorts
+   * after "₦50k–100k".
+   */
+  async getPriceDistribution(): Promise<{ bucket: string; count: number }[]> {
+    const bucketExpr = `
+      CASE
+        WHEN listing.priceMinor < 1000000 THEN 0
+        WHEN listing.priceMinor < 2500000 THEN 1
+        WHEN listing.priceMinor < 5000000 THEN 2
+        WHEN listing.priceMinor < 10000000 THEN 3
+        WHEN listing.priceMinor < 25000000 THEN 4
+        ELSE 5
+      END
+    `;
+    const rows = await this.repository
+      .createQueryBuilder('listing')
+      .select(bucketExpr, 'bucket_index')
+      .addSelect('COUNT(*)', 'count')
+      .where('listing.status = :status', { status: ListingStatus.LIVE })
+      .groupBy(bucketExpr)
+      .orderBy('bucket_index', 'ASC')
+      .getRawMany<{ bucket_index: string; count: string }>();
+    const labels = ['Under ₦10k', '₦10k–25k', '₦25k–50k', '₦50k–100k', '₦100k–250k', '₦250k+'];
+    return rows.map((r) => ({ bucket: labels[Number(r.bucket_index)], count: Number(r.count) }));
+  }
 }

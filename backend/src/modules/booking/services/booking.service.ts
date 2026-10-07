@@ -139,6 +139,11 @@ export class BookingService {
     });
   }
 
+  /** [Admin] Overview's status-breakdown pie chart. */
+  async getStatusBreakdown(): Promise<{ status: BookingStatus; count: number }[]> {
+    return this.bookingRepository.countByStatus();
+  }
+
   /**
    * [Admin] Everything the record-detail drawer needs in one call: the
    * booking, its full status-history timeline, and the resolved listing/

@@ -116,6 +116,17 @@ export class BookingRepository extends BaseRepository<Booking> {
     return Number(row?.total ?? 0);
   }
 
+  /** [Overview pie chart] Real counts per status, platform-wide — statuses are mutually exclusive per booking, so this sums to the total booking count exactly. */
+  async countByStatus(): Promise<{ status: BookingStatus; count: number }[]> {
+    const rows = await this.repository
+      .createQueryBuilder('booking')
+      .select('booking.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('booking.status')
+      .getRawMany<{ status: BookingStatus; count: string }>();
+    return rows.map((r) => ({ status: r.status, count: Number(r.count) }));
+  }
+
   /**
    * `role` picks which column to filter by: a renter sees bookings they
    * made, a provider sees bookings against their listings, 'admin' sees

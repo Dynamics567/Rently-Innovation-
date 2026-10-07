@@ -25,6 +25,12 @@ export class AdminBookingsController {
     return this.bookingService.searchAsAdmin(query);
   }
 
+  /** Overview's booking-status pie chart — registered before :id. */
+  @Get('analytics/by-status')
+  async statusBreakdown() {
+    return this.bookingService.getStatusBreakdown();
+  }
+
   @Get(':id')
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.bookingService.getDetailForAdmin(id);

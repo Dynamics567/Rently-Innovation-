@@ -10,7 +10,7 @@ import { ListingCondition, ListingStatus, PriceUnit } from '../enums/listing.enu
 
 describe('ListingsService', () => {
   let service: ListingsService;
-  let listingRepository: Record<'create' | 'save' | 'findByIdOrFail', jest.Mock>;
+  let listingRepository: Record<'create' | 'save' | 'findByIdOrFail' | 'getPriceDistribution', jest.Mock>;
   let photoRepository: Record<'countByListing' | 'create' | 'save', jest.Mock>;
   let categoriesService: Record<'getByIdOrFail' | 'assertActive', jest.Mock>;
   let attributeValidator: Record<'validate', jest.Mock>;
@@ -31,6 +31,7 @@ describe('ListingsService', () => {
       create: jest.fn((partial) => partial),
       save: jest.fn(async (entity) => ({ ...entity, id: 'listing-1' })),
       findByIdOrFail: jest.fn(),
+      getPriceDistribution: jest.fn(async () => [{ bucket: 'Under ₦10k', count: 5 }]),
     };
     photoRepository = {
       countByListing: jest.fn(async () => 0),
@@ -55,6 +56,13 @@ describe('ListingsService', () => {
       eventEmitter as unknown as EventEmitter2,
       providerProfileService as unknown as ProviderProfileService,
     );
+  });
+
+  describe('getPriceDistribution', () => {
+    it('delegates straight through to the repository', async () => {
+      const result = await service.getPriceDistribution();
+      expect(result).toEqual([{ bucket: 'Under ₦10k', count: 5 }]);
+    });
   });
 
   describe('create', () => {
