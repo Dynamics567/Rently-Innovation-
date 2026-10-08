@@ -22,6 +22,13 @@
 :root{
   --op-bg:#F5F6F8; --op-surface:#FFFFFF; --op-border:#E3E6EB; --op-border-strong:#CBD0D9;
   --op-text:#171A21; --op-text-soft:#4B5162; --op-text-faint:#8991A1;
+  /* Sidebar-only — deliberately separate from --op-text* above, which the white
+     main content area still needs. A dark operational shell around a light
+     workspace, not a full dark-mode flip of the page. */
+  --nav-bg:#0B1120; --nav-border:rgba(255,255,255,.08);
+  --nav-text:#C4CAD6; --nav-text-faint:#6B7280;
+  --nav-hover-bg:rgba(255,255,255,.06);
+  --nav-active-bg:var(--blue); --nav-active-text:#FFFFFF;
 }
 body{padding-top:0;background:var(--op-bg);font-family:var(--sans);}
 h1,h2,h3{font-family:var(--sans);}
@@ -38,16 +45,18 @@ h1,h2,h3{font-family:var(--sans);}
 
 /* ---- sidebar: grouped, flat, no rounded-pill nav items ---- */
 .app-shell{display:flex;min-height:100vh;padding-top:0;}
-.app-side{width:232px;flex-shrink:0;border-right:1px solid var(--op-border);padding:20px 12px;position:sticky;top:57px;height:calc(100vh - 57px);overflow-y:auto;background:var(--op-surface);}
-.side-group-lbl{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--op-text-faint);margin:18px 10px 6px;}
+.app-side{width:232px;flex-shrink:0;border-right:1px solid var(--nav-border);padding:20px 12px;position:sticky;top:57px;height:calc(100vh - 57px);overflow-y:auto;background:var(--nav-bg);}
+.side-group-lbl{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--nav-text-faint);margin:18px 10px 6px;}
 .side-group-lbl:first-child{margin-top:4px;}
-.side-link{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;font-size:13px;font-weight:600;color:var(--op-text-soft);margin-bottom:1px;}
+.side-link{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;font-size:13px;font-weight:600;color:var(--nav-text);margin-bottom:1px;}
 .side-link svg{width:16px;height:16px;opacity:.8;flex-shrink:0;}
-.side-link:hover{background:var(--op-bg);color:var(--op-text);}
-.side-link.active{background:var(--blue-soft);color:var(--blue-dark);}
+.side-link:hover{background:var(--nav-hover-bg);color:#fff;}
+.side-link.active{background:var(--nav-active-bg);color:var(--nav-active-text);}
 .side-link.active svg{opacity:1;}
-.side-link .cnt{margin-left:auto;font-size:11px;font-weight:700;background:var(--op-border);color:var(--op-text-soft);border-radius:999px;padding:1px 7px;}
-.side-link.active .cnt{background:var(--blue);color:#fff;}
+.side-link .cnt{margin-left:auto;font-size:11px;font-weight:700;background:rgba(255,255,255,.12);color:var(--nav-text);border-radius:999px;padding:1px 7px;}
+.side-link.active .cnt{background:rgba(255,255,255,.25);color:#fff;}
+.side-link.planned{opacity:.55;}
+.side-link.planned:hover{opacity:.85;}
 @media(max-width:980px){.app-side{display:none;}.app-main{padding:20px 16px 60px !important;max-width:100% !important;}}
 .mobile-tabbar{display:none;}
 @media(max-width:980px){
@@ -212,23 +221,38 @@ h1,h2,h3{font-family:var(--sans);}
     <a class="side-link" data-view="bookings" id="linkBookings"></a>
     <a class="side-link" data-view="returns" id="linkReturns"></a>
     <a class="side-link" data-view="disputes" id="linkDisputes"></a>
+    <a class="side-link planned" href="#" data-planned="support" id="linkSupport"></a>
 
     <div class="side-group-lbl">Marketplace</div>
     <a class="side-link" data-view="listings" id="linkListings"></a>
     <a class="side-link" data-view="categories" id="linkCategories"></a>
     <a class="side-link" data-view="providers" id="linkProviders"></a>
     <a class="side-link" data-view="customers" id="linkCustomers"></a>
+    <a class="side-link planned" href="#" data-planned="locations" id="linkLocations"></a>
+
+    <div class="side-group-lbl">Finance</div>
+    <a class="side-link planned" href="#" data-planned="transactions" id="linkTransactions"></a>
+    <a class="side-link planned" href="#" data-planned="settlements" id="linkSettlements"></a>
+    <a class="side-link planned" href="#" data-planned="refunds" id="linkRefunds"></a>
+    <a class="side-link planned" href="#" data-planned="wallets" id="linkWallets"></a>
 
     <div class="side-group-lbl">Trust &amp; Safety</div>
     <a class="side-link" data-view="verification" id="linkVerification"></a>
-    <a class="side-link" data-view="reviews" id="linkReviews"></a>
 
-    <div class="side-group-lbl">Admin</div>
+    <div class="side-group-lbl">Growth</div>
+    <a class="side-link" data-view="reviews" id="linkReviews"></a>
+    <a class="side-link planned" href="#" data-planned="promotions" id="linkPromotions"></a>
+    <a class="side-link planned" href="#" data-planned="notifications" id="linkNotifications"></a>
+
+    <div class="side-group-lbl">Content</div>
+    <a class="side-link planned" href="#" data-planned="cms" id="linkCms"></a>
+    <a class="side-link planned" href="#" data-planned="helpCentre" id="linkHelpCentre"></a>
+
+    <div class="side-group-lbl">Control</div>
     <a class="side-link" data-view="audit" id="linkAudit"></a>
     <a class="side-link" data-view="team" id="linkTeam" style="display:none;"></a>
-
-    <div class="side-group-lbl">Not built yet</div>
-    <a class="side-link" data-view="planned" id="linkPlanned" style="opacity:.6;"></a>
+    <a class="side-link planned" href="#" data-planned="permissions" id="linkPermissions"></a>
+    <a class="side-link planned" href="#" data-planned="systemSettings" id="linkSystemSettings"></a>
   </aside>
 
   <main class="app-main">
@@ -375,14 +399,17 @@ h1,h2,h3{font-family:var(--sans);}
       </div>
     </div>
 
-    <!-- ============ PLANNED (honest placeholder) ============ -->
+    <!-- ============ PLANNED (honest, per-module placeholder) ============ -->
     <div class="d-view" id="view-planned">
-      <div class="app-head"><div><h1>Planned</h1><p>Real backend work, not yet built — listed here instead of hidden, so the roadmap is honest about what exists today.</p></div></div>
-      <div class="optable-wrap">
-        <table class="optable">
-          <thead><tr><th>Module</th><th>Status</th></tr></thead>
-          <tbody id="plannedTbody"></tbody>
-        </table>
+      <div class="app-head"><div><h1 id="plannedTitle">Planned</h1><p id="plannedSub">Real backend work, not yet built.</p></div></div>
+      <div class="section-block">
+        <div class="sb-head"><h3>Everything on the roadmap</h3></div>
+        <div class="optable-wrap">
+          <table class="optable">
+            <thead><tr><th>Module</th><th>Group</th><th>Status</th></tr></thead>
+            <tbody id="plannedTbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </main>
@@ -460,7 +487,18 @@ document.getElementById('linkVerification').innerHTML = icon('shield',{size:16})
 document.getElementById('linkReviews').innerHTML = icon('star',{size:16})+' Reviews';
 document.getElementById('linkAudit').innerHTML = icon('filter',{size:16})+' Audit log';
 document.getElementById('linkTeam').innerHTML = icon('user',{size:16})+' Team &amp; access';
-document.getElementById('linkPlanned').innerHTML = icon('info',{size:16})+' Roadmap';
+document.getElementById('linkSupport').innerHTML = icon('message',{size:16})+' Support tickets';
+document.getElementById('linkLocations').innerHTML = icon('map',{size:16})+' Locations';
+document.getElementById('linkTransactions').innerHTML = icon('card',{size:16})+' Transactions';
+document.getElementById('linkSettlements').innerHTML = icon('download',{size:16})+' Settlements';
+document.getElementById('linkRefunds').innerHTML = icon('minus',{size:16})+' Refunds';
+document.getElementById('linkWallets').innerHTML = icon('wallet',{size:16})+' Wallets';
+document.getElementById('linkPromotions').innerHTML = icon('star',{size:16})+' Promotions';
+document.getElementById('linkNotifications').innerHTML = icon('bell',{size:16})+' Notifications';
+document.getElementById('linkCms').innerHTML = icon('edit',{size:16})+' CMS';
+document.getElementById('linkHelpCentre').innerHTML = icon('info',{size:16})+' Help centre';
+document.getElementById('linkPermissions').innerHTML = icon('lock',{size:16})+' Permissions';
+document.getElementById('linkSystemSettings').innerHTML = icon('settings',{size:16})+' System settings';
 document.getElementById('teamInviteCloseBtn').innerHTML = icon('close',{size:15});
 /* "Team & Access" is SUPER_ADMIN-only on the backend — hide the nav entirely for a plain admin rather than show a screen that would just 403. */
 if(session && session.user.roles.includes('super_admin')){
@@ -487,6 +525,7 @@ function goView(v){
   // from being a second, divergent copy of the bookings table.
   const domView = v==='returns' ? 'bookings' : v;
   document.querySelectorAll('.side-link[data-view]').forEach(o=>o.classList.toggle('active',o.dataset.view===v));
+  document.querySelectorAll('.side-link[data-planned]').forEach(o=>o.classList.remove('active'));
   document.querySelectorAll('.d-view').forEach(el=>el.classList.remove('active'));
   const el = document.getElementById('view-'+domView);
   (el||document.getElementById('view-overview')).classList.add('active');
@@ -500,9 +539,9 @@ function goView(v){
   if(v==='reviews') loadReviews(true);
   if(v==='audit') loadAuditLog(true);
   if(v==='team') loadTeam();
-  if(v==='planned') renderPlanned();
 }
 document.querySelectorAll('.side-link[data-view]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goView(l.dataset.view);}));
+document.querySelectorAll('.side-link[data-planned]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goPlanned(l.dataset.planned);}));
 
 /* ================================================================
    SHARED: async state rendering — loading/empty/error, every list
@@ -1374,11 +1413,40 @@ document.getElementById('teamInviteSaveBtn').addEventListener('click', async ()=
 });
 
 /* ================================================================
-   PLANNED (honest roadmap placeholder)
+   PLANNED (honest, per-module placeholder) — every not-yet-built module
+   gets its own correctly-grouped sidebar entry (see the Finance/Growth/
+   Content/Control groups above) instead of one undifferentiated "roadmap"
+   bucket; they all share this one view, parameterized by which was clicked.
    ================================================================ */
-function renderPlanned(){
-  const items=['Payments & Ledger','Transactions','Settlements','Refunds (as tracked records)','Wallets','Support / Ticketing','CMS','Promotions','Notifications (admin broadcast)','System Settings','Integrations','System Health','Granular Module→Action→Permission RBAC'];
-  document.getElementById('plannedTbody').innerHTML = items.map(i=>`<tr><td>${i}</td><td><span class="pill-status neutral">Not built yet</span></td></tr>`).join('');
+const PLANNED_MODULES = {
+  support: { label:'Support Tickets', group:'Operations', blurb:"Customer and Rental Partner support requests, linked to the booking or listing they're about." },
+  locations: { label:'Locations', group:'Marketplace', blurb:"A structured city/region taxonomy for listings, instead of today's free-text location field." },
+  transactions: { label:'Transactions', group:'Finance', blurb:'Every payment, platform fee and payout in one real ledger.' },
+  settlements: { label:'Settlements', group:'Finance', blurb:'Scheduled payouts to Rental Partners, batched and reconciled.' },
+  refunds: { label:'Refunds', group:'Finance', blurb:'Refunds as tracked records, not just a side effect of a dispute resolution.' },
+  wallets: { label:'Wallets', group:'Finance', blurb:'Running balances for Rental Partners awaiting payout.' },
+  promotions: { label:'Promotions', group:'Growth', blurb:'Discount codes and campaigns to grow bookings.' },
+  notifications: { label:'Notifications', group:'Growth', blurb:'Admin-authored broadcast notifications to customers or Rental Partners.' },
+  cms: { label:'CMS', group:'Content', blurb:'Editable static pages (About, Help articles) without a code deploy.' },
+  helpCentre: { label:'Help Centre', group:'Content', blurb:'A searchable self-serve help article library.' },
+  permissions: { label:'Permissions', group:'Control', blurb:"Granular Module→Action→Permission roles, replacing today's flat Admin/Super Admin." },
+  systemSettings: { label:'System Settings', group:'Control', blurb:'Platform-wide configuration (commission defaults, booking windows, feature flags).' },
+};
+function renderPlannedTable(){
+  document.getElementById('plannedTbody').innerHTML = Object.values(PLANNED_MODULES).map(m=>
+    `<tr><td>${m.label}</td><td>${m.group}</td><td><span class="pill-status neutral">Not built yet</span></td></tr>`
+  ).join('');
+}
+function goPlanned(key){
+  document.querySelectorAll('.side-link[data-view]').forEach(o=>o.classList.remove('active'));
+  document.querySelectorAll('.side-link[data-planned]').forEach(o=>o.classList.toggle('active', o.dataset.planned===key));
+  document.querySelectorAll('.d-view').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-planned').classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+  const mod = PLANNED_MODULES[key] || { label:'Planned', blurb:'Real backend work, not yet built.' };
+  document.getElementById('plannedTitle').textContent = mod.label;
+  document.getElementById('plannedSub').textContent = mod.blurb;
+  renderPlannedTable();
 }
 
 if(session){ renderWelcome(); renderOverview(); renderVerification(); renderDisputes(); }
