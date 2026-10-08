@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Headers, Param, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Headers, Param, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { Public } from '@common/decorators/public.decorator';
 import { Idempotent } from '@common/decorators/idempotent.decorator';
 import { CheckPolicies } from '@common/decorators/check-policies.decorator';
@@ -124,6 +125,15 @@ export class BookingsController {
     @Body() dto: RecordInspectionDto,
   ) {
     return this.bookingService.recordInspection(id, user.id, dto);
+  }
+
+  /** Called ahead of /inspect — the returned storageKey goes into that call's evidenceKeys array. */
+  @CheckPolicies(IsBookingProviderPolicy)
+  @Post(':id/inspection-evidence')
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadInspectionEvidence(@Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
+    return this.bookingService.uploadInspectionEvidence(id, file);
   }
 
   /** @deprecated Use POST :id/inspect with {damageFound:false} — kept as a backward-compatible alias. */

@@ -2,10 +2,12 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DataSource, EntityManager } from 'typeorm';
+import { randomUUID } from 'crypto';
 import { DomainException } from '@common/errors/domain.exception';
 import { ErrorCode } from '@common/errors/error-codes.enum';
 import { CursorPage } from '@common/dto/cursor-pagination.dto';
 import { toTstzRangeLiteral } from '@common/utils/tstzrange.util';
+import { STORAGE_PORT, StoragePort } from '@common/storage/storage.port';
 import { DomainEvents, BookingLifecycleEventPayload } from '@common/events/domain-events';
 import { ListingsService } from '@modules/catalog/services/listings.service';
 import { AvailabilityService } from '@modules/catalog/services/availability.service';
@@ -52,6 +54,7 @@ export class BookingService {
     private readonly providerProfileService: ProviderProfileService,
     private readonly usersService: UsersService,
     @Inject(PAYMENT_PORT) private readonly paymentPort: PaymentPort,
+    @Inject(STORAGE_PORT) private readonly storage: StoragePort,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -565,6 +568,27 @@ export class BookingService {
     );
     await this.emitBookingEvent(DomainEvents.BookingReturned, result, result.renterId);
     return result;
+  }
+
+  /**
+   * [Provider] Uploads one evidence photo for a damage report, ahead of the
+   * actual recordInspection() call — the caller collects the returned
+   * storage keys client-side and sends them as RecordInspectionDto.evidenceKeys.
+   * That field (and the Dispute.evidenceKeys column it ends up on) existed
+   * before this method did; nothing ever produced a key for it to carry.
+   * Authorization is the controller's @CheckPolicies(IsBookingProviderPolicy)
+   * guard, same as the neighboring /inspect route — not re-checked here,
+   * matching recordInspection()'s own convention below.
+   */
+  async uploadInspectionEvidence(
+    bookingId: string,
+    file: { buffer: Buffer; mimetype: string },
+  ): Promise<{ storageKey: string; url: string }> {
+    await this.findByIdOrFail(bookingId);
+    const key = `inspection-evidence/${bookingId}/${randomUUID()}`;
+    await this.storage.upload({ key, body: file.buffer, contentType: file.mimetype });
+    const url = await this.storage.getUrl(key);
+    return { storageKey: key, url };
   }
 
   /**

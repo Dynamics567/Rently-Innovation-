@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { DomainException } from '@common/errors/domain.exception';
 import { ErrorCode } from '@common/errors/error-codes.enum';
 import { AuditLogService } from '@common/audit/audit-log.service';
 import { AuditActorType } from '@common/audit/audit-actor-type.enum';
+import { STORAGE_PORT, StoragePort } from '@common/storage/storage.port';
 import { Dispute } from '../entities/dispute.entity';
 import { Booking } from '../entities/booking.entity';
 import { DisputeRepository } from '../repositories/dispute.repository';
@@ -25,14 +26,33 @@ export class DisputeService {
     private readonly disputeRepository: DisputeRepository,
     private readonly bookingService: BookingService,
     private readonly auditLogService: AuditLogService,
+    @Inject(STORAGE_PORT) private readonly storage: StoragePort,
   ) {}
 
-  async findByIdOrFail(id: string): Promise<Dispute> {
-    return this.disputeRepository.findByIdOrFail(id, 'Dispute');
+  /**
+   * Resolves evidenceKeys -> signed URLs on top of the raw entity, same
+   * Object.assign technique VerificationDocumentsService.listForProvider()
+   * uses: it preserves the Dispute prototype (so @Exclude()-marked columns,
+   * if any are ever added, still serialize correctly) rather than losing it
+   * to a `{...dispute}` spread. Shared by every read path below — a renter
+   * looking up their own dispute via findByBooking() needs to see evidence
+   * exactly as much as findByIdOrFail()'s callers do.
+   */
+  private async withEvidenceUrls(dispute: Dispute): Promise<Dispute & { evidenceUrls: { key: string; url: string }[] }> {
+    const evidenceUrls = await Promise.all(
+      dispute.evidenceKeys.map(async (key) => ({ key, url: await this.storage.getUrl(key) })),
+    );
+    return Object.assign(dispute, { evidenceUrls });
   }
 
-  async findByBooking(bookingId: string): Promise<Dispute | null> {
-    return this.disputeRepository.findByBooking(bookingId);
+  async findByIdOrFail(id: string): Promise<Dispute & { evidenceUrls: { key: string; url: string }[] }> {
+    const dispute = await this.disputeRepository.findByIdOrFail(id, 'Dispute');
+    return this.withEvidenceUrls(dispute);
+  }
+
+  async findByBooking(bookingId: string): Promise<(Dispute & { evidenceUrls: { key: string; url: string }[] }) | null> {
+    const dispute = await this.disputeRepository.findByBooking(bookingId);
+    return dispute ? this.withEvidenceUrls(dispute) : null;
   }
 
   async listAll(status?: DisputeStatus): Promise<Dispute[]> {

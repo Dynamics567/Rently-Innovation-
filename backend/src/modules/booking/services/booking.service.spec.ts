@@ -49,6 +49,7 @@ describe('BookingService', () => {
   let providerProfileService: Record<'incrementCompletedBookings' | 'getById', jest.Mock>;
   let usersService: Record<'getById', jest.Mock>;
   let paymentPort: Record<'charge' | 'refund' | 'release', jest.Mock>;
+  let storage: Record<'upload' | 'getUrl' | 'delete', jest.Mock>;
   let eventEmitter: Record<'emit', jest.Mock>;
   let dataSource: { transaction: jest.Mock };
 
@@ -119,6 +120,11 @@ describe('BookingService', () => {
       refund: jest.fn(async () => undefined),
       release: jest.fn(async () => undefined),
     };
+    storage = {
+      upload: jest.fn(async () => undefined),
+      getUrl: jest.fn(async (key: string) => `https://signed.example.com/${key}`),
+      delete: jest.fn(async () => undefined),
+    };
     eventEmitter = { emit: jest.fn() };
 
     const bookingManagerRepo = fakeRepo();
@@ -149,8 +155,34 @@ describe('BookingService', () => {
       providerProfileService as unknown as ProviderProfileService,
       usersService as unknown as UsersService,
       paymentPort as unknown as PaymentPort,
+      storage as unknown as any,
       eventEmitter as unknown as EventEmitter2,
     );
+  });
+
+  describe('uploadInspectionEvidence', () => {
+    it('uploads the file under a booking-scoped key and returns a signed URL', async () => {
+      bookingRepository.findByIdOrFail.mockResolvedValue({ id: 'booking-1' });
+      const file = { buffer: Buffer.from('fake-image'), mimetype: 'image/jpeg' };
+
+      const result = await service.uploadInspectionEvidence('booking-1', file);
+
+      expect(storage.upload).toHaveBeenCalledWith(
+        expect.objectContaining({ body: file.buffer, contentType: 'image/jpeg' }),
+      );
+      const uploadedKey = storage.upload.mock.calls[0][0].key;
+      expect(uploadedKey).toMatch(/^inspection-evidence\/booking-1\//);
+      expect(result).toEqual({ storageKey: uploadedKey, url: `https://signed.example.com/${uploadedKey}` });
+    });
+
+    it('rejects a non-existent booking', async () => {
+      bookingRepository.findByIdOrFail.mockRejectedValue(new Error('not found'));
+
+      await expect(
+        service.uploadInspectionEvidence('missing', { buffer: Buffer.from(''), mimetype: 'image/jpeg' }),
+      ).rejects.toThrow('not found');
+      expect(storage.upload).not.toHaveBeenCalled();
+    });
   });
 
   describe('create', () => {
