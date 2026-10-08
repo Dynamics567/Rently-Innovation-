@@ -97,7 +97,14 @@ export class TokenService {
   }
 
   async revokeAllForUser(userId: string): Promise<void> {
-    await this.refreshTokenRepo.update({ userId, revokedAt: undefined }, { revokedAt: new Date() });
+    // Previously filtered on `revokedAt: undefined`, intending "only the
+    // still-active ones" — but TypeORM/pg renders that as `"revoked_at" =
+    // NULL`, which under SQL's three-valued logic never matches any row
+    // (NULL is never "equal to" anything, including NULL — IS NULL is
+    // required for that), so this silently revoked nothing at all, every
+    // time. Re-stamping an already-revoked row's revokedAt is harmless, so
+    // the condition is dropped rather than rewritten with IsNull().
+    await this.refreshTokenRepo.update({ userId }, { revokedAt: new Date() });
   }
 
   private hash(value: string): string {
