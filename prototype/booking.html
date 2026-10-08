@@ -240,6 +240,7 @@ body{padding-top:0;}
         <div class="panel-card">
           <h3 id="disputeTitle">Dispute opened</h3>
           <p class="lede" id="disputeLede"></p>
+          <div id="disputeEvidence" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:18px;"></div>
           <div id="disputeProposal" style="display:none;">
             <div class="receipt-row"><span>Proposed deduction</span><span id="disputeAmt"></span></div>
             <p class="lede" id="disputeNote" style="margin:10px 0 18px;"></p>
@@ -562,10 +563,19 @@ function render(){
 /* ---------------- DISPUTE PANEL ---------------- */
 function renderDisputePanel(){
   const proposalEl=document.getElementById('disputeProposal');
+  const evidenceEl=document.getElementById('disputeEvidence');
   if(!dispute){
     document.getElementById('disputeLede').textContent = `${provider.name} reported an issue with this rental. Details will appear here shortly.`;
     proposalEl.style.display='none';
+    evidenceEl.style.display='none';
     return;
+  }
+  const evidenceUrls = dispute.evidenceUrls||[];
+  if(evidenceUrls.length){
+    evidenceEl.style.display='flex';
+    evidenceEl.innerHTML = evidenceUrls.map(e=>`<a href="${e.url}" target="_blank" rel="noopener" style="width:72px;height:72px;border-radius:10px;overflow:hidden;border:1px solid var(--line-strong);display:block;"><img src="${e.url}" style="width:100%;height:100%;object-fit:cover;" /></a>`).join('');
+  }else{
+    evidenceEl.style.display='none';
   }
   if(dispute.status==='proposed'){
     document.getElementById('disputeTitle').textContent = 'The Rental Partner proposed a deduction';

@@ -293,6 +293,22 @@ body{padding-top:0;}
   </div>
 </div>
 
+<!-- ============ REPORT DAMAGE MODAL ============ -->
+<div class="overlay" id="reportDamageOverlay">
+  <div class="modal">
+    <button class="modal-close" id="closeReportDamage"></button>
+    <h3 style="font-size:20px;margin-bottom:6px;">Report damage</h3>
+    <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:24px;">Both the renter and any admin who reviews this will see your description and photos.</p>
+    <div id="damageError" class="banner danger" style="display:none;margin-bottom:16px;"></div>
+    <div class="field"><label>What happened?</label><textarea id="damageDescription" placeholder="Describe the damage found"></textarea></div>
+    <div class="field"><label>Photos <span style="color:var(--ink-faint);font-weight:400">(optional, but strongly recommended)</span></label>
+      <input type="file" id="damagePhotos" accept="image/*" multiple style="font-size:13px;" />
+      <div id="damagePhotoPreview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;"></div>
+    </div>
+    <button class="pill-btn danger block lg" id="submitReportDamageBtn">Report damage</button>
+  </div>
+</div>
+
 <!-- ============ MESSAGE THREAD MODAL ============ -->
 <div class="overlay" id="threadOverlay">
   <div class="modal" style="max-width:520px;">
@@ -509,13 +525,7 @@ async function loadActiveRentals(){
         try{ await apiFetch(`/bookings/${b.dataset.noDamage}/inspect`,{method:'POST',body:{damageFound:false}}); await loadActiveRentals(); }
         catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
       }));
-      document.querySelectorAll('[data-report-damage]').forEach(b=>b.addEventListener('click', async ()=>{
-        const description = prompt('Describe the damage found (visible to the renter and any admin who reviews this):');
-        if(!description || description.trim().length<3){ if(description!==null) alert('Please provide a short description.'); return; }
-        b.disabled=true;
-        try{ await apiFetch(`/bookings/${b.dataset.reportDamage}/inspect`,{method:'POST',body:{damageFound:true,description:description.trim()}}); await loadActiveRentals(); }
-        catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
-      }));
+      document.querySelectorAll('[data-report-damage]').forEach(b=>b.addEventListener('click', ()=>openReportDamageModal(b.dataset.reportDamage)));
       document.querySelectorAll('[data-propose]').forEach(b=>b.addEventListener('click', async ()=>{
         const depositMinor=+b.dataset.deposit||0;
         const amountStr = prompt(`How much of the ₦${(depositMinor/100).toLocaleString()} deposit should be deducted? (in Naira, 0 for none)`);
@@ -935,6 +945,54 @@ document.getElementById('submitListingBtn').addEventListener('click', async ()=>
     // since silently retrying the whole form would create a duplicate.
     const prefix = listing ? 'Your listing was saved as a draft, but ' : '';
     errEl.innerHTML=icon('alert',{size:15})+`<div>${prefix}${apiErrorMessage(e)}${listing?' You can find it under Listings and try publishing again once the issue is fixed.':''}</div>`; errEl.style.display='flex';
+  }finally{
+    btn.disabled=false; btn.textContent=original;
+  }
+});
+
+/* ---- report damage: upload evidence photos (if any), then /inspect ----
+   evidenceKeys existed on the backend before any endpoint produced one —
+   this is that missing upload step, same create-then-attach pattern as
+   the Add Listing modal's photos above. */
+let reportDamageBookingId=null;
+document.getElementById('closeReportDamage').innerHTML = icon('close',{size:15});
+function openReportDamageModal(bookingId){
+  reportDamageBookingId=bookingId;
+  document.getElementById('damageError').style.display='none';
+  document.getElementById('damageDescription').value='';
+  document.getElementById('damagePhotos').value='';
+  document.getElementById('damagePhotoPreview').innerHTML='';
+  document.getElementById('reportDamageOverlay').classList.add('open');
+}
+function closeReportDamageModal(){ document.getElementById('reportDamageOverlay').classList.remove('open'); }
+document.getElementById('closeReportDamage').addEventListener('click',closeReportDamageModal);
+document.getElementById('reportDamageOverlay').addEventListener('click',(e)=>{ if(e.target.id==='reportDamageOverlay') closeReportDamageModal(); });
+document.getElementById('damagePhotos').addEventListener('change',(e)=>{
+  document.getElementById('damagePhotoPreview').innerHTML=[...e.target.files].map(f=>`<div style="width:56px;height:56px;border-radius:10px;overflow:hidden;border:1px solid var(--line-strong);"><img src="${URL.createObjectURL(f)}" style="width:100%;height:100%;object-fit:cover;" /></div>`).join('');
+});
+document.getElementById('submitReportDamageBtn').addEventListener('click', async ()=>{
+  const errEl=document.getElementById('damageError'); errEl.style.display='none';
+  const description=document.getElementById('damageDescription').value.trim();
+  const files=[...document.getElementById('damagePhotos').files];
+  // 5, not 3 — matches RecordInspectionDto's real @MinLength(5) server-side.
+  if(description.length<5){ errEl.innerHTML=icon('alert',{size:15})+'<div>Please describe what happened (at least 5 characters).</div>'; errEl.style.display='flex'; return; }
+
+  const btn=document.getElementById('submitReportDamageBtn');
+  btn.disabled=true; const original=btn.textContent;
+  try{
+    const evidenceKeys=[];
+    for(let i=0;i<files.length;i++){
+      btn.textContent=`Uploading photo ${i+1} of ${files.length}…`;
+      const fd=new FormData(); fd.append('file',files[i]);
+      const {storageKey} = await apiUpload(`/bookings/${reportDamageBookingId}/inspection-evidence`,fd);
+      evidenceKeys.push(storageKey);
+    }
+    btn.textContent='Reporting…';
+    await apiFetch(`/bookings/${reportDamageBookingId}/inspect`,{method:'POST',body:{damageFound:true,description,evidenceKeys}});
+    closeReportDamageModal();
+    await loadActiveRentals();
+  }catch(e){
+    errEl.innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(e)}</div>`; errEl.style.display='flex';
   }finally{
     btn.disabled=false; btn.textContent=original;
   }

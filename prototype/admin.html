@@ -645,6 +645,17 @@ document.getElementById('drawerBody').addEventListener('click', async (e)=>{
       await apiFetch(`/admin/users/${id}/roles`,{method:'PATCH',body:{roles:selected}});
       btn.textContent='Saved'; setTimeout(()=>{ closeDrawer(); loadCustomers(true); },700);
       return; // skip the generic re-enable below — button is intentionally left disabled showing "Saved"
+    } else if(action==='dispute-resolve'){
+      const depositMinor=+btn.dataset.deposit||0;
+      const amountStr=prompt(`Final deduction from the ${money2(depositMinor)} deposit (in Naira, 0 for no deduction):`);
+      if(amountStr===null){ btn.disabled=false; return; }
+      const amountNaira=Number(amountStr);
+      if(!Number.isFinite(amountNaira)||amountNaira<0){ alert('Enter a valid, non-negative amount.'); btn.disabled=false; return; }
+      const note=prompt('Note explaining this decision (visible to both parties):');
+      // 5, not 3 — matches AdminResolveDisputeDto's real @MinLength(5) server-side.
+      if(!note||note.trim().length<5){ if(note!==null) alert('Please provide a note of at least 5 characters.'); btn.disabled=false; return; }
+      await apiFetch(`/admin/disputes/${id}/resolve`,{method:'POST',body:{finalDeductionMinor:Math.round(amountNaira*100),note:note.trim()}});
+      closeDrawer(); renderDisputes();
     }
   }catch(err){
     alert(apiErrorMessage(err));
@@ -1317,47 +1328,63 @@ function renderDisputeRows(){
   const el=document.getElementById('disputesList');
   const rows=disputeQueue.filter(disputeMatchesFilter);
   if(!rows.length){ el.innerHTML = stateEmpty('Nothing in this view.'); return; }
-  el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th>Listing</th><th>Status</th><th>Opened</th><th>Description</th><th></th></tr></thead><tbody>${
-    rows.map(d=>{
-      const ctx=d._ctx||{};
-      return `<tr>
-        <td>${ctx.listingTitle||'A booking'}</td>
+  el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th>Status</th><th>Opened</th><th>Description</th><th>Evidence</th></tr></thead><tbody>${
+    rows.map(d=>`<tr class="clickable" data-dispute="${d.id}">
         <td><span class="pill-status ${DISPUTE_STATUS_PILL[d.status]||'neutral'}">${d.status}</span></td>
         <td>${new Date(d.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td>
-        <td style="max-width:280px;">${d.description}</td>
-        <td>${d.status!=='resolved'?`<button class="pill-btn green sm" data-resolve-dispute="${d.id}" data-deposit="${ctx.depositMinor||0}">Resolve</button>`:''}</td>
-      </tr>`;
-    }).join('')
+        <td style="max-width:320px;">${d.description}</td>
+        <td>${(d.evidenceKeys||[]).length ? `${d.evidenceKeys.length} photo${d.evidenceKeys.length===1?'':'s'}` : '—'}</td>
+      </tr>`).join('')
   }</tbody></table></div>`;
-  el.querySelectorAll('[data-resolve-dispute]').forEach(b=>b.addEventListener('click', async ()=>{
-    const depositMinor=+b.dataset.deposit||0;
-    const amountStr=prompt(`Final deduction from the ${money2(depositMinor)} deposit (in Naira, 0 for no deduction):`);
-    if(amountStr===null) return;
-    const amountNaira=Number(amountStr);
-    if(!Number.isFinite(amountNaira)||amountNaira<0){ alert('Enter a valid, non-negative amount.'); return; }
-    const note=prompt('Note explaining this decision (visible to both parties):');
-    // 5, not 3 — matches AdminResolveDisputeDto's real @MinLength(5) server-side; a 3-4 char note used to pass here and then 400 on submit.
-    if(!note||note.trim().length<5){ if(note!==null) alert('Please provide a note of at least 5 characters.'); return; }
-    b.disabled=true;
-    try{ await apiFetch(`/admin/disputes/${b.dataset.resolveDispute}/resolve`,{method:'POST',body:{finalDeductionMinor:Math.round(amountNaira*100),note:note.trim()}}); await renderDisputes(); }
-    catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
-  }));
+  el.querySelectorAll('[data-dispute]').forEach(r=>r.addEventListener('click',()=>openDisputeDrawer(r.dataset.dispute)));
 }
 async function renderDisputes(){
   const el=document.getElementById('disputesList');
   try{
     const {data} = await apiFetch('/admin/disputes');
     disputeQueue=data;
-    await Promise.all(disputeQueue.map(async d=>{
-      try{
-        const {data:b} = await apiFetch(`/bookings/${d.bookingId}`);
-        const [{data:listing},renter] = await Promise.all([apiFetch(`/listings/${b.listingId}`,{auth:false}),getUserCached(b.renterId)]);
-        d._ctx={listingTitle:listing.title, renterName:renter.fullName, depositMinor:b.depositMinor};
-      }catch(e){ d._ctx={}; }
-    }));
     disputeFilterTabs();
     renderDisputeRows();
   }catch(e){ el.innerHTML = stateError(e); }
+}
+
+/**
+ * Disputes never got Milestone 1's record-detail-drawer treatment — this
+ * is that drawer. Fetches the dispute itself (now carrying evidenceUrls —
+ * see DisputeService.findByIdOrFail) plus the booking via the real admin
+ * endpoint (ListingsService.findByIdOrFail internally, not the public
+ * LIVE-only /listings/:id the old table's context fetch used — that's what
+ * was 404ing for any listing no longer live, a known pre-existing issue
+ * this drawer sidesteps rather than inheriting).
+ */
+async function openDisputeDrawer(id){
+  const d = await apiFetch(`/admin/disputes/${id}`).then(r=>r.data).catch(()=>null);
+  if(!d){ alert('Could not load this dispute.'); return; }
+  const ctx = await apiFetch(`/admin/bookings/${d.bookingId}`).then(r=>r.data).catch(()=>({}));
+  openDrawer(ctx.listingTitle||'A booking', ctx.renterName?`Renter: ${ctx.renterName}`:'', [
+    { key:'overview', label:'Overview', render: async ()=>{
+      const rows = dkv('Status', `<span class="pill-status ${DISPUTE_STATUS_PILL[d.status]||'neutral'}">${d.status}</span>`)
+        + dkv('Opened', new Date(d.createdAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))
+        + dkv('Description', d.description);
+      const proposal = d.proposedDeductionMinor!=null
+        ? dkv('Proposed deduction', money2(d.proposedDeductionMinor)) + (d.proposalNote?dkv('Proposal note', d.proposalNote):'')
+        : '';
+      const resolution = d.status==='resolved'
+        ? dkv('Final deduction', money2(d.finalDeductionMinor)) + dkv('Resolution', d.resolution==='admin_decided'?'Admin decided':'Agreed between parties') + (d.resolutionNote?dkv('Resolution note', d.resolutionNote):'')
+        : '';
+      const action = d.status!=='resolved'
+        ? `<div style="margin-top:18px;"><button class="pill-btn green sm" data-admin-action="dispute-resolve" data-id="${d.id}" data-deposit="${ctx.booking?ctx.booking.depositMinor:0}">Resolve</button></div>`
+        : '';
+      return rows + proposal + resolution + action;
+    }},
+    { key:'evidence', label:'Evidence', render: async ()=>{
+      if(!d.evidenceUrls||!d.evidenceUrls.length) return stateEmpty('No evidence attached to this dispute.');
+      return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;">${
+        d.evidenceUrls.map(e=>`<a href="${e.url}" target="_blank" rel="noopener" style="aspect-ratio:1;border-radius:10px;overflow:hidden;border:1px solid var(--op-border);display:block;"><img src="${e.url}" style="width:100%;height:100%;object-fit:cover;" /></a>`).join('')
+      }</div>`;
+    }},
+    auditTabFor('Dispute', id),
+  ]);
 }
 
 /* ================================================================
