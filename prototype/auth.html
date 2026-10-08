@@ -33,6 +33,7 @@ body{min-height:100vh;}
 .auth-card .back:hover{color:var(--ink);}
 .auth-card h1{font-size:26px;font-weight:400;margin-bottom:8px;}
 .auth-card .sub{color:var(--ink-soft);font-size:14px;margin-bottom:28px;}
+.role-toggle-label{font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:10px;}
 .role-toggle{display:flex;gap:10px;margin-bottom:26px;}
 .role-card{flex:1;border:1.5px solid var(--line-strong);border-radius:14px;padding:14px;cursor:pointer;transition:.2s;}
 .role-card.sel{border-color:var(--blue);background:var(--blue-soft);}
@@ -57,7 +58,7 @@ body{min-height:100vh;}
     <div class="collage-mini" id="brandCollage"></div>
     <div class="top"><a class="wordmark wordmark-lg" href="homepage"><img src="assets/images/logo-dark.png" alt="Rently" /></a></div>
     <div class="quote">
-      <blockquote id="brandQuote">Compare providers, see real ratings, and keep your deposit protected until setup day.</blockquote>
+      <blockquote id="brandQuote">Compare Rental Partners, see real ratings, and keep your deposit protected until setup day.</blockquote>
       <div class="who" id="brandWho">Why renters choose Rently</div>
     </div>
   </div>
@@ -77,16 +78,17 @@ body{min-height:100vh;}
         </div>
 
         <div id="roleBlock" style="display:none;">
+          <div class="role-toggle-label">What would you like to do?</div>
           <div class="role-toggle">
             <div class="role-card sel" id="roleRenter">
               <div class="r-icon" id="roleRenterIcon"></div>
-              <div class="r-name">I'm a Renter</div>
-              <div class="r-sub">Book items, spaces &amp; services</div>
+              <div class="r-name">Rent Something</div>
+              <div class="r-sub">Find and rent what you need</div>
             </div>
             <div class="role-card" id="roleProvider">
               <div class="r-icon" id="roleProviderIcon"></div>
-              <div class="r-name">I'm a Provider</div>
-              <div class="r-sub">List and earn from your assets</div>
+              <div class="r-name">List &amp; Earn</div>
+              <div class="r-sub">List your items and earn from them</div>
             </div>
           </div>
         </div>
@@ -155,8 +157,8 @@ const inviteEmail = params.get('inviteEmail');
 })();
 
 document.getElementById('backLink').innerHTML = icon('chevronLeft',{size:13})+' Back to Rently';
-document.getElementById('roleRenterIcon').innerHTML=icon('user',{size:16});
-document.getElementById('roleProviderIcon').innerHTML=icon('building',{size:16});
+document.getElementById('roleRenterIcon').innerHTML=icon('search',{size:16});
+document.getElementById('roleProviderIcon').innerHTML=icon('wallet',{size:16});
 document.getElementById('googleBtn').innerHTML='<span style="font-weight:800;color:#4285F4">G</span> Continue with Google';
 document.getElementById('appleBtn').innerHTML=icon('shield',{size:15})+' Continue with Apple';
 
@@ -168,9 +170,9 @@ function paintBrand(){
   document.getElementById('brandCollage').innerHTML = keys.map(k=>`<div class="tile">${artDiv(k,140,.5)}</div>`).join('');
   if(role==='provider'){
     document.getElementById('brandQuote').textContent = 'List your equipment, get discovered by renters actively searching your category, and get paid on completion — not chasing invoices.';
-    document.getElementById('brandWho').textContent = 'Why providers choose Rently';
+    document.getElementById('brandWho').textContent = 'Why Rental Partners choose Rently';
   } else {
-    document.getElementById('brandQuote').textContent = 'Compare providers, see real ratings, and keep your deposit protected until setup day.';
+    document.getElementById('brandQuote').textContent = 'Compare Rental Partners, see real ratings, and keep your deposit protected until setup day.';
     document.getElementById('brandWho').textContent = 'Why renters choose Rently';
   }
 }
@@ -181,7 +183,7 @@ function renderRoleSel(){
   const isProviderSignup = mode==='signup' && role==='provider';
   document.getElementById('providerNote').style.display = isProviderSignup ? 'flex' : 'none';
   document.getElementById('businessNameField').style.display = isProviderSignup ? 'block' : 'none';
-  if(role==='provider') document.getElementById('providerNote').innerHTML = icon('shield',{size:15})+`<div><div class="t">ID verification required</div><div class="d">Provider accounts are verified within 24 hours before your first listing can go live.</div></div>`;
+  if(role==='provider') document.getElementById('providerNote').innerHTML = icon('shield',{size:15})+`<div><div class="t">ID verification required</div><div class="d">Rental Partner accounts are verified within 24 hours before your first listing can go live.</div></div>`;
   paintBrand();
 }
 document.getElementById('roleRenter').addEventListener('click',()=>{role='renter';renderRoleSel();});
@@ -192,7 +194,7 @@ function renderMode(){
   document.getElementById('tabLogin').classList.toggle('active',!isSignup);
   document.getElementById('tabSignup').classList.toggle('active',isSignup);
   document.getElementById('formTitle').textContent = isSignup ? 'Create your account' : 'Welcome back';
-  document.getElementById('formSub').textContent = isSignup ? 'Join Rently as a renter or list your first item as a provider.' : 'Log in to manage your bookings, favorites and messages.';
+  document.getElementById('formSub').textContent = isSignup ? "Tell us what you'd like to do, then create your account." : 'Log in to manage your bookings, favorites and messages.';
   document.getElementById('roleBlock').style.display = isSignup ? 'block':'none';
   document.getElementById('nameField').style.display = isSignup ? 'block':'none';
   document.getElementById('forgotLink').style.display = isSignup ? 'none':'inline-flex';

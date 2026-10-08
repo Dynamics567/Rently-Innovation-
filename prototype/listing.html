@@ -114,7 +114,7 @@ body{padding-top:86px;}
     <div class="nav-links">
       <a href="homepage#categories">Explore</a>
       <a href="browse">Marketplace</a>
-      <a href="auth?role=provider">Become a Provider</a>
+      <a href="auth?role=provider">List &amp; Earn</a>
     </div>
     <div class="nav-cta">
       <a class="become" href="auth?role=provider">List your first item</a>
@@ -241,7 +241,7 @@ body{padding-top:86px;}
     <div class="foot-top">
       <div><span class="wordmark wordmark-lg"><img src="assets/images/logo-dark.png" alt="Rently" /></span><p>Access made simple. Ownership made optional. A Dynamic Technology Ltd. product, built for Nigeria's rental economy.</p></div>
       <div><h5>Explore</h5><ul><li><a href="browse">Categories</a></li><li><a href="homepage#intro">How it works</a></li><li><a href="#">Trust &amp; Safety</a></li></ul></div>
-      <div><h5>Providers</h5><ul><li><a href="auth?role=provider">Become a Provider</a></li><li><a href="dashboard-provider">Provider Dashboard</a></li></ul></div>
+      <div><h5>Rental Partners</h5><ul><li><a href="auth?role=provider">List &amp; Earn</a></li><li><a href="dashboard-provider">Rental Partner Dashboard</a></li></ul></div>
       <div><h5>Company</h5><ul><li><a href="#">About</a></li><li><a href="#">Careers</a></li></ul></div>
       <div><h5>Support</h5><ul><li><a href="#">Help Center</a></li><li><a href="#">Disputes</a></li></ul></div>
     </div>
@@ -281,7 +281,7 @@ let listing=null, provider=null;
   document.getElementById('lRating').innerHTML=starIcon(13)+(listing.rating||'New');
   document.getElementById('lReviews').textContent=listing.reviews+' reviews';
   document.getElementById('lLoc').innerHTML=icon('pin',{size:12})+listing.loc;
-  document.getElementById('lVerified').innerHTML= listing.verified ? `<span style="color:var(--green-dark);display:flex;align-items:center;gap:4px;font-weight:600">${icon('check',{size:12,stroke:2.8})}Verified provider</span>` : '';
+  document.getElementById('lVerified').innerHTML= listing.verified ? `<span style="color:var(--green-dark);display:flex;align-items:center;gap:4px;font-weight:600">${icon('check',{size:12,stroke:2.8})}Verified Rental Partner</span>` : '';
   document.getElementById('shareBtn').innerHTML=icon('share',{size:16});
   document.getElementById('favBtn').innerHTML=icon('heart',{size:16});
   document.getElementById('favBtn').addEventListener('click',()=>document.getElementById('favBtn').classList.toggle('on'));
@@ -302,18 +302,18 @@ let listing=null, provider=null;
   document.getElementById('lDesc').textContent=listing.desc;
   document.getElementById('specList').innerHTML = listing.specs.length
     ? listing.specs.map(s=>`<div class="spec-item">${icon('check',{size:15,stroke:2.4})}${s}</div>`).join('')
-    : `<p style="color:var(--ink-faint)">The provider hasn't listed specific inclusions for this item yet.</p>`;
+    : `<p style="color:var(--ink-faint)">The Rental Partner hasn't listed specific inclusions for this item yet.</p>`;
 
   /* ---- provider ---- */
   document.getElementById('provAvatar').textContent=provider.avatar;
   document.getElementById('provName').innerHTML = provider.name + (provider.verified?` <span style="color:var(--green-dark)">${icon('check',{size:14,stroke:3})}</span>`:'');
-  document.getElementById('provSub').textContent = provider.verified ? 'Verified provider' : 'Provider';
+  document.getElementById('provSub').textContent = provider.verified ? 'Verified Rental Partner' : 'Rental Partner';
   document.getElementById('provStats').innerHTML = `
     <div><b>${provider.rating||'New'}</b><span>Average rating</span></div>`;
   document.getElementById('provBio').style.display='none';
   document.getElementById('contactProviderBtn').innerHTML = icon('message',{size:15})+' Message '+provider.name.split(' ')[0];
   document.getElementById('contactProviderBtn').disabled=true;
-  document.getElementById('contactProviderBtn').title='You can message the provider once you have a booking with them.';
+  document.getElementById('contactProviderBtn').title='You can message the Rental Partner once you have a booking with them.';
 
   /* ---- reviews: real GET /listings/:id/reviews, no more hardcoded empty state ---- */
   document.getElementById('rsScore').textContent=listing.rating||'—';
@@ -412,7 +412,7 @@ function initBookingWidget(){
   }
 
   document.getElementById('bwTrust1').innerHTML = icon('shield',{size:14})+`<span>Payment is held in escrow until your rental period begins.</span>`;
-  document.getElementById('bwTrust2').innerHTML = icon('info',{size:14})+`<span>${listing.mode==='instant' ? 'Your card is charged immediately — this provider accepts bookings automatically.' : 'You won\'t be charged until '+provider.name+' approves your request.'}</span>`;
+  document.getElementById('bwTrust2').innerHTML = icon('info',{size:14})+`<span>${listing.mode==='instant' ? 'Your card is charged immediately — this Rental Partner accepts bookings automatically.' : 'You won\'t be charged until '+provider.name+' approves your request.'}</span>`;
 
   const bwCal = createDateRangePicker(document.getElementById('bwCal'), (start,end)=>{
     bStart=start; bEnd=end;

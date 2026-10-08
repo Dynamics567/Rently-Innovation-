@@ -154,10 +154,10 @@ body{padding-top:0;}
         <div class="panel-card">
           <h3 id="adminTitle">Your booking is being processed</h3>
           <p class="lede" id="adminLede"></p>
-          <div class="check-item"><span class="ic" id="chkRequest"></span><span>Booking request sent to provider</span></div>
-          <div class="check-item"><span class="ic" id="chkAccept"></span><span>Provider approval</span></div>
+          <div class="check-item"><span class="ic" id="chkRequest"></span><span>Booking request sent to Rental Partner</span></div>
+          <div class="check-item"><span class="ic" id="chkAccept"></span><span>Rental Partner approval</span></div>
           <div class="check-item"><span class="ic" id="chkPay"></span><span>Payment captured &amp; held in escrow</span></div>
-          <div class="check-item"><span class="ic" id="chkReserve"></span><span>Item reserved on provider's calendar</span></div>
+          <div class="check-item"><span class="ic" id="chkReserve"></span><span>Item reserved on Rental Partner's calendar</span></div>
         </div>
         <div class="panel-card">
           <h3 style="font-size:14px;">Order summary</h3>
@@ -168,7 +168,7 @@ body{padding-top:0;}
         </div>
         <div class="panel-card" id="cancelCard" style="display:none;">
           <h3 style="font-size:14px;">Need to cancel?</h3>
-          <p class="lede" style="margin-bottom:14px;">You can cancel any time before pickup. Refunds follow the provider's cancellation policy.</p>
+          <p class="lede" style="margin-bottom:14px;">You can cancel any time before pickup. Refunds follow the Rental Partner's cancellation policy.</p>
           <div id="cancelError" class="banner danger" style="display:none;margin-bottom:14px;"></div>
           <button class="pill-btn ghost sm" id="cancelBookingBtn">Cancel booking</button>
         </div>
@@ -178,10 +178,10 @@ body{padding-top:0;}
       <div class="stage-panel" data-group="ready">
         <div class="panel-card">
           <h3>Ready for pickup</h3>
-          <p class="lede">The provider has confirmed your item is prepared. Here's everything you need for handover.</p>
+          <p class="lede">The Rental Partner has confirmed your item is prepared. Here's everything you need for handover.</p>
           <div class="qr-wrap">
             <div class="qr-box" id="qrPickup"></div>
-            <div class="txt"><div class="t">Show this code at pickup</div><div class="d">The provider scans this to confirm your identity and start the handover checklist — no need to print it, your phone screen works fine.</div></div>
+            <div class="txt"><div class="t">Show this code at pickup</div><div class="d">The Rental Partner scans this to confirm your identity and start the handover checklist — no need to print it, your phone screen works fine.</div></div>
           </div>
           <div class="check-item"><span class="ic" id="chkAgreement"></span><span>Rental agreement signed digitally</span></div>
           <div class="check-item"><span class="ic" id="chkDeposit"></span><span>Security deposit confirmed</span></div>
@@ -214,7 +214,7 @@ body{padding-top:0;}
           <p class="lede" id="returnLede"></p>
           <div class="qr-wrap">
             <div class="qr-box" id="qrReturn"></div>
-            <div class="txt"><div class="t">Show this code when you return the item</div><div class="d">The provider scans it to pull up your original condition report for comparison.</div></div>
+            <div class="txt"><div class="t">Show this code when you return the item</div><div class="d">The Rental Partner scans it to pull up your original condition report for comparison.</div></div>
           </div>
           <button class="pill-btn ghost sm" id="rescheduleBtn"></button>
         </div>
@@ -224,7 +224,7 @@ body{padding-top:0;}
       <div class="stage-panel" data-group="inspection">
         <div class="panel-card">
           <h3>Inspection</h3>
-          <p class="lede">The provider compares the item's condition now against the photos taken at pickup.</p>
+          <p class="lede">The Rental Partner compares the item's condition now against the photos taken at pickup.</p>
           <div class="photo-compare">
             <div class="grp"><h5>At pickup</h5><div class="thumbs" id="cmpBefore"></div></div>
             <div class="grp"><h5>At return</h5><div class="thumbs" id="cmpAfter"></div></div>
@@ -269,7 +269,7 @@ body{padding-top:0;}
           <h3 style="font-size:14px;" id="reviewTitle">Rate your experience</h3>
           <div class="review-stars" id="reviewStars"></div>
           <div id="reviewError" class="banner danger" style="display:none;margin-bottom:14px;font-size:12.5px;padding:10px 14px;"></div>
-          <textarea id="reviewComment" placeholder="What went well? Anything the provider could improve?" style="width:100%;border:1.5px solid var(--line-strong);border-radius:12px;padding:12px 14px;font-size:13.5px;min-height:80px;margin-bottom:14px;font-family:inherit;"></textarea>
+          <textarea id="reviewComment" placeholder="What went well? Anything the Rental Partner could improve?" style="width:100%;border:1.5px solid var(--line-strong);border-radius:12px;padding:12px 14px;font-size:13.5px;min-height:80px;margin-bottom:14px;font-family:inherit;"></textarea>
           <button class="pill-btn blue sm" id="submitReviewBtn">Submit review</button>
         </div>
       </div>
@@ -282,7 +282,7 @@ body{padding-top:0;}
   <div class="modal">
     <button class="modal-close" id="closeExtension"></button>
     <h3 style="font-size:20px;margin-bottom:6px;">Request an extension</h3>
-    <p class="lede" style="margin-bottom:20px;">Push your return date out. The provider needs to approve it, and you'll be charged for the extra time.</p>
+    <p class="lede" style="margin-bottom:20px;">Push your return date out. The Rental Partner needs to approve it, and you'll be charged for the extra time.</p>
     <div id="extensionError" class="banner danger" style="display:none;margin-bottom:16px;"></div>
     <div id="extensionPendingNotice" class="banner info" style="display:none;margin-bottom:16px;"></div>
     <div class="field" id="fieldExtensionDate">
@@ -315,12 +315,12 @@ body{padding-top:0;}
 <div class="overlay" id="becomeProviderOverlay">
   <div class="modal">
     <button class="modal-close" id="closeBecomeProvider"></button>
-    <h3 style="font-size:20px;margin-bottom:6px;">Set up your provider profile</h3>
+    <h3 style="font-size:20px;margin-bottom:6px;">Set up your Rental Partner profile</h3>
     <p style="color:var(--ink-soft);font-size:13.5px;margin-bottom:24px;">Just a couple of details before you start listing — you can add more later.</p>
     <div id="becomeProviderError" class="banner danger" style="display:none;margin-bottom:16px;"></div>
     <div class="field"><label>Business name <span style="color:var(--ink-faint);font-weight:400">(optional — leave blank if you're an individual)</span></label><input type="text" id="bpBusinessName" placeholder="e.g. EventCraft NG" /></div>
     <div class="field"><label>CAC registration number <span style="color:var(--ink-faint);font-weight:400">(optional)</span></label><input type="text" id="bpRegNo" placeholder="RC1234567" /></div>
-    <button class="pill-btn green block lg" id="submitBecomeProviderBtn">Continue to provider dashboard</button>
+    <button class="pill-btn green block lg" id="submitBecomeProviderBtn">Continue to Rental Partner dashboard</button>
   </div>
 </div>
 
@@ -332,7 +332,7 @@ const BEFORE_PICKUP = ['requested','accepted','payment','reserved','ready'];
 
 document.getElementById('bellBtn').innerHTML = icon('bell',{size:17})+'<span class="dot"></span>';
 document.getElementById('ddBookings').innerHTML = icon('calendar',{size:15})+' My bookings';
-document.getElementById('ddSwitch').innerHTML = icon('building',{size:15})+' Switch to Provider';
+document.getElementById('ddSwitch').innerHTML = icon('building',{size:15})+' List &amp; Earn';
 document.getElementById('ddLogout').innerHTML = icon('logout',{size:15})+' Log out';
 document.getElementById('closeBecomeProvider').innerHTML = icon('close',{size:15});
 initProviderSwitchLinks(['ddSwitch'], session);
@@ -345,7 +345,7 @@ initNotifDropdown();
 document.getElementById('backLink').innerHTML = icon('chevronLeft',{size:12})+' Back to my bookings';
 
 const STATUS_BADGE = {
-  requested:['pending','Awaiting provider'], accepted:['pending','Accepted'], payment:['pending','Payment complete'],
+  requested:['pending','Awaiting Rental Partner'], accepted:['pending','Accepted'], payment:['pending','Payment complete'],
   reserved:['confirmed','Reserved'], ready:['confirmed','Ready for pickup'], pickedup:['confirmed','Picked up'],
   active:['confirmed','Active'], returnsched:['pending','Return scheduled'], returned:['pending','Returned'],
   inspected:['pending','Inspection done'], depositreleased:['completed','Deposit released'], completed:['completed','Completed'],
@@ -382,7 +382,7 @@ async function loadBooking(){
   }catch(e){
     // The listing was later paused/unpublished — booking tracking still works, just without live listing details.
     listing = {title:'This listing', cat:'spaces', img:undefined, price:0, unit:'day', loc:'—', providerId:null};
-    provider = {name:'the provider', avatar:'PR', verified:false, rating:0};
+    provider = {name:'the Rental Partner', avatar:'PR', verified:false, rating:0};
   }
   // Fetched regardless of current status, not just while status==='disputed' --
   // once a dispute resolves the booking moves straight to 'completed' with no
@@ -474,7 +474,7 @@ function render(){
   // ---- Group A: admin ----
   if(groups.admin.includes(currentStage)){
     const adminIdx=groups.admin.indexOf(currentStage);
-    document.getElementById('adminTitle').textContent = ['Your request was sent','The provider is reviewing your dates','Payment captured — item on hold','Your item is reserved'][adminIdx];
+    document.getElementById('adminTitle').textContent = ['Your request was sent','The Rental Partner is reviewing your dates','Payment captured — item on hold','Your item is reserved'][adminIdx];
     document.getElementById('adminLede').textContent = currentStage==='requested'
       ? `${provider.name} has been notified. You won't be charged unless they approve.`
       : `Everything is on track for your rental starting ${fmt(dFrom)}. We'll notify you the moment it's ready for pickup.`;
@@ -540,7 +540,7 @@ function render(){
     const deductionMinor = wasDisputed ? (dispute.finalDeductionMinor||0) : 0;
     const releasedAmt = booking.deposit - Math.round(deductionMinor/100);
     document.getElementById('depositDesc').textContent = !released
-      ? 'Will be refunded once the provider confirms no damage was found.'
+      ? 'Will be refunded once the Rental Partner confirms no damage was found.'
       : wasDisputed
         ? (deductionMinor>0
             ? `₦${Math.round(deductionMinor/100).toLocaleString()} was deducted following a dispute resolution — the remainder was refunded to your original payment method.`
@@ -568,14 +568,14 @@ function renderDisputePanel(){
     return;
   }
   if(dispute.status==='proposed'){
-    document.getElementById('disputeTitle').textContent = 'The provider proposed a deduction';
+    document.getElementById('disputeTitle').textContent = 'The Rental Partner proposed a deduction';
     document.getElementById('disputeLede').textContent = dispute.description || `${provider.name} reported an issue with this rental.`;
     document.getElementById('disputeAmt').textContent = money((dispute.proposedDeductionMinor||0)/100);
     document.getElementById('disputeNote').textContent = dispute.proposalNote || '';
     proposalEl.style.display='block';
   }else if(dispute.status==='contested'){
     document.getElementById('disputeTitle').textContent = 'Under admin review';
-    document.getElementById('disputeLede').textContent = "You rejected the provider's proposed deduction. An admin will review the evidence and make a final call — you'll be notified once it's resolved.";
+    document.getElementById('disputeLede').textContent = "You rejected the Rental Partner's proposed deduction. An admin will review the evidence and make a final call — you'll be notified once it's resolved.";
     proposalEl.style.display='none';
   }else if(dispute.status==='resolved'){
     document.getElementById('disputeTitle').textContent = 'Dispute resolved';

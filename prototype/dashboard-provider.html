@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Provider dashboard — Rently</title>
+<title>Rental Partner dashboard — Rently</title>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32.png" />
 <link rel="icon" type="image/png" sizes="16x16" href="assets/images/favicon-16.png" />
 <link rel="apple-touch-icon" sizes="180x180" href="assets/images/favicon-180.png" />
@@ -89,7 +89,7 @@ body{padding-top:0;}
 
 <div class="app-shell">
   <aside class="app-side">
-    <div class="side-group-lbl">Provider</div>
+    <div class="side-group-lbl">Rental Partner</div>
     <a class="side-link active" data-view="overview" id="linkOverview"></a>
     <a class="side-link" data-view="listings" id="linkListings"></a>
     <a class="side-link" data-view="requests" id="linkRequests"></a>
@@ -230,7 +230,7 @@ body{padding-top:0;}
 
     <!-- ============ SETTINGS ============ -->
     <div class="d-view" id="view-settings">
-      <div class="app-head"><div><h1>Provider settings</h1><p>Your public profile, verification status and payout details.</p></div></div>
+      <div class="app-head"><div><h1>Rental Partner settings</h1><p>Your public profile, verification status and payout details.</p></div></div>
       <div class="settings-form">
         <div class="banner" id="verifiedBanner" style="margin-bottom:28px;"></div>
         <div class="field"><label>Business name <span style="color:var(--ink-faint);font-weight:400">(cannot be changed yet)</span></label><input type="text" id="settingsBusinessName" disabled /></div>
@@ -422,7 +422,7 @@ async function loadRequests(){
       catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
     }));
     document.getElementById('kpiPending').textContent = myRequests.length;
-    document.getElementById('actionBanner').innerHTML = icon('alert',{size:16})+`<div><div class="t">${myRequests.length} request${myRequests.length===1?'':'s'} waiting on you</div><div class="d">Providers who respond quickly convert more often — jump into Requests to approve or decline.</div></div>`;
+    document.getElementById('actionBanner').innerHTML = icon('alert',{size:16})+`<div><div class="t">${myRequests.length} request${myRequests.length===1?'':'s'} waiting on you</div><div class="d">Rental Partners who respond quickly convert more often — jump into Requests to approve or decline.</div></div>`;
     document.getElementById('actionBanner').style.display = myRequests.length ? 'flex' : 'none';
   }catch(e){
     document.getElementById('requestsList').innerHTML = `<p style="color:var(--ink-faint)">${apiErrorMessage(e)}</p>`;
@@ -637,7 +637,7 @@ function renderWelcome(){
   const firstName = displayName.split(' ')[0];
   document.getElementById('avatarBtn').textContent = initials(displayName);
   document.querySelector('#avatarDropdown .n').textContent = displayName;
-  document.querySelector('#avatarDropdown .e').textContent = 'Provider account';
+  document.querySelector('#avatarDropdown .e').textContent = 'Rental Partner account';
 
   const liveCount = myListings.filter(l=>l.status==='live').length;
   const isPower = liveCount>=5 || earningsBookings.length>=10;
@@ -961,7 +961,7 @@ document.getElementById('earningsKpiRow').innerHTML = kpiCard('kpiGross2','Gross
       const {data} = await apiFetch('/providers/profile',{method:'POST',body:{}});
       myProvider = data;
     }catch(e2){
-      document.querySelector('.app-main').innerHTML = `<div style="padding:80px 40px;color:var(--ink-faint)">Couldn't set up your provider profile. ${apiErrorMessage(e2)}</div>`;
+      document.querySelector('.app-main').innerHTML = `<div style="padding:80px 40px;color:var(--ink-faint)">Couldn't set up your Rental Partner profile. ${apiErrorMessage(e2)}</div>`;
       return;
     }
   }
