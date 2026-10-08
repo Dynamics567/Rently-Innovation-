@@ -342,7 +342,7 @@ document.getElementById('addListingBtn2').innerHTML = icon('plus',{size:15})+' A
 document.getElementById('closeAddListing').innerHTML = icon('close',{size:15});
 document.getElementById('activeRentalsEmptyIcon').innerHTML = icon('calendar',{size:22});
 
-document.getElementById('ddLogout').addEventListener('click',(e)=>{ e.preventDefault(); clearSession(); window.location.href='auth'; });
+document.getElementById('ddLogout').addEventListener('click', async (e)=>{ e.preventDefault(); await apiLogout(); window.location.href='auth'; });
 initAvatarMenu();
 initNotifDropdown();
 

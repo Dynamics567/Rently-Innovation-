@@ -166,6 +166,7 @@
       <a href="auth?role=provider">Become a Provider</a>
     </div>
     <div class="nav-cta">
+      <a class="become" href="#" id="navLogoutLink" style="display:none;">Log out</a>
       <a class="pill-btn ghost" href="auth" id="navAuthLink">Log in</a>
     </div>
   </div>
@@ -403,6 +404,9 @@ paintArt(document.getElementById('art-provider'),'provider',130,.14);
     const link=document.getElementById('navAuthLink');
     link.textContent='Dashboard';
     link.href = session.user.roles.includes('provider') ? 'dashboard-provider' : 'dashboard-renter';
+    const logoutLink=document.getElementById('navLogoutLink');
+    logoutLink.style.display='';
+    logoutLink.addEventListener('click', async (e)=>{ e.preventDefault(); await apiLogout(); window.location.reload(); });
   }
 })();
 

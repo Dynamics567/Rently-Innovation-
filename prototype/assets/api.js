@@ -44,6 +44,27 @@ function clearSession() {
 }
 
 /**
+ * Real logout: revokes every refresh token for this user server-side
+ * (POST /auth/logout — see AuthService.logout/TokenService.revokeAllForUser)
+ * before wiping the local session. Previously every "Log out" button only
+ * called clearSession(), which just deleted the local copy of tokens that
+ * remained valid on the server until they expired naturally — anyone who
+ * still had the refresh token (e.g. from browser history/another tab that
+ * hadn't cleared yet) could keep minting new access tokens with it.
+ * The server call's own failure (network issue, already-expired token)
+ * is swallowed — a user clicking "log out" must always end up logged out
+ * locally, even if the revoke call itself couldn't be made.
+ */
+async function apiLogout() {
+  try {
+    await apiFetch('/auth/logout', { method: 'POST' });
+  } catch (e) {
+    // ignore — still clear the local session below
+  }
+  clearSession();
+}
+
+/**
  * Redirects to auth if logged out, or to the correct dashboard on a role
  * mismatch. Call at the top of every app-shell page.
  *

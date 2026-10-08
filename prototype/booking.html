@@ -339,7 +339,7 @@ initProviderSwitchLinks(['ddSwitch'], session);
 document.getElementById('avatarBtn').textContent = session ? initials(session.user.fullName) : '';
 document.querySelector('#avatarDropdown .n').textContent = session ? session.user.fullName : '';
 document.querySelector('#avatarDropdown .e').textContent = session ? (session.user.email||'') : '';
-document.getElementById('ddLogout').addEventListener('click',(e)=>{ e.preventDefault(); clearSession(); window.location.href='auth'; });
+document.getElementById('ddLogout').addEventListener('click', async (e)=>{ e.preventDefault(); await apiLogout(); window.location.href='auth'; });
 initAvatarMenu();
 initNotifDropdown();
 document.getElementById('backLink').innerHTML = icon('chevronLeft',{size:12})+' Back to my bookings';

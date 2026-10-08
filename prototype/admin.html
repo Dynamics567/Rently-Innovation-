@@ -186,7 +186,7 @@ h1,h2,h3{font-family:var(--sans);}
     <span>Search customers, providers, listings…</span>
     <kbd>⌘K</kbd>
   </div>
-  <a class="side-link" href="homepage" id="linkExit" style="margin-left:auto;"></a>
+  <a class="side-link" href="#" id="linkExit" style="margin-left:auto;"></a>
 </nav>
 
 <div class="mobile-tabbar">
@@ -446,7 +446,8 @@ const session = requireSession('admin');
    ================================================================ */
 document.querySelector('.admin-badge').innerHTML = icon('shield',{size:11,stroke:3});
 document.getElementById('searchTriggerIcon').innerHTML = icon('search',{size:15});
-document.getElementById('linkExit').innerHTML = icon('logout',{size:16})+' Exit';
+document.getElementById('linkExit').innerHTML = icon('logout',{size:16})+' Log out';
+document.getElementById('linkExit').addEventListener('click', async (e)=>{ e.preventDefault(); await apiLogout(); window.location.href='homepage'; });
 document.getElementById('linkOverview').innerHTML = icon('grid',{size:16})+' Overview';
 document.getElementById('linkBookings').innerHTML = icon('calendar',{size:16})+' Bookings';
 document.getElementById('linkReturns').innerHTML = icon('arrowRight',{size:16})+' Returns';

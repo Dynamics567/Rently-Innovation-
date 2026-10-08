@@ -269,7 +269,7 @@ if(session){
   document.querySelector('#avatarDropdown .n').textContent = session.user.fullName;
   document.querySelector('#avatarDropdown .e').textContent = session.user.email || '';
 }
-document.getElementById('ddLogout').addEventListener('click',(e)=>{ e.preventDefault(); clearSession(); window.location.href='auth'; });
+document.getElementById('ddLogout').addEventListener('click', async (e)=>{ e.preventDefault(); await apiLogout(); window.location.href='auth'; });
 initAvatarMenu();
 initNotifDropdown();
 
