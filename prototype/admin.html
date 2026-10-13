@@ -251,7 +251,7 @@ h1,h2,h3{font-family:var(--sans);}
     <div class="side-group-lbl">Control</div>
     <a class="side-link" data-view="audit" id="linkAudit"></a>
     <a class="side-link" data-view="team" id="linkTeam" style="display:none;"></a>
-    <a class="side-link planned" href="#" data-planned="permissions" id="linkPermissions"></a>
+    <a class="side-link" data-view="permissions" id="linkPermissions" style="display:none;"></a>
     <a class="side-link planned" href="#" data-planned="systemSettings" id="linkSystemSettings"></a>
   </aside>
 
@@ -399,6 +399,19 @@ h1,h2,h3{font-family:var(--sans);}
       </div>
     </div>
 
+    <!-- ============ PERMISSIONS ============ -->
+    <div class="d-view" id="view-permissions">
+      <div class="app-head"><div><h1>Permissions</h1><p>What each named admin role can actually do. Toggling a box here takes effect immediately — not on next login.</p></div></div>
+      <div class="section-block">
+        <div class="optable-wrap">
+          <table class="optable" id="permissionsMatrix">
+            <thead><tr id="permissionsMatrixHead"></tr></thead>
+            <tbody id="permissionsMatrixBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ============ PLANNED (honest, per-module placeholder) ============ -->
     <div class="d-view" id="view-planned">
       <div class="app-head"><div><h1 id="plannedTitle">Planned</h1><p id="plannedSub">Real backend work, not yet built.</p></div></div>
@@ -500,9 +513,10 @@ document.getElementById('linkHelpCentre').innerHTML = icon('info',{size:16})+' H
 document.getElementById('linkPermissions').innerHTML = icon('lock',{size:16})+' Permissions';
 document.getElementById('linkSystemSettings').innerHTML = icon('settings',{size:16})+' System settings';
 document.getElementById('teamInviteCloseBtn').innerHTML = icon('close',{size:15});
-/* "Team & Access" is SUPER_ADMIN-only on the backend — hide the nav entirely for a plain admin rather than show a screen that would just 403. */
+/* "Team & Access" and "Permissions" are both SUPER_ADMIN-only on the backend — hide the nav entirely for a plain admin rather than show a screen that would just 403. */
 if(session && session.user.roles.includes('super_admin')){
   document.getElementById('linkTeam').style.display='';
+  document.getElementById('linkPermissions').style.display='';
 }
 document.getElementById('mLinkOverview').innerHTML = icon('grid',{size:15})+' Overview';
 document.getElementById('mLinkBookings').innerHTML = icon('calendar',{size:15})+' Bookings';
@@ -539,6 +553,7 @@ function goView(v){
   if(v==='reviews') loadReviews(true);
   if(v==='audit') loadAuditLog(true);
   if(v==='team') loadTeam();
+  if(v==='permissions') loadPermissions();
 }
 document.querySelectorAll('.side-link[data-view]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goView(l.dataset.view);}));
 document.querySelectorAll('.side-link[data-planned]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goPlanned(l.dataset.planned);}));
@@ -644,6 +659,16 @@ document.getElementById('drawerBody').addEventListener('click', async (e)=>{
       const selected=ROLE_OPTIONS.filter(r=>document.querySelector(`[data-role="${r}"]`).checked);
       await apiFetch(`/admin/users/${id}/roles`,{method:'PATCH',body:{roles:selected}});
       btn.textContent='Saved'; setTimeout(()=>{ closeDrawer(); loadCustomers(true); },700);
+      return; // skip the generic re-enable below — button is intentionally left disabled showing "Saved"
+    } else if(action==='user-save-admin-roles'){
+      const errEl=document.getElementById('adminRoleSaveError'); if(errEl) errEl.style.display='none';
+      const currentIds = new Set((btn.dataset.currentAdminRoles||'').split(',').filter(Boolean));
+      const checkedIds = new Set([...document.querySelectorAll('[data-admin-role]')].filter(c=>c.checked).map(c=>c.dataset.adminRole));
+      const toAssign = [...checkedIds].filter(rid=>!currentIds.has(rid));
+      const toRevoke = [...currentIds].filter(rid=>!checkedIds.has(rid));
+      for(const roleId of toAssign) await apiFetch(`/admin/users/${id}/admin-roles`,{method:'POST',body:{adminRoleId:roleId}});
+      for(const roleId of toRevoke) await apiFetch(`/admin/users/${id}/admin-roles/${roleId}`,{method:'DELETE'});
+      btn.textContent='Saved'; setTimeout(()=>{ closeDrawer(); },700);
       return; // skip the generic re-enable below — button is intentionally left disabled showing "Saved"
     } else if(action==='dispute-resolve'){
       const depositMinor=+btn.dataset.deposit||0;
@@ -1149,9 +1174,30 @@ async function openCustomerDrawer(id){
     }},
     { key:'access', label:'Access', render: async ()=>{
       if(!canGrantRoles) return stateEmpty('Only a super admin can grant or remove roles.');
-      return `${ROLE_OPTIONS.map(r=>`<label class="role-check"><input type="checkbox" data-role="${r}" ${u.roles.includes(r)?'checked':''} />${ROLE_LABELS[r]}</label>`).join('')}
+      const baseRolesHtml = `${ROLE_OPTIONS.map(r=>`<label class="role-check"><input type="checkbox" data-role="${r}" ${u.roles.includes(r)?'checked':''} />${ROLE_LABELS[r]}</label>`).join('')}
         <div id="roleSaveError" class="banner danger" style="display:none;margin:12px 0;"></div>
         <button class="pill-btn blue sm" data-admin-action="user-save-roles" data-id="${id}">Save roles</button>`;
+
+      // Named admin roles (Finance Admin, Customer Support, ...) only make sense
+      // once the account already has the base `admin` grant above — Full Admin
+      // (the migration-only grandfather role) is excluded, same reasoning as
+      // the Permissions matrix: not a "pick me" option, existing-compat only.
+      if(!u.roles.includes('admin') && !u.roles.includes('super_admin')) return baseRolesHtml;
+      const [allRoles, userAdminRoles] = await Promise.all([
+        apiFetch('/admin/roles').then(r=>r.data).catch(()=>[]),
+        apiFetch(`/admin/users/${id}/admin-roles`).then(r=>r.data).catch(()=>[]),
+      ]);
+      const assignedIds = new Set(userAdminRoles.map(r=>r.id));
+      const assignableRoles = allRoles.filter(r=>r.slug!=='full-admin');
+      const adminRolesHtml = assignableRoles.length ? `
+        <div style="margin-top:28px;padding-top:20px;border-top:1px solid var(--op-border);">
+          <h4 style="font-size:13px;margin-bottom:4px;">Admin roles</h4>
+          <p style="font-size:12px;color:var(--op-text-faint);margin-bottom:12px;">What this admin can actually do day to day — see the Permissions screen for exactly what each one grants.</p>
+          ${assignableRoles.map(r=>`<label class="role-check"><input type="checkbox" data-admin-role="${r.id}" ${assignedIds.has(r.id)?'checked':''} />${r.name}</label>`).join('')}
+          <div id="adminRoleSaveError" class="banner danger" style="display:none;margin:12px 0;"></div>
+          <button class="pill-btn blue sm" data-admin-action="user-save-admin-roles" data-id="${id}" data-current-admin-roles="${[...assignedIds].join(',')}">Save admin roles</button>
+        </div>` : '';
+      return baseRolesHtml + adminRolesHtml;
     }},
     auditTabFor('User', id),
   ]);
@@ -1440,6 +1486,43 @@ document.getElementById('teamInviteSaveBtn').addEventListener('click', async ()=
 });
 
 /* ================================================================
+   PERMISSIONS — the Module→Action→Permission matrix. "Full Admin" is a
+   migration-only grandfather role (every pre-existing `admin` account was
+   auto-assigned it so nobody lost access when this shipped) — excluded
+   from the editable matrix since it's not meant to be a "pick me" option,
+   just existing-compatibility.
+   ================================================================ */
+async function loadPermissions(){
+  const headEl=document.getElementById('permissionsMatrixHead'), bodyEl=document.getElementById('permissionsMatrixBody');
+  try{
+    const [permissions, roles] = await Promise.all([
+      apiFetch('/admin/permissions').then(r=>r.data),
+      apiFetch('/admin/roles').then(r=>r.data),
+    ]);
+    const editableRoles = roles.filter(r=>r.slug!=='full-admin');
+    headEl.innerHTML = `<th>Permission</th>${editableRoles.map(r=>`<th style="text-align:center;">${r.name}</th>`).join('')}`;
+
+    let currentModule=null;
+    bodyEl.innerHTML = permissions.map(p=>{
+      const moduleHeader = p.module!==currentModule ? (currentModule=p.module, `<tr><td colspan="${editableRoles.length+1}" style="background:var(--op-bg);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--op-text-faint);">${p.module}</td></tr>`) : '';
+      return moduleHeader + `<tr>
+        <td>${p.label}</td>
+        ${editableRoles.map(r=>`<td style="text-align:center;"><input type="checkbox" class="q-check" data-perm-role="${r.id}" data-perm-key="${p.key}" ${r.permissionKeys.includes(p.key)?'checked':''} /></td>`).join('')}
+      </tr>`;
+    }).join('');
+
+    bodyEl.querySelectorAll('[data-perm-role]').forEach(cb=>cb.addEventListener('change', async ()=>{
+      const roleId = cb.dataset.permRole;
+      cb.disabled = true;
+      const checkedKeys = [...bodyEl.querySelectorAll(`[data-perm-role="${roleId}"]`)].filter(c=>c.checked).map(c=>c.dataset.permKey);
+      try{ await apiFetch(`/admin/roles/${roleId}/permissions`,{method:'PATCH',body:{permissionKeys:checkedKeys}}); }
+      catch(e){ alert(apiErrorMessage(e)); cb.checked=!cb.checked; }
+      finally{ cb.disabled=false; }
+    }));
+  }catch(e){ bodyEl.innerHTML = `<tr><td>${stateError(e)}</td></tr>`; }
+}
+
+/* ================================================================
    PLANNED (honest, per-module placeholder) — every not-yet-built module
    gets its own correctly-grouped sidebar entry (see the Finance/Growth/
    Content/Control groups above) instead of one undifferentiated "roadmap"
@@ -1456,7 +1539,6 @@ const PLANNED_MODULES = {
   notifications: { label:'Notifications', group:'Growth', blurb:'Admin-authored broadcast notifications to customers or Rental Partners.' },
   cms: { label:'CMS', group:'Content', blurb:'Editable static pages (About, Help articles) without a code deploy.' },
   helpCentre: { label:'Help Centre', group:'Content', blurb:'A searchable self-serve help article library.' },
-  permissions: { label:'Permissions', group:'Control', blurb:"Granular Module→Action→Permission roles, replacing today's flat Admin/Super Admin." },
   systemSettings: { label:'System Settings', group:'Control', blurb:'Platform-wide configuration (commission defaults, booking windows, feature flags).' },
 };
 function renderPlannedTable(){
