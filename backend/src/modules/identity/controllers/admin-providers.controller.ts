@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
 import { IsOptional, IsString, MinLength } from 'class-validator';
 import { CursorPaginationDto } from '@common/dto/cursor-pagination.dto';
 import { Roles } from '@common/decorators/roles.decorator';
+import { RequirePermission } from '@common/decorators/require-permission.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { UserRole } from '../enums/user-role.enum';
 import { ProviderProfileService } from '../services/provider-profile.service';
@@ -47,6 +48,7 @@ class RejectVerificationDocumentDto {
 @ApiTags('admin')
 @ApiBearerAuth()
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+@RequirePermission('providers.view')
 @Controller('admin/providers')
 export class AdminProvidersController {
   constructor(
@@ -72,6 +74,7 @@ export class AdminProvidersController {
   }
 
   /** Suspending/reinstating a provider acts on their underlying user account — the same status flag that already gates login — not a separate field on ProviderProfile. */
+  @RequirePermission('providers.verify')
   @Post(':id/status')
   async setStatus(
     @Param('id', ParseUUIDPipe) id: string,
@@ -82,11 +85,13 @@ export class AdminProvidersController {
     return this.usersService.setStatus(profile.userId, dto.status, admin.id, dto.reason);
   }
 
+  @RequirePermission('providers.verify')
   @Post(':id/verify')
   async verify(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() admin: AuthenticatedUser) {
     return this.providerService.approveVerification(id, admin.id);
   }
 
+  @RequirePermission('providers.verify')
   @Post(':id/reject')
   async reject(
     @Param('id', ParseUUIDPipe) id: string,
@@ -101,6 +106,7 @@ export class AdminProvidersController {
     return this.verificationDocumentsService.listForProvider(id);
   }
 
+  @RequirePermission('providers.verify')
   @Post('verification-documents/:documentId/approve')
   async approveVerificationDocument(
     @Param('documentId', ParseUUIDPipe) documentId: string,
@@ -110,6 +116,7 @@ export class AdminProvidersController {
     return this.verificationDocumentsService.approve(documentId, admin.id, dto.note);
   }
 
+  @RequirePermission('providers.verify')
   @Post('verification-documents/:documentId/reject')
   async rejectVerificationDocument(
     @Param('documentId', ParseUUIDPipe) documentId: string,

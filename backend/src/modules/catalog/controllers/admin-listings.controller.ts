@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/commo
 import { ApiBearerAuth, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
 import { IsOptional, IsString } from 'class-validator';
 import { Roles } from '@common/decorators/roles.decorator';
+import { RequirePermission } from '@common/decorators/require-permission.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { UserRole } from '@modules/identity/enums/user-role.enum';
 import { AuthenticatedUser } from '@modules/identity/strategies/jwt.strategy';
@@ -26,6 +27,7 @@ class PauseListingDto {
 @ApiTags('admin')
 @ApiBearerAuth()
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+@RequirePermission('listings.view')
 @Controller('admin/listings')
 export class AdminListingsController {
   constructor(private readonly listingsService: ListingsService) {}
@@ -52,6 +54,7 @@ export class AdminListingsController {
     return this.listingsService.findByIdOrFail(id);
   }
 
+  @RequirePermission('listings.moderate')
   @Post(':id/pause')
   async pause(
     @Param('id') id: string,
@@ -61,22 +64,26 @@ export class AdminListingsController {
     return this.listingsService.pauseAsAdmin(id, admin.id, dto.reason);
   }
 
+  @RequirePermission('listings.moderate')
   @Post(':id/reinstate')
   async reinstate(@Param('id') id: string, @CurrentUser() admin: AuthenticatedUser) {
     return this.listingsService.reinstateAsAdmin(id, admin.id);
   }
 
+  @RequirePermission('listings.moderate')
   @Post(':id/approve')
   async approve(@Param('id') id: string, @CurrentUser() admin: AuthenticatedUser) {
     return this.listingsService.approve(id, admin.id);
   }
 
+  @RequirePermission('listings.moderate')
   @Post(':id/reject')
   async reject(@Param('id') id: string, @CurrentUser() admin: AuthenticatedUser) {
     return this.listingsService.reject(id, admin.id);
   }
 
   /** Soft-deletes a listing (e.g. test/junk data cleanup) — reversible via deleted_at, audit-logged. */
+  @RequirePermission('listings.moderate')
   @Delete(':id')
   async remove(@Param('id') id: string, @CurrentUser() admin: AuthenticatedUser) {
     await this.listingsService.removeAsAdmin(id, admin.id);

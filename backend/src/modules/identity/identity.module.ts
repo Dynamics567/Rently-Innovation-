@@ -13,12 +13,20 @@ import { VerificationDocument } from './entities/verification-document.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { PasswordResetToken } from './entities/password-reset-token.entity';
 import { AdminInvite } from './entities/admin-invite.entity';
+import { Permission } from './entities/permission.entity';
+import { AdminRole } from './entities/admin-role.entity';
+import { AdminRolePermission } from './entities/admin-role-permission.entity';
+import { UserAdminRole } from './entities/user-admin-role.entity';
 
 import { UserRepository } from './repositories/user.repository';
 import { ProviderProfileRepository } from './repositories/provider-profile.repository';
 import { VerificationDocumentRepository } from './repositories/verification-document.repository';
 import { PasswordResetTokenRepository } from './repositories/password-reset-token.repository';
 import { AdminInviteRepository } from './repositories/admin-invite.repository';
+import { PermissionRepository } from './repositories/permission.repository';
+import { AdminRoleRepository } from './repositories/admin-role.repository';
+import { AdminRolePermissionRepository } from './repositories/admin-role-permission.repository';
+import { UserAdminRoleRepository } from './repositories/user-admin-role.repository';
 
 import { AuthService } from './services/auth.service';
 import { TokenService } from './services/token.service';
@@ -26,6 +34,7 @@ import { OtpService } from './services/otp.service';
 import { UsersService } from './services/users.service';
 import { ProviderProfileService } from './services/provider-profile.service';
 import { VerificationDocumentsService } from './services/verification-documents.service';
+import { PermissionsService } from './services/permissions.service';
 import { ConsoleSmsSender, SMS_SENDER } from './services/sms-sender.port';
 import { ConsoleEmailSender, EMAIL_SENDER } from './services/email-sender.port';
 import { ResendEmailSender } from './services/resend-email-sender';
@@ -36,6 +45,7 @@ import { ProvidersController } from './controllers/providers.controller';
 import { AdminProvidersController } from './controllers/admin-providers.controller';
 import { AdminUsersController } from './controllers/admin-users.controller';
 import { AdminTeamController } from './controllers/admin-team.controller';
+import { AdminPermissionsController } from './controllers/admin-permissions.controller';
 
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { IsSelfOrAdminPolicy } from './policies/is-self-or-admin.policy';
@@ -57,6 +67,10 @@ import { IsSelfOrAdminPolicy } from './policies/is-self-or-admin.policy';
       RefreshToken,
       PasswordResetToken,
       AdminInvite,
+      Permission,
+      AdminRole,
+      AdminRolePermission,
+      UserAdminRole,
     ]),
     StorageModule,
     AuditLogModule,
@@ -77,6 +91,7 @@ import { IsSelfOrAdminPolicy } from './policies/is-self-or-admin.policy';
     AdminProvidersController,
     AdminUsersController,
     AdminTeamController,
+    AdminPermissionsController,
   ],
   providers: [
     UserRepository,
@@ -84,12 +99,17 @@ import { IsSelfOrAdminPolicy } from './policies/is-self-or-admin.policy';
     VerificationDocumentRepository,
     PasswordResetTokenRepository,
     AdminInviteRepository,
+    PermissionRepository,
+    AdminRoleRepository,
+    AdminRolePermissionRepository,
+    UserAdminRoleRepository,
     AuthService,
     TokenService,
     OtpService,
     UsersService,
     ProviderProfileService,
     VerificationDocumentsService,
+    PermissionsService,
     JwtStrategy,
     IsSelfOrAdminPolicy,
     { provide: SMS_SENDER, useClass: ConsoleSmsSender },
@@ -102,6 +122,6 @@ import { IsSelfOrAdminPolicy } from './policies/is-self-or-admin.policy';
       inject: [ConfigService],
     },
   ],
-  exports: [AuthService, UsersService, ProviderProfileService, EMAIL_SENDER],
+  exports: [AuthService, UsersService, ProviderProfileService, PermissionsService, EMAIL_SENDER],
 })
 export class IdentityModule {}

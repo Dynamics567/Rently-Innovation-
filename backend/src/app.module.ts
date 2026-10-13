@@ -12,6 +12,7 @@ import { DatabaseModule } from '@database/database.module';
 import { AllExceptionsFilter } from '@common/filters/all-exceptions.filter';
 import { JwtAuthGuard } from '@common/guards/jwt-auth.guard';
 import { RolesGuard } from '@common/guards/roles.guard';
+import { PermissionsGuard } from '@common/guards/permissions.guard';
 import { PoliciesGuard } from '@common/guards/policies.guard';
 import { LoggingInterceptor } from '@common/interceptors/logging.interceptor';
 import { TransformInterceptor } from '@common/interceptors/transform.interceptor';
@@ -34,10 +35,12 @@ import { HealthModule } from './health/health.module';
 /**
  * Guard/filter/interceptor ORDER matters and is easy to get subtly wrong:
  * Nest runs global guards in registration order (JwtAuthGuard establishes
- * `request.user` → RolesGuard reads it → PoliciesGuard runs last since it's
- * the most expensive, resource-fetching check). Interceptors wrap in
- * registration order too — logging outermost so it times the whole request
- * including serialization.
+ * `request.user` → RolesGuard reads it → PermissionsGuard, the granular
+ * layer on top of RolesGuard's coarse admin/super-admin gate, additive and
+ * a no-op for any route without @RequirePermission() → PoliciesGuard runs
+ * last since it's the most expensive, resource-fetching check). Interceptors
+ * wrap in registration order too — logging outermost so it times the whole
+ * request including serialization.
  */
 @Module({
   imports: [
@@ -78,6 +81,7 @@ import { HealthModule } from './health/health.module';
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: PermissionsGuard },
     { provide: APP_GUARD, useClass: PoliciesGuard },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },

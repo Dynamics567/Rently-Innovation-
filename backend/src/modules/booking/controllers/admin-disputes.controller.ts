@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '@common/decorators/roles.decorator';
+import { RequirePermission } from '@common/decorators/require-permission.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { UserRole } from '@modules/identity/enums/user-role.enum';
 import { AuthenticatedUser } from '@modules/identity/strategies/jwt.strategy';
@@ -11,6 +12,7 @@ import { DisputeStatus } from '../enums/dispute-status.enum';
 @ApiTags('admin')
 @ApiBearerAuth()
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+@RequirePermission('disputes.view')
 @Controller('admin/disputes')
 export class AdminDisputesController {
   constructor(private readonly disputeService: DisputeService) {}
@@ -25,6 +27,7 @@ export class AdminDisputesController {
     return this.disputeService.findByIdOrFail(id);
   }
 
+  @RequirePermission('disputes.resolve')
   @Post(':id/resolve')
   async resolve(
     @Param('id', ParseUUIDPipe) id: string,

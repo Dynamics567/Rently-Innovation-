@@ -1,14 +1,21 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { IsEmail } from 'class-validator';
+import { IsEmail, IsUUID } from 'class-validator';
 import { Roles } from '@common/decorators/roles.decorator';
+import { RequirePermission } from '@common/decorators/require-permission.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { UserRole } from '../enums/user-role.enum';
 import { UsersService } from '../services/users.service';
+import { PermissionsService } from '../services/permissions.service';
 import { SetUserRolesDto } from '../dto/set-user-roles.dto';
 import { SetUserStatusDto } from '../dto/set-user-status.dto';
 import { QueryAdminUsersDto } from '../dto/query-admin-users.dto';
 import { AuthenticatedUser } from '../strategies/jwt.strategy';
+
+class AssignAdminRoleDto {
+  @IsUUID()
+  adminRoleId: string;
+}
 
 class LookupUserQueryDto {
   @IsEmail()
@@ -30,7 +37,10 @@ class LookupUserQueryDto {
 @Roles(UserRole.SUPER_ADMIN)
 @Controller('admin/users')
 export class AdminUsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly permissionsService: PermissionsService,
+  ) {}
 
   @Get('lookup')
   async lookup(@Query() query: LookupUserQueryDto) {
@@ -55,6 +65,7 @@ export class AdminUsersController {
    * class, via Reflector.getAllAndOverride).
    */
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @RequirePermission('users.view')
   @Get()
   async search(@Query() query: QueryAdminUsersDto) {
     return this.usersService.searchForAdmin(query.search, query.cursor, query.limit);
@@ -62,24 +73,28 @@ export class AdminUsersController {
 
   /** Overview's "total users" stat — registered before :id so "stats" is never parsed as a user id. */
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @RequirePermission('users.view')
   @Get('stats')
   async stats() {
     return this.usersService.getStats();
   }
 
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @RequirePermission('users.view')
   @Get('analytics/signups')
   async signupTrend(@Query('days') days?: string) {
     return this.usersService.getSignupTrend(days ? Number(days) : 30);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @RequirePermission('users.view')
   @Get(':id')
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.getById(id);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @RequirePermission('users.suspend')
   @Post(':id/status')
   async setStatus(
     @Param('id', ParseUUIDPipe) id: string,
@@ -87,6 +102,38 @@ export class AdminUsersController {
     @CurrentUser() admin: AuthenticatedUser,
   ) {
     return this.usersService.setStatus(id, dto.status, admin.id, dto.reason);
+  }
+
+  /**
+   * Named admin-role assignment (Finance Admin, Customer Support, ...) —
+   * deliberately left at this controller's SUPER_ADMIN-only default, same
+   * tier as granting the `admin` role itself (setRoles above): deciding
+   * what an admin can do is the same blast radius as deciding who's an
+   * admin at all.
+   */
+  @Get(':id/admin-roles')
+  async listAdminRoles(@Param('id', ParseUUIDPipe) id: string) {
+    return this.permissionsService.listRolesForUser(id);
+  }
+
+  @Post(':id/admin-roles')
+  async assignAdminRole(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AssignAdminRoleDto,
+    @CurrentUser() admin: AuthenticatedUser,
+  ) {
+    await this.permissionsService.assignRoleToUser(id, dto.adminRoleId, admin.id);
+    return { assigned: true };
+  }
+
+  @Delete(':id/admin-roles/:roleId')
+  async revokeAdminRole(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('roleId', ParseUUIDPipe) roleId: string,
+    @CurrentUser() admin: AuthenticatedUser,
+  ) {
+    await this.permissionsService.revokeRoleFromUser(id, roleId, admin.id);
+    return { revoked: true };
   }
 
   /**

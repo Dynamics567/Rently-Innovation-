@@ -2,6 +2,7 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
 import { IsOptional, IsString } from 'class-validator';
 import { Roles } from '@common/decorators/roles.decorator';
+import { RequirePermission } from '@common/decorators/require-permission.decorator';
 import { CursorPaginationDto } from '@common/dto/cursor-pagination.dto';
 import { UserRole } from '@modules/identity/enums/user-role.enum';
 import { AuditLogService } from './audit-log.service';
@@ -30,6 +31,7 @@ class QueryAuditLogDto extends CursorPaginationDto {
 @ApiTags('admin')
 @ApiBearerAuth()
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+@RequirePermission('auditlog.view')
 @Controller('admin/audit-log')
 export class AdminAuditLogController {
   constructor(private readonly auditLogService: AuditLogService) {}

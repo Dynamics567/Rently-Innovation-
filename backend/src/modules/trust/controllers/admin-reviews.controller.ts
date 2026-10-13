@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
 import { IsOptional, IsString, MinLength } from 'class-validator';
 import { CursorPaginationDto } from '@common/dto/cursor-pagination.dto';
 import { Roles } from '@common/decorators/roles.decorator';
+import { RequirePermission } from '@common/decorators/require-permission.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { UserRole } from '@modules/identity/enums/user-role.enum';
 import { AuthenticatedUser } from '@modules/identity/strategies/jwt.strategy';
@@ -25,6 +26,7 @@ class HideReviewDto {
 @ApiTags('admin')
 @ApiBearerAuth()
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+@RequirePermission('reviews.view')
 @Controller('admin/reviews')
 export class AdminReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
@@ -34,6 +36,7 @@ export class AdminReviewsController {
     return this.reviewsService.searchForAdmin(query.search, { cursor: query.cursor, limit: query.limit });
   }
 
+  @RequirePermission('reviews.moderate')
   @Post(':id/hide')
   async hide(
     @Param('id', ParseUUIDPipe) id: string,
@@ -43,6 +46,7 @@ export class AdminReviewsController {
     return this.reviewsService.hide(id, admin.id, dto.reason);
   }
 
+  @RequirePermission('reviews.moderate')
   @Post(':id/unhide')
   async unhide(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() admin: AuthenticatedUser) {
     return this.reviewsService.unhide(id, admin.id);
