@@ -231,10 +231,10 @@ h1,h2,h3{font-family:var(--sans);}
     <a class="side-link planned" href="#" data-planned="locations" id="linkLocations"></a>
 
     <div class="side-group-lbl">Finance</div>
-    <a class="side-link planned" href="#" data-planned="transactions" id="linkTransactions"></a>
-    <a class="side-link planned" href="#" data-planned="settlements" id="linkSettlements"></a>
-    <a class="side-link planned" href="#" data-planned="refunds" id="linkRefunds"></a>
-    <a class="side-link planned" href="#" data-planned="wallets" id="linkWallets"></a>
+    <a class="side-link" data-view="transactions" id="linkTransactions"></a>
+    <a class="side-link" data-view="settlements" id="linkSettlements"></a>
+    <a class="side-link" data-view="refunds" id="linkRefunds"></a>
+    <a class="side-link" data-view="wallets" id="linkWallets"></a>
 
     <div class="side-group-lbl">Trust &amp; Safety</div>
     <a class="side-link" data-view="verification" id="linkVerification"></a>
@@ -412,6 +412,34 @@ h1,h2,h3{font-family:var(--sans);}
       </div>
     </div>
 
+    <!-- ============ TRANSACTIONS ============ -->
+    <div class="d-view" id="view-transactions">
+      <div class="app-head"><div><h1>Transactions</h1><p>Every charge, refund, deposit release and Rental Partner credit — the real ledger behind every booking's money.</p></div></div>
+      <div class="chip-filter" id="txTypeFilter" style="margin-bottom:14px;"></div>
+      <div id="transactionsList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
+      <div style="margin-top:14px;text-align:center;"><button class="pill-btn ghost sm" id="txLoadMore" style="display:none;">Load more</button></div>
+    </div>
+
+    <!-- ============ REFUNDS ============ -->
+    <div class="d-view" id="view-refunds">
+      <div class="app-head"><div><h1>Refunds</h1><p>Refunds as their own tracked records — every one from this point forward is real and exact. Cancellations from before this ledger existed aren't included (the exact amount was never saved anywhere to backfill from).</p></div></div>
+      <div id="refundsList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
+      <div style="margin-top:14px;text-align:center;"><button class="pill-btn ghost sm" id="refundLoadMore" style="display:none;">Load more</button></div>
+    </div>
+
+    <!-- ============ WALLETS ============ -->
+    <div class="d-view" id="view-wallets">
+      <div class="app-head"><div><h1>Wallets</h1><p>Every Rental Partner's running balance — what they're still owed, computed fresh from the ledger, never a stored figure.</p></div></div>
+      <div id="walletsList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
+    </div>
+
+    <!-- ============ SETTLEMENTS ============ -->
+    <div class="d-view" id="view-settlements">
+      <div class="app-head"><div><h1>Settlements</h1><p>Payouts to Rental Partners, recorded by an admin once actually paid — there's no payment processor wired up yet, so "paid" here is a manual bookkeeping record, not an automated transfer.</p></div></div>
+      <div id="settlementsList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
+      <div style="margin-top:14px;text-align:center;"><button class="pill-btn ghost sm" id="settleLoadMore" style="display:none;">Load more</button></div>
+    </div>
+
     <!-- ============ PLANNED (honest, per-module placeholder) ============ -->
     <div class="d-view" id="view-planned">
       <div class="app-head"><div><h1 id="plannedTitle">Planned</h1><p id="plannedSub">Real backend work, not yet built.</p></div></div>
@@ -554,6 +582,10 @@ function goView(v){
   if(v==='audit') loadAuditLog(true);
   if(v==='team') loadTeam();
   if(v==='permissions') loadPermissions();
+  if(v==='transactions') loadTransactions(true);
+  if(v==='refunds') loadRefunds(true);
+  if(v==='wallets') loadWallets();
+  if(v==='settlements') loadSettlements(true);
 }
 document.querySelectorAll('.side-link[data-view]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goView(l.dataset.view);}));
 document.querySelectorAll('.side-link[data-planned]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goPlanned(l.dataset.planned);}));
@@ -681,6 +713,15 @@ document.getElementById('drawerBody').addEventListener('click', async (e)=>{
       if(!note||note.trim().length<5){ if(note!==null) alert('Please provide a note of at least 5 characters.'); btn.disabled=false; return; }
       await apiFetch(`/admin/disputes/${id}/resolve`,{method:'POST',body:{finalDeductionMinor:Math.round(amountNaira*100),note:note.trim()}});
       closeDrawer(); renderDisputes();
+    } else if(action==='wallet-create-settlement'){
+      if(!confirm("Create a settlement for this Rental Partner's full unsettled balance?")){ btn.disabled=false; return; }
+      await apiFetch('/admin/finance/settlements',{method:'POST',body:{providerId:id}});
+      closeDrawer(); loadWallets();
+    } else if(action==='settlement-mark-paid'){
+      const reference=prompt('How was this actually paid? (e.g. "Bank transfer, GTBank, ref #1234")');
+      if(!reference||reference.trim().length<3){ if(reference!==null) alert('Please provide a reference of at least 3 characters.'); btn.disabled=false; return; }
+      await apiFetch(`/admin/finance/settlements/${id}/paid`,{method:'PATCH',body:{reference:reference.trim()}});
+      closeDrawer(); loadSettlements(true);
     }
   }catch(err){
     alert(apiErrorMessage(err));
@@ -1523,6 +1564,174 @@ async function loadPermissions(){
 }
 
 /* ================================================================
+   FINANCE — real ledger derived from PaymentPort's own charge/refund/
+   release events (see FinanceService's doc comment). No payment processor
+   is wired up yet: Settlements are a manual admin bookkeeping record, not
+   an automated payout — see the Settlements view's own description.
+   ================================================================ */
+const TX_TYPE_LABEL = {
+  charge: 'Charge',
+  refund: 'Refund',
+  deposit_release: 'Deposit release',
+  provider_earning: 'Provider earning',
+  provider_forfeit_credit: 'Forfeit credit',
+};
+const TX_TYPE_PILL = { charge:'good', refund:'warn', deposit_release:'neutral', provider_earning:'good', provider_forfeit_credit:'bad' };
+const SETTLEMENT_STATUS_PILL = { pending:'warn', paid:'good' };
+
+let txRows=[], txCursor=null, txTypeFilter='';
+function txFilterTabs(){
+  const tabs=[['','All'],['charge','Charges'],['refund','Refunds'],['deposit_release','Deposit releases'],['provider_earning','Provider earnings'],['provider_forfeit_credit','Forfeit credits']];
+  document.getElementById('txTypeFilter').innerHTML = tabs.map(([k,l])=>`<button class="${txTypeFilter===k?'on':''}" data-txf="${k}">${l}</button>`).join('');
+  document.querySelectorAll('[data-txf]').forEach(b=>b.addEventListener('click',()=>{ txTypeFilter=b.dataset.txf; txFilterTabs(); loadTransactions(true); }));
+}
+function renderTxRow(t){
+  return `<tr class="clickable" data-tx="${t.id}">
+    <td>${new Date(t.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td>
+    <td><span class="pill-status ${TX_TYPE_PILL[t.type]||'neutral'}">${TX_TYPE_LABEL[t.type]||t.type}</span></td>
+    <td>${t.bookingId.slice(0,8).toUpperCase()}</td>
+    <td class="num">${money2(t.amountMinor)}</td>
+  </tr>`;
+}
+function renderTxTable(rows, elId, emptyMessage){
+  const el=document.getElementById(elId);
+  if(!rows.length){ el.innerHTML = stateEmpty(emptyMessage); return; }
+  el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th>Date</th><th>Type</th><th>Booking</th><th>Amount</th></tr></thead><tbody>${rows.map(renderTxRow).join('')}</tbody></table></div>`;
+  el.querySelectorAll('[data-tx]').forEach(r=>r.addEventListener('click',()=>openTransactionDrawer(r.dataset.tx)));
+}
+async function loadTransactions(reset){
+  if(reset){ txCursor=null; txRows=[]; document.getElementById('transactionsList').innerHTML='<div class="skel-row-sm"></div><div class="skel-row-sm"></div>'; txFilterTabs(); }
+  try{
+    const params=new URLSearchParams({limit:'20'});
+    if(txTypeFilter) params.set('type',txTypeFilter);
+    if(txCursor) params.set('cursor',txCursor);
+    const {data,meta} = await apiFetch(`/admin/finance/transactions?${params}`);
+    txRows = reset ? data : txRows.concat(data);
+    txCursor = meta.nextCursor;
+    document.getElementById('txLoadMore').style.display = meta.hasMore ? '' : 'none';
+    renderTxTable(txRows, 'transactionsList', 'No transactions match this view.');
+  }catch(e){ document.getElementById('transactionsList').innerHTML = stateError(e); }
+}
+document.getElementById('txLoadMore').addEventListener('click',()=>loadTransactions(false));
+
+/** A thin, fixed type=refund view of the exact same ledger — kept as its own small state so switching between this and Transactions never clobbers the other's filter/pagination. */
+let refundRows=[], refundCursor=null;
+async function loadRefunds(reset){
+  if(reset){ refundCursor=null; refundRows=[]; document.getElementById('refundsList').innerHTML='<div class="skel-row-sm"></div><div class="skel-row-sm"></div>'; }
+  try{
+    const params=new URLSearchParams({limit:'20',type:'refund'});
+    if(refundCursor) params.set('cursor',refundCursor);
+    const {data,meta} = await apiFetch(`/admin/finance/transactions?${params}`);
+    refundRows = reset ? data : refundRows.concat(data);
+    refundCursor = meta.nextCursor;
+    document.getElementById('refundLoadMore').style.display = meta.hasMore ? '' : 'none';
+    renderTxTable(refundRows, 'refundsList', 'No refunds recorded since this ledger went live.');
+  }catch(e){ document.getElementById('refundsList').innerHTML = stateError(e); }
+}
+document.getElementById('refundLoadMore').addEventListener('click',()=>loadRefunds(false));
+
+async function openTransactionDrawer(id){
+  openDrawer('Transaction', id.slice(0,8).toUpperCase(), [
+    { key:'overview', label:'Overview', render: async ()=>{
+      const t = await apiFetch(`/admin/finance/transactions/${id}`).then(r=>r.data);
+      return dkv('Type', `<span class="pill-status ${TX_TYPE_PILL[t.type]||'neutral'}">${TX_TYPE_LABEL[t.type]||t.type}</span>`)
+        + dkv('Amount', money2(t.amountMinor))
+        + dkv('Booking', t.bookingId)
+        + dkv('Renter', t.renterName||'—')
+        + dkv('Rental Partner', t.providerName||'—')
+        + dkv('Payment reference', t.paymentReference||'—')
+        + dkv('Date', new Date(t.createdAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}));
+    }},
+    auditTabFor('Transaction', id),
+  ]);
+}
+
+async function loadWallets(){
+  const el=document.getElementById('walletsList');
+  el.innerHTML = '<div class="skel-row-sm"></div><div class="skel-row-sm"></div>';
+  try{
+    const {data} = await apiFetch('/admin/finance/wallets');
+    if(!data.length){ el.innerHTML = stateEmpty('No Rental Partner has earned anything yet.'); return; }
+    el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th>Rental Partner</th><th>Unsettled balance</th><th>Lifetime earned</th><th>Last settlement</th></tr></thead><tbody>${
+      data.map(w=>`<tr class="clickable" data-wallet="${w.providerId}">
+        <td>${w.providerName||w.providerId.slice(0,8).toUpperCase()}</td>
+        <td class="num">${money2(w.unsettledMinor)}</td>
+        <td class="num">${money2(w.lifetimeEarnedMinor)}</td>
+        <td>${w.lastSettlementAt ? new Date(w.lastSettlementAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : 'Never'}</td>
+      </tr>`).join('')
+    }</tbody></table></div>`;
+    el.querySelectorAll('[data-wallet]').forEach(r=>r.addEventListener('click',()=>openWalletDrawer(r.dataset.wallet)));
+  }catch(e){ el.innerHTML = stateError(e); }
+}
+async function openWalletDrawer(providerId){
+  openDrawer('Wallet', providerId.slice(0,8).toUpperCase(), [
+    { key:'overview', label:'Overview', render: async ()=>{
+      const w = await apiFetch(`/admin/finance/wallets/${providerId}`).then(r=>r.data);
+      const createBtn = w.unsettledMinor > 0
+        ? `<button class="pill-btn blue sm" data-admin-action="wallet-create-settlement" data-id="${providerId}" style="margin-top:16px;">Create settlement for ${money2(w.unsettledMinor)}</button>`
+        : '';
+      return dkv('Rental Partner', w.providerName||'—')
+        + dkv('Unsettled balance', money2(w.unsettledMinor))
+        + dkv('Lifetime earned', money2(w.lifetimeEarnedMinor))
+        + createBtn;
+    }},
+    { key:'history', label:'History', render: async ()=>{
+      const {data} = await apiFetch(`/admin/finance/transactions?providerId=${providerId}&limit=50`);
+      if(!data.length) return stateEmpty('No transactions yet.');
+      return data.map(t=>`<div class="timeline-item"><div class="dot"></div><div><div class="t">${TX_TYPE_LABEL[t.type]||t.type} — ${money2(t.amountMinor)}</div><div class="s">${new Date(t.createdAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div></div></div>`).join('');
+    }},
+  ]);
+}
+
+let settlementRows=[], settlementCursor=null;
+async function loadSettlements(reset){
+  if(reset){ settlementCursor=null; settlementRows=[]; document.getElementById('settlementsList').innerHTML='<div class="skel-row-sm"></div><div class="skel-row-sm"></div>'; }
+  try{
+    const params=new URLSearchParams({limit:'20'});
+    if(settlementCursor) params.set('cursor',settlementCursor);
+    const {data,meta} = await apiFetch(`/admin/finance/settlements?${params}`);
+    settlementRows = reset ? data : settlementRows.concat(data);
+    settlementCursor = meta.nextCursor;
+    document.getElementById('settleLoadMore').style.display = meta.hasMore ? '' : 'none';
+    renderSettlementsTable();
+  }catch(e){ document.getElementById('settlementsList').innerHTML = stateError(e); }
+}
+function renderSettlementsTable(){
+  const el=document.getElementById('settlementsList');
+  if(!settlementRows.length){ el.innerHTML = stateEmpty("No settlements yet — create one from a Rental Partner's Wallet."); return; }
+  el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th>Rental Partner</th><th>Amount</th><th>Status</th><th>Created</th></tr></thead><tbody>${
+    settlementRows.map(s=>`<tr class="clickable" data-settlement="${s.id}">
+      <td>${s.providerName||s.providerId.slice(0,8).toUpperCase()}</td>
+      <td class="num">${money2(s.totalMinor)}</td>
+      <td><span class="pill-status ${SETTLEMENT_STATUS_PILL[s.status]||'neutral'}">${s.status}</span></td>
+      <td>${new Date(s.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td>
+    </tr>`).join('')
+  }</tbody></table></div>`;
+  el.querySelectorAll('[data-settlement]').forEach(r=>r.addEventListener('click',()=>openSettlementDrawer(r.dataset.settlement)));
+}
+document.getElementById('settleLoadMore').addEventListener('click',()=>loadSettlements(false));
+async function openSettlementDrawer(id){
+  openDrawer('Settlement', id.slice(0,8).toUpperCase(), [
+    { key:'overview', label:'Overview', render: async ()=>{
+      const s = await apiFetch(`/admin/finance/settlements/${id}`).then(r=>r.data);
+      const markPaidBtn = s.status==='pending'
+        ? `<button class="pill-btn green sm" data-admin-action="settlement-mark-paid" data-id="${id}" style="margin-top:16px;">Mark paid</button>`
+        : '';
+      const paidRows = s.status==='paid'
+        ? dkv('Paid reference', s.paidReference||'—') + dkv('Paid at', new Date(s.paidAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))
+        : '';
+      return dkv('Rental Partner', s.providerName||'—')
+        + dkv('Amount', money2(s.totalMinor))
+        + dkv('Status', `<span class="pill-status ${SETTLEMENT_STATUS_PILL[s.status]||'neutral'}">${s.status}</span>`)
+        + dkv('Created', new Date(s.createdAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))
+        + paidRows
+        + markPaidBtn;
+    }},
+    auditTabFor('Settlement', id),
+  ]);
+}
+
+/* ================================================================
    PLANNED (honest, per-module placeholder) — every not-yet-built module
    gets its own correctly-grouped sidebar entry (see the Finance/Growth/
    Content/Control groups above) instead of one undifferentiated "roadmap"
@@ -1531,10 +1740,6 @@ async function loadPermissions(){
 const PLANNED_MODULES = {
   support: { label:'Support Tickets', group:'Operations', blurb:"Customer and Rental Partner support requests, linked to the booking or listing they're about." },
   locations: { label:'Locations', group:'Marketplace', blurb:"A structured city/region taxonomy for listings, instead of today's free-text location field." },
-  transactions: { label:'Transactions', group:'Finance', blurb:'Every payment, platform fee and payout in one real ledger.' },
-  settlements: { label:'Settlements', group:'Finance', blurb:'Scheduled payouts to Rental Partners, batched and reconciled.' },
-  refunds: { label:'Refunds', group:'Finance', blurb:'Refunds as tracked records, not just a side effect of a dispute resolution.' },
-  wallets: { label:'Wallets', group:'Finance', blurb:'Running balances for Rental Partners awaiting payout.' },
   promotions: { label:'Promotions', group:'Growth', blurb:'Discount codes and campaigns to grow bookings.' },
   notifications: { label:'Notifications', group:'Growth', blurb:'Admin-authored broadcast notifications to customers or Rental Partners.' },
   cms: { label:'CMS', group:'Content', blurb:'Editable static pages (About, Help articles) without a code deploy.' },
