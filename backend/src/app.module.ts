@@ -27,6 +27,7 @@ import { AuditLogModule } from '@common/audit/audit-log.module';
 import { IdentityModule } from '@modules/identity/identity.module';
 import { CatalogModule } from '@modules/catalog/catalog.module';
 import { BookingModule } from '@modules/booking/booking.module';
+import { FinanceModule } from '@modules/finance/finance.module';
 import { NotificationsModule } from '@modules/notifications/notifications.module';
 import { TrustModule } from '@modules/trust/trust.module';
 import { MessagingModule } from '@modules/messaging/messaging.module';
@@ -72,6 +73,7 @@ import { HealthModule } from './health/health.module';
     IdentityModule,
     CatalogModule,
     BookingModule,
+    FinanceModule,
     NotificationsModule,
     TrustModule,
     MessagingModule,

@@ -32,6 +32,7 @@ import { PAYMENT_PORT, PaymentPort } from './payment.port';
 import { computeCancellationRefund, CancellationRefund } from './cancellation-refund.util';
 import { ProviderProfileService } from '@modules/identity/services/provider-profile.service';
 import { UsersService } from '@modules/identity/services/users.service';
+import { FinanceService } from '@modules/finance/services/finance.service';
 
 interface StageStep {
   stage: BookingStage;
@@ -55,6 +56,7 @@ export class BookingService {
     private readonly usersService: UsersService,
     @Inject(PAYMENT_PORT) private readonly paymentPort: PaymentPort,
     @Inject(STORAGE_PORT) private readonly storage: StoragePort,
+    private readonly financeService: FinanceService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -334,6 +336,10 @@ export class BookingService {
           amountMinor: quote.totalMinor,
         });
         accepted.paymentReference = charge.providerReference;
+        await this.financeService.recordCharge(
+          { bookingId: saved.id, renterId, amountMinor: quote.totalMinor, paymentReference: charge.providerReference },
+          manager,
+        );
         const paid = await this.runSteps(
           manager,
           accepted,
@@ -415,6 +421,15 @@ export class BookingService {
         amountMinor: booking.totalMinor,
       });
       booking.paymentReference = charge.providerReference;
+      await this.financeService.recordCharge(
+        {
+          bookingId: booking.id,
+          renterId: booking.renterId,
+          amountMinor: booking.totalMinor,
+          paymentReference: charge.providerReference,
+        },
+        manager,
+      );
       const withAccepted = await this.runSteps(
         manager,
         booking,
@@ -484,6 +499,10 @@ export class BookingService {
           amountMinor: refund.refundMinor,
           reason,
         });
+        await this.financeService.recordRefund(
+          { bookingId: booking.id, renterId: booking.renterId, amountMinor: refund.refundMinor },
+          manager,
+        );
         const pctLabel = Math.round(refund.refundPct * 100);
         refundNote = [reason, `Refunded ${pctLabel}% per ${booking.cancellationPolicy} policy.`]
           .filter(Boolean)
@@ -609,6 +628,10 @@ export class BookingService {
       const result = await this.dataSource.transaction(async (manager) => {
         if (booking.depositMinor > 0) {
           await this.paymentPort.release({ bookingId: booking.id, amountMinor: booking.depositMinor });
+          await this.financeService.recordDepositRelease(
+            { bookingId: booking.id, renterId: booking.renterId, amountMinor: booking.depositMinor },
+            manager,
+          );
         }
         const inspected = await this.runSteps(
           manager,
@@ -627,6 +650,11 @@ export class BookingService {
           released,
           [{ stage: BookingStage.COMPLETED, status: BookingStatus.COMPLETED }],
           actingUserId,
+        );
+        const providerId = await this.getListingProviderId(booking.listingId);
+        await this.financeService.recordProviderEarning(
+          { bookingId: booking.id, providerId, amountMinor: booking.rentalFeeMinor },
+          manager,
         );
         await this.markListingCompletedBooking(booking.listingId);
         return completed;
@@ -686,12 +714,28 @@ export class BookingService {
     bookingId: string,
     finalDeductionMinor: number,
     actingUserId: string,
+    disputeId?: string,
   ): Promise<Booking> {
     const booking = await this.findByIdOrFail(bookingId);
     const releaseMinor = Math.max(0, booking.depositMinor - finalDeductionMinor);
     if (releaseMinor > 0) {
       await this.paymentPort.release({ bookingId: booking.id, amountMinor: releaseMinor });
+      await this.financeService.recordDepositRelease(
+        { bookingId: booking.id, renterId: booking.renterId, amountMinor: releaseMinor, disputeId },
+        manager,
+      );
     }
+    const providerId = await this.getListingProviderId(booking.listingId);
+    if (finalDeductionMinor > 0) {
+      await this.financeService.recordProviderForfeitCredit(
+        { bookingId: booking.id, providerId, amountMinor: finalDeductionMinor, disputeId },
+        manager,
+      );
+    }
+    await this.financeService.recordProviderEarning(
+      { bookingId: booking.id, providerId, amountMinor: booking.rentalFeeMinor },
+      manager,
+    );
     const undisputed = await this.setStatusOnly(
       manager,
       booking,
@@ -732,6 +776,12 @@ export class BookingService {
   private async markListingCompletedBooking(listingId: string): Promise<void> {
     const listing = await this.listingsService.findByIdOrFail(listingId);
     await this.providerProfileService.incrementCompletedBookings(listing.providerId);
+  }
+
+  /** [FinanceService] The ProviderProfile id a completed/resolved booking's earning is credited to. */
+  private async getListingProviderId(listingId: string): Promise<string> {
+    const listing = await this.listingsService.findByIdOrFail(listingId);
+    return listing.providerId;
   }
 
   /**
@@ -815,6 +865,15 @@ export class BookingService {
       booking.totalMinor += additionalMinor;
       booking.paymentReference = charge.providerReference;
       const saved = await manager.getRepository(Booking).save(booking);
+      await this.financeService.recordCharge(
+        {
+          bookingId: booking.id,
+          renterId: booking.renterId,
+          amountMinor: additionalMinor,
+          paymentReference: charge.providerReference,
+        },
+        manager,
+      );
       // Recorded as a same-stage transition purely for the audit trail — the
       // booking doesn't move stages, but the timeline should show this happened.
       await this.recordTransition(

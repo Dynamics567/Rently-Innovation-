@@ -4,8 +4,10 @@ import { BookingStatusHistoryRepository } from '../repositories/booking-status-h
 import { BookingExtensionRequestRepository } from '../repositories/booking-extension-request.repository';
 import { Booking } from '../entities/booking.entity';
 import { BookingStatusHistory } from '../entities/booking-status-history.entity';
+import { BookingExtensionRequest } from '../entities/booking-extension-request.entity';
 import { Dispute } from '../entities/dispute.entity';
 import { BookingStage, BookingStatus } from '../enums/booking.enums';
+import { ExtensionRequestStatus } from '../enums/extension-request-status.enum';
 import { ListingsService } from '@modules/catalog/services/listings.service';
 import { AvailabilityService } from '@modules/catalog/services/availability.service';
 import { AssetsService } from '@modules/catalog/services/assets.service';
@@ -19,6 +21,7 @@ import {
   PriceUnit,
 } from '@modules/catalog/enums/listing.enums';
 import { PaymentPort } from './payment.port';
+import { FinanceService } from '@modules/finance/services/finance.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 /**
@@ -43,6 +46,7 @@ describe('BookingService', () => {
     jest.Mock
   >;
   let historyRepository: Record<'findByBooking', jest.Mock>;
+  let extensionRequestRepository: Record<'findByIdOrFail', jest.Mock>;
   let listingsService: Record<'findByIdOrFail' | 'getQuote', jest.Mock>;
   let availabilityService: Record<'isBlocked', jest.Mock>;
   let assetsService: Record<'getActiveForListing', jest.Mock>;
@@ -50,11 +54,16 @@ describe('BookingService', () => {
   let usersService: Record<'getById', jest.Mock>;
   let paymentPort: Record<'charge' | 'refund' | 'release', jest.Mock>;
   let storage: Record<'upload' | 'getUrl' | 'delete', jest.Mock>;
+  let financeService: Record<
+    'recordCharge' | 'recordRefund' | 'recordDepositRelease' | 'recordProviderEarning' | 'recordProviderForfeitCredit',
+    jest.Mock
+  >;
   let eventEmitter: Record<'emit', jest.Mock>;
   let dataSource: { transaction: jest.Mock };
 
   const liveListing = {
     id: 'listing-1',
+    providerId: 'provider-1',
     status: ListingStatus.LIVE,
     bookingMode: BookingMode.REQUEST,
     cancellationPolicy: CancellationPolicy.MODERATE,
@@ -98,6 +107,7 @@ describe('BookingService', () => {
       getBookedQuantity: jest.fn(async () => 0),
     };
     historyRepository = { findByBooking: jest.fn() };
+    extensionRequestRepository = { findByIdOrFail: jest.fn() };
     listingsService = {
       findByIdOrFail: jest.fn(async () => liveListing),
       getQuote: jest.fn(async () => quote),
@@ -125,11 +135,19 @@ describe('BookingService', () => {
       getUrl: jest.fn(async (key: string) => `https://signed.example.com/${key}`),
       delete: jest.fn(async () => undefined),
     };
+    financeService = {
+      recordCharge: jest.fn(async () => undefined),
+      recordRefund: jest.fn(async () => undefined),
+      recordDepositRelease: jest.fn(async () => undefined),
+      recordProviderEarning: jest.fn(async () => undefined),
+      recordProviderForfeitCredit: jest.fn(async () => undefined),
+    };
     eventEmitter = { emit: jest.fn() };
 
     const bookingManagerRepo = fakeRepo();
     const historyManagerRepo = fakeRepo();
     const disputeManagerRepo = fakeRepo();
+    const extensionRequestManagerRepo = fakeRepo();
     const manager = {
       getRepository: jest.fn((entity: unknown) =>
         entity === Booking
@@ -138,7 +156,9 @@ describe('BookingService', () => {
             ? disputeManagerRepo
             : entity === BookingStatusHistory
             ? historyManagerRepo
-            : undefined,
+            : entity === BookingExtensionRequest
+              ? extensionRequestManagerRepo
+              : undefined,
       ),
     };
     dataSource = { transaction: jest.fn((cb: (m: unknown) => unknown) => cb(manager)) };
@@ -147,7 +167,7 @@ describe('BookingService', () => {
       dataSource as any,
       bookingRepository as unknown as BookingRepository,
       historyRepository as unknown as BookingStatusHistoryRepository,
-      {} as unknown as BookingExtensionRequestRepository,
+      extensionRequestRepository as unknown as BookingExtensionRequestRepository,
       {} as unknown as DisputeRepository,
       listingsService as unknown as ListingsService,
       availabilityService as unknown as AvailabilityService,
@@ -156,6 +176,7 @@ describe('BookingService', () => {
       usersService as unknown as UsersService,
       paymentPort as unknown as PaymentPort,
       storage as unknown as any,
+      financeService as unknown as FinanceService,
       eventEmitter as unknown as EventEmitter2,
     );
   });
@@ -234,6 +255,10 @@ describe('BookingService', () => {
         bookingId: expect.any(String),
         amountMinor: quote.totalMinor,
       });
+      expect(financeService.recordCharge).toHaveBeenCalledWith(
+        expect.objectContaining({ renterId: 'renter-1', amountMinor: quote.totalMinor, paymentReference: 'MOCK-REF' }),
+        expect.anything(),
+      );
       expect(result.stage).toBe(BookingStage.RESERVED);
       expect(result.status).toBe(BookingStatus.CONFIRMED);
     });
@@ -335,6 +360,7 @@ describe('BookingService', () => {
     it('captures payment and reserves on approval of a pending request-to-book booking', async () => {
       bookingRepository.findByIdOrFail.mockResolvedValue({
         id: 'booking-1',
+        renterId: 'renter-1',
         bookingMode: BookingMode.REQUEST,
         status: BookingStatus.PENDING,
         stage: BookingStage.REQUESTED,
@@ -347,6 +373,10 @@ describe('BookingService', () => {
         bookingId: 'booking-1',
         amountMinor: 78000,
       });
+      expect(financeService.recordCharge).toHaveBeenCalledWith(
+        expect.objectContaining({ bookingId: 'booking-1', renterId: 'renter-1', amountMinor: 78000 }),
+        expect.anything(),
+      );
       expect(result.stage).toBe(BookingStage.RESERVED);
       expect(result.status).toBe(BookingStatus.CONFIRMED);
     });
@@ -369,6 +399,7 @@ describe('BookingService', () => {
     it('refunds a confirmed booking cancelled before pickup', async () => {
       bookingRepository.findByIdOrFail.mockResolvedValue({
         id: 'booking-1',
+        renterId: 'renter-1',
         status: BookingStatus.CONFIRMED,
         stage: BookingStage.RESERVED,
         totalMinor: 78000,
@@ -385,6 +416,10 @@ describe('BookingService', () => {
         amountMinor: 78000,
         reason: 'change of plans',
       });
+      expect(financeService.recordRefund).toHaveBeenCalledWith(
+        expect.objectContaining({ bookingId: 'booking-1', renterId: 'renter-1', amountMinor: 78000 }),
+        expect.anything(),
+      );
       expect(result.status).toBe(BookingStatus.CANCELLED);
     });
 
@@ -400,6 +435,7 @@ describe('BookingService', () => {
       await service.cancel('booking-1', 'user-1');
 
       expect(paymentPort.refund).not.toHaveBeenCalled();
+      expect(financeService.recordRefund).not.toHaveBeenCalled();
     });
   });
 
@@ -436,9 +472,12 @@ describe('BookingService', () => {
     it('releases the deposit and completes the booking once returned', async () => {
       bookingRepository.findByIdOrFail.mockResolvedValue({
         id: 'booking-1',
+        renterId: 'renter-1',
+        listingId: 'listing-1',
         stage: BookingStage.RETURNED,
         status: BookingStatus.CONFIRMED,
         depositMinor: 15000,
+        rentalFeeMinor: 60000,
       });
 
       const result: any = await service.releaseDeposit('booking-1', 'provider-user-1');
@@ -447,6 +486,14 @@ describe('BookingService', () => {
         bookingId: 'booking-1',
         amountMinor: 15000,
       });
+      expect(financeService.recordDepositRelease).toHaveBeenCalledWith(
+        expect.objectContaining({ bookingId: 'booking-1', renterId: 'renter-1', amountMinor: 15000 }),
+        expect.anything(),
+      );
+      expect(financeService.recordProviderEarning).toHaveBeenCalledWith(
+        expect.objectContaining({ bookingId: 'booking-1', providerId: 'provider-1', amountMinor: 60000 }),
+        expect.anything(),
+      );
       expect(result.stage).toBe(BookingStage.COMPLETED);
       expect(result.status).toBe(BookingStatus.COMPLETED);
     });
@@ -454,6 +501,7 @@ describe('BookingService', () => {
     it('skips the payment release call when there is no deposit', async () => {
       bookingRepository.findByIdOrFail.mockResolvedValue({
         id: 'booking-1',
+        listingId: 'listing-1',
         stage: BookingStage.RETURNED,
         status: BookingStatus.CONFIRMED,
         depositMinor: 0,
@@ -462,6 +510,7 @@ describe('BookingService', () => {
       await service.releaseDeposit('booking-1', 'provider-user-1');
 
       expect(paymentPort.release).not.toHaveBeenCalled();
+      expect(financeService.recordDepositRelease).not.toHaveBeenCalled();
     });
   });
 
@@ -482,6 +531,99 @@ describe('BookingService', () => {
       expect(paymentPort.release).not.toHaveBeenCalled();
       expect(result.status).toBe(BookingStatus.DISPUTED);
       expect(result.stage).toBe(BookingStage.INSPECTED);
+    });
+  });
+
+  describe('finalizeDispute', () => {
+    function fakeManager() {
+      const bookingRepo = fakeRepo();
+      const historyRepo = fakeRepo();
+      return {
+        getRepository: jest.fn((entity: unknown) => (entity === BookingStatusHistory ? historyRepo : bookingRepo)),
+      };
+    }
+
+    it('releases the undisputed remainder to the renter and credits the provider for both their earning and the forfeited deduction', async () => {
+      bookingRepository.findByIdOrFail.mockResolvedValue({
+        id: 'booking-1',
+        renterId: 'renter-1',
+        listingId: 'listing-1',
+        status: BookingStatus.DISPUTED,
+        stage: BookingStage.INSPECTED,
+        depositMinor: 15000,
+        rentalFeeMinor: 60000,
+      });
+
+      await service.finalizeDispute(fakeManager() as any, 'booking-1', 5000, 'admin-1', 'dispute-1');
+
+      expect(paymentPort.release).toHaveBeenCalledWith({ bookingId: 'booking-1', amountMinor: 10000 });
+      expect(financeService.recordDepositRelease).toHaveBeenCalledWith(
+        expect.objectContaining({ bookingId: 'booking-1', renterId: 'renter-1', amountMinor: 10000, disputeId: 'dispute-1' }),
+        expect.anything(),
+      );
+      expect(financeService.recordProviderForfeitCredit).toHaveBeenCalledWith(
+        expect.objectContaining({ bookingId: 'booking-1', providerId: 'provider-1', amountMinor: 5000, disputeId: 'dispute-1' }),
+        expect.anything(),
+      );
+      expect(financeService.recordProviderEarning).toHaveBeenCalledWith(
+        expect.objectContaining({ bookingId: 'booking-1', providerId: 'provider-1', amountMinor: 60000 }),
+        expect.anything(),
+      );
+    });
+
+    it('skips the forfeit credit entirely when nothing was deducted, but still credits the provider earning', async () => {
+      bookingRepository.findByIdOrFail.mockResolvedValue({
+        id: 'booking-1',
+        renterId: 'renter-1',
+        listingId: 'listing-1',
+        status: BookingStatus.DISPUTED,
+        stage: BookingStage.INSPECTED,
+        depositMinor: 15000,
+        rentalFeeMinor: 60000,
+      });
+
+      await service.finalizeDispute(fakeManager() as any, 'booking-1', 0, 'admin-1', 'dispute-1');
+
+      expect(financeService.recordProviderForfeitCredit).not.toHaveBeenCalled();
+      expect(financeService.recordDepositRelease).toHaveBeenCalledWith(
+        expect.objectContaining({ amountMinor: 15000 }),
+        expect.anything(),
+      );
+      expect(financeService.recordProviderEarning).toHaveBeenCalled();
+    });
+  });
+
+  describe('approveExtension', () => {
+    it('charges the additional fee and records it on the ledger', async () => {
+      extensionRequestRepository.findByIdOrFail.mockResolvedValue({
+        id: 'ext-1',
+        bookingId: 'booking-1',
+        status: ExtensionRequestStatus.PENDING,
+        currentEndsAt: new Date('2026-08-13T10:00:00Z'),
+        requestedEndsAt: new Date('2026-08-15T10:00:00Z'),
+        additionalRentalFeeMinor: 20000,
+        additionalServiceFeeMinor: 1000,
+      });
+      bookingRepository.findByIdOrFail.mockResolvedValue({
+        id: 'booking-1',
+        renterId: 'renter-1',
+        listingId: 'listing-1',
+        status: BookingStatus.CONFIRMED,
+        stage: BookingStage.ACTIVE,
+        startsAt: new Date('2026-08-10T10:00:00Z'),
+        endsAt: new Date('2026-08-13T10:00:00Z'),
+        rentalFeeMinor: 60000,
+        serviceFeeMinor: 3000,
+        totalMinor: 78000,
+      });
+
+      await service.approveExtension('ext-1', 'provider-user-1');
+
+      expect(paymentPort.charge).toHaveBeenCalledWith({ bookingId: 'booking-1', amountMinor: 21000 });
+      expect(financeService.recordCharge).toHaveBeenCalledWith(
+        expect.objectContaining({ bookingId: 'booking-1', renterId: 'renter-1', amountMinor: 21000, paymentReference: 'MOCK-REF' }),
+        expect.anything(),
+      );
     });
   });
 

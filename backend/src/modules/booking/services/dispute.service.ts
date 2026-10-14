@@ -128,6 +128,7 @@ export class DisputeService {
         dispute.bookingId,
         savedDispute.finalDeductionMinor ?? 0,
         renterUserId,
+        dispute.id,
       );
       return savedDispute;
     });
@@ -166,7 +167,13 @@ export class DisputeService {
       dispute.resolvedAt = new Date();
       dispute.resolutionNote = note;
       const savedDispute = await manager.getRepository(Dispute).save(dispute);
-      finalizedBooking = await this.bookingService.finalizeDispute(manager, dispute.bookingId, finalDeductionMinor, adminId);
+      finalizedBooking = await this.bookingService.finalizeDispute(
+        manager,
+        dispute.bookingId,
+        finalDeductionMinor,
+        adminId,
+        disputeId,
+      );
       await this.auditLogService.record(
         {
           actorId: adminId,
