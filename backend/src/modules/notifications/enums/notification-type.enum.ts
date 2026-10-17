@@ -13,6 +13,9 @@ export enum NotificationType {
   PROVIDER_REJECTED = 'provider_rejected',
   LISTING_APPROVED = 'listing_approved',
   LISTING_REJECTED = 'listing_rejected',
+  LISTING_SUBMITTED = 'listing_submitted',
+  LISTING_CHANGES_REQUESTED = 'listing_changes_requested',
+  LISTING_FLAGGED = 'listing_flagged',
   VERIFICATION_DOCUMENT_REVIEWED = 'verification_document_reviewed',
   MESSAGE_RECEIVED = 'message_received',
 }

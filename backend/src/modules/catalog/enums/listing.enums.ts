@@ -29,6 +29,7 @@ export enum ListingStatus {
   LIVE = 'live',
   PAUSED = 'paused',
   REJECTED = 'rejected',
+  CHANGES_REQUESTED = 'changes_requested',
 }
 
 /**

@@ -72,6 +72,10 @@ export class ListingRepository extends BaseRepository<Listing> {
     const qb = this.repository
       .createQueryBuilder('listing')
       .leftJoinAndSelect('listing.category', 'category')
+      // Only the cover (position 0) photo — resolving every photo of every
+      // row on a list page would be unnecessary N-photo work; see
+      // ListingsService.withCoverPhotoUrl().
+      .leftJoinAndSelect('listing.photos', 'photos', 'photos.position = 0')
       .where('listing.status IN (:...statuses)', { statuses });
 
     if (dto.category) {

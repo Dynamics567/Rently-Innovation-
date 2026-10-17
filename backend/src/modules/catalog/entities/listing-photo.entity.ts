@@ -18,4 +18,11 @@ export class ListingPhoto extends BaseEntity {
 
   @Column({ type: 'int', default: 0 })
   position: number;
+
+  /** Cleared by deleting this photo (the provider's "replace it" path) — there is no separate unflag action. */
+  @Column({ name: 'flagged_at', type: 'timestamptz', nullable: true })
+  flaggedAt?: Date | null;
+
+  @Column({ name: 'flag_reason', type: 'text', nullable: true })
+  flagReason?: string | null;
 }

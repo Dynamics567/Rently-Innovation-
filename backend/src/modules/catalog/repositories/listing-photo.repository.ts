@@ -17,4 +17,9 @@ export class ListingPhotoRepository extends BaseRepository<ListingPhoto> {
   async countByListing(listingId: string): Promise<number> {
     return this.repository.count({ where: { listingId } });
   }
+
+  /** Hard delete — a photo is a raw file reference, not an auditable business record. See ListingsService.removePhoto()'s doc comment. */
+  async remove(id: string): Promise<void> {
+    await this.repository.delete(id);
+  }
 }

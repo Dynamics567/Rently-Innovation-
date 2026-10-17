@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DomainException } from '@common/errors/domain.exception';
 import { ErrorCode } from '@common/errors/error-codes.enum';
@@ -6,9 +6,11 @@ import { CursorPage } from '@common/dto/cursor-pagination.dto';
 import { AuditLogService } from '@common/audit/audit-log.service';
 import { AuditActorType } from '@common/audit/audit-actor-type.enum';
 import { DomainEvents } from '@common/events/domain-events';
+import { STORAGE_PORT, StoragePort } from '@common/storage/storage.port';
 import { ListingRepository } from '../repositories/listing.repository';
 import { ListingPhotoRepository } from '../repositories/listing-photo.repository';
 import { Listing } from '../entities/listing.entity';
+import { ListingPhoto } from '../entities/listing-photo.entity';
 import { ListingStatus } from '../enums/listing.enums';
 import { CreateListingDto } from '../dto/create-listing.dto';
 import { UpdateListingDto } from '../dto/update-listing.dto';
@@ -24,6 +26,7 @@ const ALL_STATUSES = Object.values(ListingStatus);
 /** A listing needs at least one photo to look trustworthy enough to book, and a cap keeps the gallery/upload UI predictable. */
 const MIN_LISTING_PHOTOS = 1;
 const MAX_LISTING_PHOTOS = 4;
+const MAX_PHOTO_SIZE_BYTES = 8 * 1024 * 1024;
 
 @Injectable()
 export class ListingsService {
@@ -35,7 +38,13 @@ export class ListingsService {
     private readonly auditLogService: AuditLogService,
     private readonly eventEmitter: EventEmitter2,
     private readonly providerProfileService: ProviderProfileService,
+    @Inject(STORAGE_PORT) private readonly storage: StoragePort,
   ) {}
+
+  /** The frontend's single source of truth for its own copy of these limits — see ListingsController's public config route. */
+  getPhotoLimits(): { minPhotos: number; maxPhotos: number; maxFileSizeBytes: number } {
+    return { minPhotos: MIN_LISTING_PHOTOS, maxPhotos: MAX_LISTING_PHOTOS, maxFileSizeBytes: MAX_PHOTO_SIZE_BYTES };
+  }
 
   async create(providerId: string, dto: CreateListingDto): Promise<Listing> {
     const category = await this.categoriesService.getByIdOrFail(dto.categoryId);
@@ -90,7 +99,7 @@ export class ListingsService {
 
   /**
    * GET /listings/:id — public and LIVE-only. A provider viewing their own
-   * draft/pending/paused listing uses GET /listings/mine instead (see
+   * draft/pending/paused listing uses GET /listings/:id/manage instead (see
    * ListingsController for why this endpoint can't offer an owner exception).
    */
   async getDetail(id: string): Promise<Listing> {
@@ -101,16 +110,62 @@ export class ListingsService {
         'This listing is not currently available.',
       );
     }
-    return listing;
+    return this.withPhotoUrls(listing);
+  }
+
+  /** [Owner or admin] Every status, full resolved photo gallery — what the edit flow and the admin drawer both actually need, unlike getDetail()'s public LIVE-only projection. */
+  async getDetailForManage(id: string): Promise<Listing> {
+    const listing = await this.findByIdOrFail(id);
+    return this.withPhotoUrls(listing);
+  }
+
+  /** [Admin] Same as getDetailForManage(), plus the Rental Partner's name and category name the admin drawer's Overview tab shows. */
+  async getDetailForAdmin(id: string): Promise<Listing & { providerName: string | null; categoryName: string | null }> {
+    const listing = await this.getDetailForManage(id);
+    const [provider, category] = await Promise.all([
+      this.providerProfileService.getById(listing.providerId).catch(() => null),
+      this.categoriesService.getByIdOrFail(listing.categoryId).catch(() => null),
+    ]);
+    return Object.assign(listing, {
+      providerName: provider?.businessName ?? null,
+      categoryName: category?.name ?? null,
+    });
+  }
+
+  /**
+   * Resolves every photo's storageKey to a real URL, ordered so index 0 is
+   * always the cover photo — same Object.assign technique
+   * VerificationDocumentsService.listForProvider() uses, which keeps the
+   * Listing prototype intact rather than losing it to a `{...spread}`.
+   */
+  private async withPhotoUrls(listing: Listing): Promise<Listing> {
+    const photos = await this.photoRepository.findByListing(listing.id);
+    const resolved = await Promise.all(
+      photos.map(async (photo) => Object.assign(photo, { url: await this.storage.getUrl(photo.storageKey) })),
+    );
+    return Object.assign(listing, { photos: resolved });
+  }
+
+  /** [List rows] Only the cover (position 0) photo's URL, not the whole gallery — avoids N-photos-per-row resolution on a list page. */
+  private async withCoverPhotoUrl(listing: Listing): Promise<Listing> {
+    const cover = listing.photos?.[0];
+    if (!cover) return Object.assign(listing, { coverPhotoUrl: null });
+    const coverPhotoUrl = await this.storage.getUrl(cover.storageKey);
+    return Object.assign(listing, { coverPhotoUrl, photos: undefined });
+  }
+
+  private async withCoverPhotos(page: CursorPage<Listing>): Promise<CursorPage<Listing>> {
+    const data = await Promise.all(page.data.map((listing) => this.withCoverPhotoUrl(listing)));
+    return { ...page, data };
   }
 
   async search(dto: QueryListingsDto): Promise<CursorPage<Listing>> {
-    return this.listingRepository.search(dto, LIVE_STATUSES);
+    return this.withCoverPhotos(await this.listingRepository.search(dto, LIVE_STATUSES));
   }
 
   /** A provider's own listings, any status — GET /listings?providerId=me. */
   async searchOwn(dto: QueryListingsDto): Promise<CursorPage<Listing>> {
-    return this.listingRepository.search(dto, ALL_STATUSES);
+    return this.withCoverPhotos(await this.listingRepository.search(dto, ALL_STATUSES));
   }
 
   /**
@@ -122,7 +177,7 @@ export class ListingsService {
    */
   async searchForAdmin(dto: QueryListingsDto & { status?: ListingStatus }): Promise<CursorPage<Listing>> {
     const statuses = dto.status ? [dto.status] : ALL_STATUSES;
-    return this.listingRepository.search(dto, statuses);
+    return this.withCoverPhotos(await this.listingRepository.search(dto, statuses));
   }
 
   /** [Admin] Every listing awaiting moderation, across all providers — GET /admin/listings/moderation-queue. */
@@ -191,30 +246,44 @@ export class ListingsService {
     });
   }
 
-  /** DRAFT/REJECTED submit for moderation; PAUSED reactivates directly (already approved once). */
+  /** DRAFT/REJECTED/CHANGES_REQUESTED submit (or resubmit) for moderation; PAUSED reactivates directly (already approved once). */
   async publish(id: string): Promise<Listing> {
     const listing = await this.findByIdOrFail(id);
     const photoCount = await this.photoRepository.countByListing(id);
     if (photoCount < MIN_LISTING_PHOTOS) {
       throw DomainException.unprocessable(
         ErrorCode.LISTING_PHOTO_REQUIRED,
-        'Add at least one photo before publishing this listing.',
+        'Please upload at least one image of your item before submitting your listing.',
       );
     }
+    let enteringReview = false;
     if (listing.status === ListingStatus.PAUSED) {
       listing.status = ListingStatus.LIVE;
     } else if (
       listing.status === ListingStatus.DRAFT ||
-      listing.status === ListingStatus.REJECTED
+      listing.status === ListingStatus.REJECTED ||
+      listing.status === ListingStatus.CHANGES_REQUESTED
     ) {
       listing.status = ListingStatus.PENDING_REVIEW;
+      enteringReview = true;
     } else {
       throw DomainException.conflict(
         ErrorCode.BOOKING_INVALID_STATE_TRANSITION,
         `Cannot publish a listing in "${listing.status}" status.`,
       );
     }
-    return this.listingRepository.save(listing);
+    const saved = await this.listingRepository.save(listing);
+    if (enteringReview) {
+      const providerUserId = await this.providerProfileService.getById(saved.providerId).then((p) => p.userId).catch(() => null);
+      if (providerUserId) {
+        this.eventEmitter.emit(DomainEvents.ListingSubmitted, {
+          recipientId: providerUserId,
+          listingId: saved.id,
+          listingTitle: saved.title,
+        });
+      }
+    }
+    return saved;
   }
 
   async pause(id: string): Promise<Listing> {
@@ -255,10 +324,11 @@ export class ListingsService {
     return saved;
   }
 
-  async reject(id: string, adminId: string): Promise<Listing> {
+  async reject(id: string, adminId: string, reason: string): Promise<Listing> {
     const listing = await this.findByIdOrFail(id);
     const before = { status: listing.status };
     listing.status = ListingStatus.REJECTED;
+    listing.rejectionReason = reason;
     const saved = await this.listingRepository.save(listing);
     await this.auditLogService.record({
       actorId: adminId,
@@ -267,7 +337,7 @@ export class ListingsService {
       entityType: 'Listing',
       entityId: id,
       before,
-      after: { status: saved.status },
+      after: { status: saved.status, reason },
     });
     const providerUserId = await this.providerProfileService.getById(saved.providerId).then((p) => p.userId).catch(() => null);
     if (providerUserId) {
@@ -275,6 +345,98 @@ export class ListingsService {
         recipientId: providerUserId,
         listingId: saved.id,
         listingTitle: saved.title,
+        reason,
+      });
+    }
+    return saved;
+  }
+
+  /** [Admin] The PENDING_REVIEW gate's "not quite, but fixable" outcome — distinct from flagListing() below, which never changes status. */
+  async requestChanges(id: string, adminId: string, reason: string): Promise<Listing> {
+    const listing = await this.findByIdOrFail(id);
+    if (listing.status !== ListingStatus.PENDING_REVIEW) {
+      throw DomainException.conflict(
+        ErrorCode.BOOKING_INVALID_STATE_TRANSITION,
+        `Only listings pending review can have changes requested (current status: "${listing.status}").`,
+      );
+    }
+    const before = { status: listing.status };
+    listing.status = ListingStatus.CHANGES_REQUESTED;
+    listing.changesRequestedReason = reason;
+    const saved = await this.listingRepository.save(listing);
+    await this.auditLogService.record({
+      actorId: adminId,
+      actorType: AuditActorType.ADMIN,
+      action: 'listing.request_changes',
+      entityType: 'Listing',
+      entityId: id,
+      before,
+      after: { status: saved.status, reason },
+    });
+    const providerUserId = await this.providerProfileService.getById(saved.providerId).then((p) => p.userId).catch(() => null);
+    if (providerUserId) {
+      this.eventEmitter.emit(DomainEvents.ListingChangesRequested, {
+        recipientId: providerUserId,
+        listingId: saved.id,
+        listingTitle: saved.title,
+        reason,
+      });
+    }
+    return saved;
+  }
+
+  /** [Admin] A standalone, reason-required marker — unlike requestChanges(), this never touches `status`, so a flagged LIVE listing stays bookable while the Rental Partner is made aware and fixes it. */
+  async flagListing(id: string, adminId: string, reason: string): Promise<Listing> {
+    const listing = await this.findByIdOrFail(id);
+    listing.flaggedAt = new Date();
+    listing.flagReason = reason;
+    const saved = await this.listingRepository.save(listing);
+    await this.auditLogService.record({
+      actorId: adminId,
+      actorType: AuditActorType.ADMIN,
+      action: 'listing.flag',
+      entityType: 'Listing',
+      entityId: id,
+      before: null,
+      after: { reason },
+    });
+    const providerUserId = await this.providerProfileService.getById(saved.providerId).then((p) => p.userId).catch(() => null);
+    if (providerUserId) {
+      this.eventEmitter.emit(DomainEvents.ListingFlagged, {
+        recipientId: providerUserId,
+        listingId: saved.id,
+        listingTitle: saved.title,
+        reason,
+        scope: 'listing',
+      });
+    }
+    return saved;
+  }
+
+  /** [Admin] Same marker as flagListing(), scoped to one photo. Clearing it is removePhoto() on that id — the Rental Partner's "replace it" path — not a separate unflag endpoint. */
+  async flagPhoto(listingId: string, photoId: string, adminId: string, reason: string): Promise<ListingPhoto> {
+    const listing = await this.findByIdOrFail(listingId);
+    const photo = await this.photoRepository.findByIdOrFail(photoId, 'Photo');
+    photo.flaggedAt = new Date();
+    photo.flagReason = reason;
+    const saved = await this.photoRepository.save(photo);
+    await this.auditLogService.record({
+      actorId: adminId,
+      actorType: AuditActorType.ADMIN,
+      action: 'listing_photo.flag',
+      entityType: 'ListingPhoto',
+      entityId: photoId,
+      before: null,
+      after: { reason },
+    });
+    const providerUserId = await this.providerProfileService.getById(listing.providerId).then((p) => p.userId).catch(() => null);
+    if (providerUserId) {
+      this.eventEmitter.emit(DomainEvents.ListingFlagged, {
+        recipientId: providerUserId,
+        listingId: listing.id,
+        listingTitle: listing.title,
+        reason,
+        scope: 'image',
       });
     }
     return saved;
@@ -305,7 +467,7 @@ export class ListingsService {
     return this.listingRepository.save(copy);
   }
 
-  async addPhoto(listingId: string, storageKey: string): Promise<void> {
+  async addPhoto(listingId: string, storageKey: string): Promise<ListingPhoto> {
     const position = await this.photoRepository.countByListing(listingId);
     if (position >= MAX_LISTING_PHOTOS) {
       throw DomainException.unprocessable(
@@ -314,11 +476,47 @@ export class ListingsService {
       );
     }
     const photo = this.photoRepository.create({ listingId, storageKey, position });
-    await this.photoRepository.save(photo);
+    return this.photoRepository.save(photo);
   }
 
   async getPhotos(listingId: string) {
     return this.photoRepository.findByListing(listingId);
+  }
+
+  /**
+   * Hard delete — a photo is a raw file reference, not an auditable business
+   * record (consistent with addPhoto() having no soft-delete concept
+   * either). Also the Rental Partner's "replace it" path for a flagged
+   * photo: deleting it clears the flag along with the row, no separate
+   * unflag endpoint needed. Re-sequences the remaining photos' `position`
+   * values to stay contiguous from 0, so the cover (position 0) is never a
+   * gap left by whatever was just removed.
+   */
+  async removePhoto(listingId: string, photoId: string): Promise<void> {
+    const photo = await this.photoRepository.findByIdOrFail(photoId, 'Photo');
+    if (photo.listingId !== listingId) {
+      throw DomainException.notFound(ErrorCode.RESOURCE_NOT_FOUND, 'Photo not found on this listing.');
+    }
+    await this.storage.delete(photo.storageKey).catch(() => undefined);
+    await this.photoRepository.remove(photoId);
+    const remaining = await this.photoRepository.findByListing(listingId);
+    await Promise.all(remaining.map((p, index) => (p.position === index ? null : this.photoRepository.save(Object.assign(p, { position: index })))));
+  }
+
+  /** Rewrites `position` to match the submitted order — dragging a photo to the front *is* making it the cover (position 0). */
+  async reorderPhotos(listingId: string, orderedPhotoIds: string[]): Promise<ListingPhoto[]> {
+    const existing = await this.photoRepository.findByListing(listingId);
+    const existingIds = new Set(existing.map((p) => p.id));
+    const submittedIds = new Set(orderedPhotoIds);
+    const matches = existingIds.size === submittedIds.size && [...existingIds].every((id) => submittedIds.has(id));
+    if (!matches) {
+      throw DomainException.unprocessable(
+        ErrorCode.VALIDATION_FAILED,
+        'The submitted photo order must include exactly this listing\'s existing photos, no more and no fewer.',
+      );
+    }
+    const byId = new Map(existing.map((p) => [p.id, p]));
+    return Promise.all(orderedPhotoIds.map((id, index) => this.photoRepository.save(Object.assign(byId.get(id)!, { position: index }))));
   }
 
   /**

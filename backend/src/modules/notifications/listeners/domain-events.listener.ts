@@ -4,6 +4,7 @@ import { UsersService } from '@modules/identity/services/users.service';
 import {
   BookingLifecycleEventPayload,
   DomainEvents,
+  ListingFlaggedEventPayload,
   ListingModerationEventPayload,
   ProviderRejectedEventPayload,
   ProviderVerificationEventPayload,
@@ -167,7 +168,32 @@ export class DomainEventsListener {
   async onListingRejected(payload: ListingModerationEventPayload) {
     await this.deliver(payload.recipientId, NotificationType.LISTING_REJECTED, payload, {
       subject: `Listing rejected — ${payload.listingTitle}`,
-      body: `Your listing "${payload.listingTitle}" was not approved. Log in to Rently to review and resubmit it.`,
+      body: `Your listing "${payload.listingTitle}" was not approved.${this.reasonSuffix(payload.reason)} Log in to Rently to review and resubmit it.`,
+    });
+  }
+
+  @OnEvent(DomainEvents.ListingSubmitted)
+  async onListingSubmitted(payload: ListingModerationEventPayload) {
+    await this.deliver(payload.recipientId, NotificationType.LISTING_SUBMITTED, payload, {
+      subject: `Listing submitted for review — ${payload.listingTitle}`,
+      body: `Your listing "${payload.listingTitle}" has been submitted and is awaiting review. We'll let you know as soon as it's decided.`,
+    });
+  }
+
+  @OnEvent(DomainEvents.ListingChangesRequested)
+  async onListingChangesRequested(payload: ListingModerationEventPayload) {
+    await this.deliver(payload.recipientId, NotificationType.LISTING_CHANGES_REQUESTED, payload, {
+      subject: `Changes requested — ${payload.listingTitle}`,
+      body: `Your listing "${payload.listingTitle}" needs a few changes before it can go live.${this.reasonSuffix(payload.reason)} Log in to Rently to update and resubmit it.`,
+    });
+  }
+
+  @OnEvent(DomainEvents.ListingFlagged)
+  async onListingFlagged(payload: ListingFlaggedEventPayload) {
+    const what = payload.scope === 'image' ? 'A photo on your listing' : 'Your listing';
+    await this.deliver(payload.recipientId, NotificationType.LISTING_FLAGGED, payload, {
+      subject: `${payload.scope === 'image' ? 'Photo' : 'Listing'} flagged — ${payload.listingTitle}`,
+      body: `${what} "${payload.listingTitle}" was flagged by an admin.${this.reasonSuffix(payload.reason)} Log in to Rently to review and fix it.`,
     });
   }
 

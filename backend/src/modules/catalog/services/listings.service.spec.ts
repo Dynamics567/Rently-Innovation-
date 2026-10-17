@@ -11,12 +11,13 @@ import { ListingCondition, ListingStatus, PriceUnit } from '../enums/listing.enu
 describe('ListingsService', () => {
   let service: ListingsService;
   let listingRepository: Record<'create' | 'save' | 'findByIdOrFail' | 'getPriceDistribution', jest.Mock>;
-  let photoRepository: Record<'countByListing' | 'create' | 'save', jest.Mock>;
+  let photoRepository: Record<'countByListing' | 'create' | 'save' | 'findByListing' | 'findByIdOrFail' | 'remove', jest.Mock>;
   let categoriesService: Record<'getByIdOrFail' | 'assertActive', jest.Mock>;
   let attributeValidator: Record<'validate', jest.Mock>;
   let auditLogService: Record<'record', jest.Mock>;
   let eventEmitter: Record<'emit', jest.Mock>;
   let providerProfileService: Record<'getById', jest.Mock>;
+  let storage: Record<'getUrl' | 'upload' | 'delete', jest.Mock>;
 
   const activeCategory = {
     id: 'cat-1',
@@ -29,7 +30,7 @@ describe('ListingsService', () => {
   beforeEach(() => {
     listingRepository = {
       create: jest.fn((partial) => partial),
-      save: jest.fn(async (entity) => ({ ...entity, id: 'listing-1' })),
+      save: jest.fn(async (entity) => ({ id: 'listing-1', ...entity })),
       findByIdOrFail: jest.fn(),
       getPriceDistribution: jest.fn(async () => [{ bucket: 'Under ₦10k', count: 5 }]),
     };
@@ -37,6 +38,9 @@ describe('ListingsService', () => {
       countByListing: jest.fn(async () => 0),
       create: jest.fn((p) => p),
       save: jest.fn(async (p) => p),
+      findByListing: jest.fn(async () => []),
+      findByIdOrFail: jest.fn(),
+      remove: jest.fn(async () => undefined),
     };
     categoriesService = {
       getByIdOrFail: jest.fn(async () => activeCategory),
@@ -46,6 +50,11 @@ describe('ListingsService', () => {
     auditLogService = { record: jest.fn(async () => undefined) };
     eventEmitter = { emit: jest.fn() };
     providerProfileService = { getById: jest.fn(async () => ({ userId: 'provider-user-1' })) };
+    storage = {
+      getUrl: jest.fn(async (key: string) => `https://signed.example.com/${key}`),
+      upload: jest.fn(async () => undefined),
+      delete: jest.fn(async () => undefined),
+    };
 
     service = new ListingsService(
       listingRepository as unknown as ListingRepository,
@@ -55,6 +64,7 @@ describe('ListingsService', () => {
       auditLogService as unknown as AuditLogService,
       eventEmitter as unknown as EventEmitter2,
       providerProfileService as unknown as ProviderProfileService,
+      storage as unknown as any,
     );
   });
 
@@ -172,6 +182,169 @@ describe('ListingsService', () => {
 
       expect(quote.depositMinor).toBe(0);
       expect(quote.totalMinor).toBe(10000);
+    });
+  });
+
+  describe('publish', () => {
+    it('rejects with the brief\'s exact copy when the listing has no photos', async () => {
+      listingRepository.findByIdOrFail.mockResolvedValue({ id: 'l1', status: ListingStatus.DRAFT });
+      photoRepository.countByListing.mockResolvedValue(0);
+
+      await expect(service.publish('l1')).rejects.toMatchObject({
+        code: 'LISTING_PHOTO_REQUIRED',
+        message: 'Please upload at least one image of your item before submitting your listing.',
+      });
+    });
+
+    it('accepts resubmission from CHANGES_REQUESTED and notifies the Rental Partner of submission', async () => {
+      listingRepository.findByIdOrFail.mockResolvedValue({
+        id: 'l1',
+        providerId: 'provider-1',
+        title: 'Generator',
+        status: ListingStatus.CHANGES_REQUESTED,
+      });
+      photoRepository.countByListing.mockResolvedValue(1);
+
+      const result: any = await service.publish('l1');
+
+      expect(result.status).toBe(ListingStatus.PENDING_REVIEW);
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'listing.submitted',
+        expect.objectContaining({ recipientId: 'provider-user-1', listingId: 'l1' }),
+      );
+    });
+
+    it('does not emit a submission notification when just reinstating from PAUSED', async () => {
+      listingRepository.findByIdOrFail.mockResolvedValue({ id: 'l1', status: ListingStatus.PAUSED });
+      photoRepository.countByListing.mockResolvedValue(1);
+
+      await service.publish('l1');
+
+      expect(eventEmitter.emit).not.toHaveBeenCalledWith('listing.submitted', expect.anything());
+    });
+  });
+
+  describe('reject', () => {
+    it('persists the reason and includes it in both the audit log and the notification', async () => {
+      listingRepository.findByIdOrFail.mockResolvedValue({ id: 'l1', providerId: 'provider-1', title: 'Generator', status: ListingStatus.PENDING_REVIEW });
+
+      const result: any = await service.reject('l1', 'admin-1', 'Photos are too blurry to review.');
+
+      expect(result.status).toBe(ListingStatus.REJECTED);
+      expect(result.rejectionReason).toBe('Photos are too blurry to review.');
+      expect(auditLogService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'listing.reject', after: expect.objectContaining({ reason: 'Photos are too blurry to review.' }) }),
+      );
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'listing.rejected',
+        expect.objectContaining({ reason: 'Photos are too blurry to review.' }),
+      );
+    });
+  });
+
+  describe('requestChanges', () => {
+    it('rejects a listing that is not pending review', async () => {
+      listingRepository.findByIdOrFail.mockResolvedValue({ id: 'l1', status: ListingStatus.DRAFT });
+
+      await expect(service.requestChanges('l1', 'admin-1', 'Please add more photos.')).rejects.toMatchObject({
+        code: 'BOOKING_INVALID_STATE_TRANSITION',
+      });
+    });
+
+    it('moves a pending listing to CHANGES_REQUESTED with the reason persisted and notified', async () => {
+      listingRepository.findByIdOrFail.mockResolvedValue({
+        id: 'l1',
+        providerId: 'provider-1',
+        title: 'Generator',
+        status: ListingStatus.PENDING_REVIEW,
+      });
+
+      const result: any = await service.requestChanges('l1', 'admin-1', 'Please add more photos.');
+
+      expect(result.status).toBe(ListingStatus.CHANGES_REQUESTED);
+      expect(result.changesRequestedReason).toBe('Please add more photos.');
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'listing.changes_requested',
+        expect.objectContaining({ reason: 'Please add more photos.' }),
+      );
+    });
+  });
+
+  describe('flagListing / flagPhoto', () => {
+    it('flagListing sets flaggedAt/flagReason without touching status', async () => {
+      listingRepository.findByIdOrFail.mockResolvedValue({
+        id: 'l1',
+        providerId: 'provider-1',
+        title: 'Generator',
+        status: ListingStatus.LIVE,
+      });
+
+      const result: any = await service.flagListing('l1', 'admin-1', 'Possibly misleading photos.');
+
+      expect(result.status).toBe(ListingStatus.LIVE);
+      expect(result.flagReason).toBe('Possibly misleading photos.');
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'listing.flagged',
+        expect.objectContaining({ scope: 'listing', reason: 'Possibly misleading photos.' }),
+      );
+    });
+
+    it('flagPhoto flags one photo and notifies with scope "image"', async () => {
+      listingRepository.findByIdOrFail.mockResolvedValue({ id: 'l1', providerId: 'provider-1', title: 'Generator' });
+      photoRepository.findByIdOrFail.mockResolvedValue({ id: 'photo-1', listingId: 'l1' });
+
+      const result: any = await service.flagPhoto('l1', 'photo-1', 'admin-1', 'Unrelated image.');
+
+      expect(result.flagReason).toBe('Unrelated image.');
+      expect(eventEmitter.emit).toHaveBeenCalledWith(
+        'listing.flagged',
+        expect.objectContaining({ scope: 'image', reason: 'Unrelated image.' }),
+      );
+    });
+  });
+
+  describe('removePhoto', () => {
+    it('deletes the storage object and re-sequences the remaining photos contiguously from 0', async () => {
+      photoRepository.findByIdOrFail.mockResolvedValue({ id: 'photo-2', listingId: 'l1', storageKey: 'listings/l1/photo-2' });
+      photoRepository.findByListing.mockResolvedValue([
+        { id: 'photo-1', position: 0 },
+        { id: 'photo-3', position: 2 }, // was position 2 before photo-2 (position 1) was removed — needs resequencing to 1
+      ]);
+
+      await service.removePhoto('l1', 'photo-2');
+
+      expect(storage.delete).toHaveBeenCalledWith('listings/l1/photo-2');
+      expect(photoRepository.remove).toHaveBeenCalledWith('photo-2');
+      expect(photoRepository.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'photo-3', position: 1 }));
+      expect(photoRepository.save).not.toHaveBeenCalledWith(expect.objectContaining({ id: 'photo-1' })); // already at the correct position — not rewritten
+    });
+
+    it('rejects a photo id that does not belong to this listing', async () => {
+      photoRepository.findByIdOrFail.mockResolvedValue({ id: 'photo-2', listingId: 'some-other-listing' });
+
+      await expect(service.removePhoto('l1', 'photo-2')).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
+    });
+  });
+
+  describe('reorderPhotos', () => {
+    it('rewrites position to match the submitted order', async () => {
+      photoRepository.findByListing.mockResolvedValue([
+        { id: 'photo-1', position: 0 },
+        { id: 'photo-2', position: 1 },
+      ]);
+
+      const result = await service.reorderPhotos('l1', ['photo-2', 'photo-1']);
+
+      expect(result.find((p) => p.id === 'photo-2')!.position).toBe(0);
+      expect(result.find((p) => p.id === 'photo-1')!.position).toBe(1);
+    });
+
+    it('rejects a submitted order that does not exactly match the listing\'s existing photos', async () => {
+      photoRepository.findByListing.mockResolvedValue([{ id: 'photo-1', position: 0 }]);
+
+      await expect(service.reorderPhotos('l1', ['photo-1', 'photo-nonexistent'])).rejects.toMatchObject({
+        code: 'VALIDATION_FAILED',
+      });
     });
   });
 });

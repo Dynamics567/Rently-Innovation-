@@ -104,6 +104,20 @@ export class Listing extends BaseEntity {
   @Column({ type: 'enum', enum: ListingStatus, default: ListingStatus.DRAFT })
   status: ListingStatus;
 
+  @Column({ name: 'rejection_reason', type: 'text', nullable: true })
+  rejectionReason?: string | null;
+
+  @Column({ name: 'changes_requested_reason', type: 'text', nullable: true })
+  changesRequestedReason?: string | null;
+
+  // Independent of `status` — a flagged listing can still be LIVE while an
+  // admin's concern is visible to the Rental Partner; see ListingsService.flagListing().
+  @Column({ name: 'flagged_at', type: 'timestamptz', nullable: true })
+  flaggedAt?: Date | null;
+
+  @Column({ name: 'flag_reason', type: 'text', nullable: true })
+  flagReason?: string | null;
+
   // Denormalized, recalculated by the Trust & Safety module on review write —
   // see docs/DATABASE_SCHEMA.md.
   @Column({ name: 'avg_rating', type: 'numeric', precision: 2, scale: 1, default: 0 })

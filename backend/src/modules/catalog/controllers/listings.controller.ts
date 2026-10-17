@@ -1,12 +1,14 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Inject,
   Param,
   Patch,
   Post,
   Query,
+  UnsupportedMediaTypeException,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -31,7 +33,10 @@ import { CreateAvailabilityBlockDto } from '../dto/create-availability-block.dto
 import { CreateAssetDto } from '../dto/create-asset.dto';
 import { UpdateAssetDto } from '../dto/update-asset.dto';
 import { DateRangeQueryDto } from '../dto/date-range-query.dto';
+import { ReorderPhotosDto } from '../dto/reorder-photos.dto';
 import { IsListingOwnerPolicy } from '../policies/is-listing-owner.policy';
+
+const ALLOWED_PHOTO_MIMETYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 @ApiTags('listings')
 @Controller('listings')
@@ -57,15 +62,30 @@ export class ListingsController {
     return this.listingsService.searchOwn({ ...query, providerId: profile.id });
   }
 
+  /** The frontend's single source of truth for the min/max photo count and max file size it enforces client-side — registered before :id so "config" is never swallowed as an id. */
+  @Public()
+  @Get('config')
+  listingConfig() {
+    return this.listingsService.getPhotoLimits();
+  }
+
   // Public and LIVE-only, deliberately with no "owner can preview their own
   // draft" exception: @Public() routes never run the JWT strategy (see
   // JwtAuthGuard), so request.user is never populated here regardless of
   // whether a token was sent — there's no reliable way to know who's asking.
-  // A provider previewing their own non-live listing uses GET /listings/mine.
+  // A provider previewing their own non-live listing uses GET /listings/:id/manage.
   @Public()
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return this.listingsService.getDetail(id);
+  }
+
+  /** [Owner or admin] Every status, full photo gallery — what the edit flow actually needs, unlike findOne()'s public LIVE-only projection. */
+  @CheckPolicies(IsListingOwnerPolicy)
+  @ApiBearerAuth()
+  @Get(':id/manage')
+  async findOneForManage(@Param('id') id: string) {
+    return this.listingsService.getDetailForManage(id);
   }
 
   @Roles(UserRole.PROVIDER)
@@ -107,13 +127,41 @@ export class ListingsController {
   @CheckPolicies(IsListingOwnerPolicy)
   @ApiBearerAuth()
   @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 8 * 1024 * 1024 },
+      fileFilter: (_req, file, callback) => {
+        callback(null, ALLOWED_PHOTO_MIMETYPES.includes(file.mimetype));
+      },
+    }),
+  )
   @Post(':id/photos')
   async uploadPhoto(@Param('id') id: string, @UploadedFile() file: Express.Multer.File) {
+    // multer's fileFilter rejecting a file just omits it from the request
+    // rather than throwing — surface that as a real 415, not a confusing
+    // "no file" error from @UploadedFile() further down.
+    if (!file) {
+      throw new UnsupportedMediaTypeException('Photos must be JPEG, PNG, or WebP, 8MB or smaller.');
+    }
     const key = `listings/${id}/${randomUUID()}`;
     await this.storage.upload({ key, body: file.buffer, contentType: file.mimetype });
-    await this.listingsService.addPhoto(id, key);
-    return { key, url: await this.storage.getUrl(key) };
+    const photo = await this.listingsService.addPhoto(id, key);
+    return { id: photo.id, position: photo.position, key, url: await this.storage.getUrl(key) };
+  }
+
+  @CheckPolicies(IsListingOwnerPolicy)
+  @ApiBearerAuth()
+  @Delete(':id/photos/:photoId')
+  async removePhoto(@Param('id') id: string, @Param('photoId') photoId: string) {
+    await this.listingsService.removePhoto(id, photoId);
+    return { removed: true };
+  }
+
+  @CheckPolicies(IsListingOwnerPolicy)
+  @ApiBearerAuth()
+  @Post(':id/photos/reorder')
+  async reorderPhotos(@Param('id') id: string, @Body() dto: ReorderPhotosDto) {
+    return this.listingsService.reorderPhotos(id, dto.photoIds);
   }
 
   @Public()

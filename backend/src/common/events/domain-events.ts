@@ -26,6 +26,9 @@ export const DomainEvents = {
   ProviderRejected: 'provider.rejected',
   ListingApproved: 'listing.approved',
   ListingRejected: 'listing.rejected',
+  ListingSubmitted: 'listing.submitted',
+  ListingChangesRequested: 'listing.changes_requested',
+  ListingFlagged: 'listing.flagged',
   VerificationDocumentReviewed: 'verification_document.reviewed',
 } as const;
 
@@ -52,6 +55,16 @@ export interface ListingModerationEventPayload {
   recipientId: string;
   listingId: string;
   listingTitle: string;
+  reason?: string | null;
+}
+
+export interface ListingFlaggedEventPayload {
+  recipientId: string;
+  listingId: string;
+  listingTitle: string;
+  reason: string;
+  /** Which thing was actually flagged — the whole listing, or one of its photos. */
+  scope: 'listing' | 'image';
 }
 
 export interface VerificationDocumentReviewedEventPayload {

@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { ApiBearerAuth, ApiProperty, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
+import { IsOptional, IsString, MinLength } from 'class-validator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { RequirePermission } from '@common/decorators/require-permission.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
@@ -14,6 +14,13 @@ class PauseListingDto {
   @IsOptional()
   @IsString()
   reason?: string;
+}
+
+class ListingReasonDto {
+  @ApiProperty()
+  @IsString()
+  @MinLength(5)
+  reason: string;
 }
 
 /**
@@ -51,7 +58,7 @@ export class AdminListingsController {
 
   @Get(':id')
   async findOne(@Param('id') id: string) {
-    return this.listingsService.findByIdOrFail(id);
+    return this.listingsService.getDetailForAdmin(id);
   }
 
   @RequirePermission('listings.moderate')
@@ -78,8 +85,33 @@ export class AdminListingsController {
 
   @RequirePermission('listings.moderate')
   @Post(':id/reject')
-  async reject(@Param('id') id: string, @CurrentUser() admin: AuthenticatedUser) {
-    return this.listingsService.reject(id, admin.id);
+  async reject(@Param('id') id: string, @Body() dto: ListingReasonDto, @CurrentUser() admin: AuthenticatedUser) {
+    return this.listingsService.reject(id, admin.id, dto.reason);
+  }
+
+  /** [PENDING_REVIEW only] "Not quite, but fixable" — distinct from flag() below, which never changes status. */
+  @RequirePermission('listings.moderate')
+  @Post(':id/request-changes')
+  async requestChanges(@Param('id') id: string, @Body() dto: ListingReasonDto, @CurrentUser() admin: AuthenticatedUser) {
+    return this.listingsService.requestChanges(id, admin.id, dto.reason);
+  }
+
+  /** A standalone marker, valid regardless of status — flagging an already-LIVE listing doesn't pull it offline. */
+  @RequirePermission('listings.moderate')
+  @Post(':id/flag')
+  async flag(@Param('id') id: string, @Body() dto: ListingReasonDto, @CurrentUser() admin: AuthenticatedUser) {
+    return this.listingsService.flagListing(id, admin.id, dto.reason);
+  }
+
+  @RequirePermission('listings.moderate')
+  @Post(':id/photos/:photoId/flag')
+  async flagPhoto(
+    @Param('id') id: string,
+    @Param('photoId') photoId: string,
+    @Body() dto: ListingReasonDto,
+    @CurrentUser() admin: AuthenticatedUser,
+  ) {
+    return this.listingsService.flagPhoto(id, photoId, admin.id, dto.reason);
   }
 
   /** Soft-deletes a listing (e.g. test/junk data cleanup) — reversible via deleted_at, audit-logged. */
