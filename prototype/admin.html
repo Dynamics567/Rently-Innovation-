@@ -156,6 +156,22 @@ h1,h2,h3{font-family:var(--sans);}
 .drawer-tabs button{padding:9px 12px;font-size:12.5px;font-weight:600;color:var(--op-text-faint);border-bottom:2px solid transparent;white-space:nowrap;}
 .drawer-tabs button.on{color:var(--op-text);border-bottom-color:var(--blue);}
 .drawer-body{flex:1;overflow-y:auto;padding:20px 24px 40px;}
+.photo-card-grid{display:flex;gap:10px;flex-wrap:wrap;}
+.photo-card{width:100px;}
+.photo-card .thumb-wrap{width:100px;height:100px;border-radius:10px;overflow:hidden;border:1px solid var(--op-border-strong);position:relative;background:var(--op-bg);}
+.photo-card .thumb-wrap.clickable{cursor:pointer;}
+.photo-card .thumb-wrap img{width:100%;height:100%;object-fit:cover;display:block;}
+.photo-card .cover-badge{position:absolute;top:4px;left:4px;background:var(--blue);color:#fff;font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:2px 6px;border-radius:5px;}
+.photo-card .flag-badge{position:absolute;bottom:0;left:0;right:0;background:var(--red);color:#fff;font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:2px 4px;text-align:center;}
+.photo-card.flagged .thumb-wrap{outline:2px solid var(--red);}
+.lightbox-overlay{position:fixed;inset:0;background:rgba(10,12,18,.9);z-index:400;display:none;align-items:center;justify-content:center;padding:24px;}
+.lightbox-overlay.open{display:flex;}
+.lightbox-overlay img{max-width:min(900px,90vw);max-height:80vh;border-radius:8px;object-fit:contain;}
+.lightbox-nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;display:flex;align-items:center;justify-content:center;}
+.lightbox-nav:hover{background:rgba(255,255,255,.22);}
+.lightbox-prev{left:24px;}
+.lightbox-next{right:24px;}
+.lightbox-close{position:absolute;top:24px;right:24px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;display:flex;align-items:center;justify-content:center;}
 .dkv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--op-border);font-size:13px;}
 .dkv:last-child{border-bottom:none;}
 .dkv .k{color:var(--op-text-faint);}
@@ -490,6 +506,14 @@ h1,h2,h3{font-family:var(--sans);}
   </div>
 </div>
 
+<!-- ============ PHOTO LIGHTBOX ============ -->
+<div class="lightbox-overlay" id="lightboxOverlay">
+  <button class="lightbox-nav lightbox-prev" id="lightboxPrev"></button>
+  <img id="lightboxImg" src="" alt="" />
+  <button class="lightbox-nav lightbox-next" id="lightboxNext"></button>
+  <button class="lightbox-close" id="lightboxClose"></button>
+</div>
+
 <!-- ============ ADMIN SIGN-IN (not dismissible — this page has no content to see behind it until a real admin session exists) ============ -->
 <div class="overlay" id="adminLoginOverlay">
   <div class="modal" style="max-width:380px;">
@@ -570,6 +594,9 @@ document.getElementById('mLinkVerification').innerHTML = icon('shield',{size:15}
 document.getElementById('mLinkReviews').innerHTML = icon('star',{size:15})+' Reviews';
 document.getElementById('mLinkAudit').innerHTML = icon('filter',{size:15})+' Audit';
 document.getElementById('drawerCloseBtn').innerHTML = icon('close',{size:15});
+document.getElementById('lightboxClose').innerHTML = icon('close',{size:16});
+document.getElementById('lightboxPrev').innerHTML = icon('chevronLeft',{size:20});
+document.getElementById('lightboxNext').innerHTML = icon('chevronRight',{size:20});
 document.getElementById('catCloseBtn').innerHTML = icon('close',{size:15});
 
 function goView(v){
@@ -620,6 +647,7 @@ function stateEmpty(message){
    supplies only the tabs that make sense for it.
    ================================================================ */
 let drawerTabs=[], drawerActiveTab=null;
+let currentDrawerListingPhotos=[]; // read by the delegated #drawerBody listener's data-lightbox-open branch — see openListingDrawer()
 function openDrawer(title, sub, tabs){
   drawerTabs = tabs;
   document.getElementById('drawerTitle').textContent = title;
@@ -648,6 +676,30 @@ document.getElementById('drawerOverlay').addEventListener('click',closeDrawer);
 
 function dkv(k,v){ return `<div class="dkv"><span class="k">${k}</span><span class="v">${v}</span></div>`; }
 
+/* ---- photo lightbox — shared by any drawer tab that renders a photo grid ---- */
+let lightboxPhotos=[], lightboxIndex=0;
+function renderLightbox(){
+  document.getElementById('lightboxImg').src = lightboxPhotos[lightboxIndex]?.url || '';
+  document.getElementById('lightboxPrev').style.visibility = lightboxIndex>0 ? 'visible' : 'hidden';
+  document.getElementById('lightboxNext').style.visibility = lightboxIndex<lightboxPhotos.length-1 ? 'visible' : 'hidden';
+}
+function openPhotoLightbox(photos, startIndex){
+  lightboxPhotos = photos; lightboxIndex = startIndex;
+  renderLightbox();
+  document.getElementById('lightboxOverlay').classList.add('open');
+}
+function closePhotoLightbox(){ document.getElementById('lightboxOverlay').classList.remove('open'); }
+document.getElementById('lightboxClose').addEventListener('click', closePhotoLightbox);
+document.getElementById('lightboxOverlay').addEventListener('click',(e)=>{ if(e.target.id==='lightboxOverlay') closePhotoLightbox(); });
+document.getElementById('lightboxPrev').addEventListener('click',()=>{ if(lightboxIndex>0){ lightboxIndex--; renderLightbox(); } });
+document.getElementById('lightboxNext').addEventListener('click',()=>{ if(lightboxIndex<lightboxPhotos.length-1){ lightboxIndex++; renderLightbox(); } });
+document.addEventListener('keydown',(e)=>{
+  if(!document.getElementById('lightboxOverlay').classList.contains('open')) return;
+  if(e.key==='Escape') closePhotoLightbox();
+  if(e.key==='ArrowLeft' && lightboxIndex>0){ lightboxIndex--; renderLightbox(); }
+  if(e.key==='ArrowRight' && lightboxIndex<lightboxPhotos.length-1){ lightboxIndex++; renderLightbox(); }
+});
+
 /**
  * Single delegated listener for every action button any drawer tab ever
  * renders, attached once to the stable #drawerBody container rather than
@@ -662,6 +714,8 @@ function dkv(k,v){ return `<div class="dkv"><span class="k">${k}</span><span cla
  * it's clicked.
  */
 document.getElementById('drawerBody').addEventListener('click', async (e)=>{
+  const lightboxTrigger = e.target.closest('[data-lightbox-open]');
+  if(lightboxTrigger){ openPhotoLightbox(currentDrawerListingPhotos, +lightboxTrigger.dataset.lightboxOpen); return; }
   const btn = e.target.closest('[data-admin-action]');
   if(!btn || btn.disabled) return;
   const action = btn.dataset.adminAction;
@@ -671,8 +725,23 @@ document.getElementById('drawerBody').addEventListener('click', async (e)=>{
     if(action==='listing-approve'){
       await apiFetch(`/admin/listings/${id}/approve`,{method:'POST'}); closeDrawer(); loadListings(true);
     } else if(action==='listing-reject'){
-      if(!confirm('Reject this listing?')){ btn.disabled=false; return; }
-      await apiFetch(`/admin/listings/${id}/reject`,{method:'POST'}); closeDrawer(); loadListings(true);
+      const reason=prompt('Reason for rejecting this listing (shown to the Rental Partner):');
+      if(!reason||reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); btn.disabled=false; return; }
+      await apiFetch(`/admin/listings/${id}/reject`,{method:'POST',body:{reason:reason.trim()}}); closeDrawer(); loadListings(true);
+    } else if(action==='listing-request-changes'){
+      const reason=prompt('What needs to change before this can be approved? (shown to the Rental Partner):');
+      if(!reason||reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); btn.disabled=false; return; }
+      await apiFetch(`/admin/listings/${id}/request-changes`,{method:'POST',body:{reason:reason.trim()}}); closeDrawer(); loadListings(true);
+    } else if(action==='listing-flag'){
+      const reason=prompt('Why are you flagging this listing? (visible to the Rental Partner, does not change its status):');
+      if(!reason||reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); btn.disabled=false; return; }
+      await apiFetch(`/admin/listings/${id}/flag`,{method:'POST',body:{reason:reason.trim()}}); closeDrawer(); loadListings(true);
+    } else if(action==='listing-flag-photo'){
+      const photoId=btn.dataset.photoId;
+      const reason=prompt('Why are you flagging this photo? (visible to the Rental Partner, who can replace it):');
+      if(!reason||reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); btn.disabled=false; return; }
+      await apiFetch(`/admin/listings/${id}/photos/${photoId}/flag`,{method:'POST',body:{reason:reason.trim()}});
+      await openListingDrawer(id); await selectDrawerTab('photos');
     } else if(action==='listing-pause'){
       const reason=prompt('Reason for pausing this listing (optional):');
       await apiFetch(`/admin/listings/${id}/pause`,{method:'POST',body:{reason:reason||undefined}}); closeDrawer(); loadListings(true);
@@ -968,9 +1037,9 @@ async function openBookingDrawer(id){
    LISTINGS — search across every status; the old standalone
    moderation screen is now just the "Pending review" chip here.
    ================================================================ */
-const LISTING_STATUS_PILL={draft:'neutral',pending_review:'warn',live:'good',paused:'neutral',rejected:'bad'};
+const LISTING_STATUS_PILL={draft:'neutral',pending_review:'warn',live:'good',paused:'neutral',rejected:'bad',changes_requested:'warn'};
 let lstCursor=null, lstStatus='', lstRows=[];
-document.getElementById('lstStatusFilter').innerHTML = ['','draft','pending_review','live','paused','rejected'].map(s=>
+document.getElementById('lstStatusFilter').innerHTML = ['','draft','pending_review','live','paused','changes_requested','rejected'].map(s=>
   `<button data-s="${s}" class="${s===''?'on':''}">${s===''?'All':s.replace('_',' ')}</button>`).join('');
 document.querySelectorAll('#lstStatusFilter [data-s]').forEach(b=>b.addEventListener('click',()=>{
   lstStatus=b.dataset.s;
@@ -1034,8 +1103,9 @@ function wireListingsBulkBar(){
   };
   document.getElementById('lstBulkRejectBtn').onclick=async ()=>{
     const ids=selectedIds(); if(!ids.length) return;
-    if(!confirm(`Reject ${ids.length} listing${ids.length===1?'':'s'}?`)) return;
-    const results = await Promise.allSettled(ids.map(id=>apiFetch(`/admin/listings/${id}/reject`,{method:'POST'})));
+    const reason=prompt(`Reason for rejecting ${ids.length} listing${ids.length===1?'':'s'} (shown to each Rental Partner):`);
+    if(!reason||reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); return; }
+    const results = await Promise.allSettled(ids.map(id=>apiFetch(`/admin/listings/${id}/reject`,{method:'POST',body:{reason:reason.trim()}})));
     const failed=results.filter(r=>r.status==='rejected').length;
     if(failed) alert(`${failed} of ${ids.length} could not be rejected.`);
     loadListings(true);
@@ -1048,21 +1118,42 @@ async function openListingDrawer(id){
   if(!l){ alert('Could not load this listing.'); return; }
   const actions=[];
   if(l.status==='pending_review') actions.push(
+    `<button class="pill-btn ghost sm" data-admin-action="listing-request-changes" data-id="${id}">Request changes</button>`,
     `<button class="pill-btn ghost sm" data-admin-action="listing-reject" data-id="${id}">Reject</button>`,
     `<button class="pill-btn green sm" data-admin-action="listing-approve" data-id="${id}">Approve</button>`,
   );
   if(l.status==='live') actions.push(`<button class="pill-btn ghost sm" data-admin-action="listing-pause" data-id="${id}">Pause</button>`);
   if(l.status==='paused') actions.push(`<button class="pill-btn green sm" data-admin-action="listing-reinstate" data-id="${id}">Reinstate</button>`);
-  openDrawer(l.title, l.locationText, [
+  actions.push(`<button class="pill-btn ghost sm" data-admin-action="listing-flag" data-id="${id}">${l.flagReason?'Re-flag':'Flag'}</button>`);
+  openDrawer(l.title, [l.providerName, l.locationText].filter(Boolean).join(' · '), [
     { key:'overview', label:'Overview', render: async ()=> {
-      const html = dkv('Status', l.status.replace('_',' '))+dkv('Price', money(Math.round(l.priceMinor/100))+'/'+l.priceUnit)
+      const feedback = l.status==='changes_requested' ? dkv('Changes requested', l.changesRequestedReason||'—')
+        : l.status==='rejected' ? dkv('Rejection reason', l.rejectionReason||'—') : '';
+      const flagRow = l.flagReason ? dkv('Flagged', `<span class="pill-status bad">${l.flagReason}</span>`) : '';
+      const html = dkv('Status', l.status.replace('_',' '))+dkv('Rental Partner', l.providerName||'—')+dkv('Category', l.categoryName||'—')
+        +dkv('Price', money(Math.round(l.priceMinor/100))+'/'+l.priceUnit)
         +dkv('Deposit', l.depositMinor?money(Math.round(l.depositMinor/100)):'None')+dkv('Booking mode', l.bookingMode)
         +dkv('Quantity available', l.quantityAvailable)+dkv('Submitted', new Date(l.createdAt).toLocaleDateString())
-        + (actions.length ? `<div style="display:flex;gap:8px;margin-top:18px;">${actions.join('')}</div>` : '');
+        + feedback + flagRow
+        + (actions.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;">${actions.join('')}</div>` : '');
       return html;
+    }},
+    { key:'photos', label:'Photos', render: async ()=> {
+      const photos = l.photos||[];
+      if(!photos.length) return stateEmpty('No photos on this listing.');
+      return `<div class="photo-card-grid">${photos.map((p,i)=>`
+        <div class="photo-card admin-photo-card ${p.flagReason?'flagged':''}">
+          <div class="thumb-wrap clickable" data-lightbox-open="${i}">
+            <img src="${p.url}" />
+            ${i===0?'<span class="cover-badge">Cover</span>':''}
+            ${p.flagReason?`<div class="flag-badge" title="${p.flagReason.replace(/"/g,'&quot;')}">Flagged</div>`:''}
+          </div>
+          <button class="pill-btn ghost sm" style="width:100%;margin-top:6px;font-size:11px;padding:4px 0;" data-admin-action="listing-flag-photo" data-id="${id}" data-photo-id="${p.id}">${p.flagReason?'Re-flag':'Flag'}</button>
+        </div>`).join('')}</div>`;
     }},
     auditTabFor('Listing', id),
   ]);
+  currentDrawerListingPhotos = l.photos || [];
 }
 
 /* ================================================================

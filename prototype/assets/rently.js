@@ -398,9 +398,15 @@ const LOCATIONS=[['Lekki Phase 1','Lagos'],['Victoria Island','Lagos'],['Ikeja',
 /* ---------------- LISTING CARD RENDERER (shared) ---------------- */
 function rcard(l,feature=false,opts={}){
   const href=opts.href!==undefined?opts.href:`listing?id=${l.id}`;
+  // Real cover photo when the listing has one (every LIVE listing does, per
+  // the ≥1-photo publish gate) — the category placeholder art is now only a
+  // fallback, not the default.
+  const media = l.cover
+    ? `<img src="${l.cover}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" />`
+    : artDiv(l.img||l.cat,feature?90:100,.18);
   return `<a class="rcard ${feature?'feature':''}" href="${href}">
     <div class="rcard-media">
-      ${artDiv(l.img||l.cat,feature?90:100,.18)}
+      ${media}
       <div class="rcard-top">
         <div class="badge-row">${l.verified?`<div class="badge float verified">${icon('check',{size:11,stroke:2.6})}Verified</div>`:''}${l.mode==='instant'?`<div class="badge float instant">${icon('check',{size:11,stroke:2.6})}Instant Book</div>`:''}${l.availability==='limited'?`<div class="badge float request">${icon('alert',{size:11,stroke:2.6})}Few left</div>`:''}</div>
         <div class="fav-btn" onclick="event.preventDefault();event.stopPropagation();this.classList.toggle('on')">${icon('heart',{size:15})}</div>

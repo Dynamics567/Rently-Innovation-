@@ -286,15 +286,20 @@ let listing=null, provider=null;
   document.getElementById('favBtn').innerHTML=icon('heart',{size:16});
   document.getElementById('favBtn').addEventListener('click',()=>document.getElementById('favBtn').classList.toggle('on'));
 
-  /* ---- gallery: 1 large + 4 small. Only one real photo is sourced per
-     category, so the small tiles reuse it as varied detail crops (different
-     crop position + zoom) rather than repeating one flat image five times. */
+  /* ---- gallery: real uploaded photos when the listing has any (every LIVE
+     listing does, per the ≥1-photo publish gate) — cycles through them
+     across the 5 tiles rather than repeating just the cover. Falls back to
+     the old category placeholder-art system only for the edge case of a
+     listing with zero photos. */
+  const realPhotos = listing.photos||[];
   const gCrops=[{position:'50% 45%',zoom:1},{position:'15% 25%',zoom:1.25},{position:'80% 65%',zoom:1.15},{position:'35% 85%',zoom:1.1},{position:'85% 15%',zoom:1.3}];
   const galleryKey = listing.img||listing.cat;
   document.getElementById('gallery').innerHTML = gCrops.map((v,i)=>{
-    const tile = hasPhoto(galleryKey)
-      ? `<div class="art" style="${artStyle(galleryKey)}">${photoTag(galleryKey,v)}</div>`
-      : `<div class="art" style="${artStyle(galleryKey)}">${artHTML(galleryKey,120+i*8,.18+i*.02)}</div>`;
+    const tile = realPhotos.length
+      ? `<div class="art" style="background:#000;"><img src="${realPhotos[i % realPhotos.length]}" style="width:100%;height:100%;object-fit:cover;" /></div>`
+      : hasPhoto(galleryKey)
+        ? `<div class="art" style="${artStyle(galleryKey)}">${photoTag(galleryKey,v)}</div>`
+        : `<div class="art" style="${artStyle(galleryKey)}">${artHTML(galleryKey,120+i*8,.18+i*.02)}</div>`;
     return `<div class="g-tile">${tile}${i===4?'<div class="show-all-btn">'+icon('grid',{size:13})+' Show all photos</div>':''}</div>`;
   }).join('');
 

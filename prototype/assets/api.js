@@ -209,6 +209,38 @@ async function apiUpload(path, formData) {
   return json.data;
 }
 
+/**
+ * Same contract as apiUpload(), but via XMLHttpRequest instead of fetch() —
+ * fetch has no standard way to observe upload progress, while
+ * xhr.upload.onprogress is the one real byte-level signal available
+ * without pulling in a library. `onProgress(fraction)` fires with a number
+ * from 0 to 1; omit it if the caller doesn't need a progress bar.
+ */
+function apiUploadWithProgress(path, formData, onProgress) {
+  const session = getSession();
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_BASE}${path}`);
+    if (session) xhr.setRequestHeader('Authorization', `Bearer ${session.access}`);
+    if (onProgress) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(e.loaded / e.total);
+      };
+    }
+    xhr.onload = () => {
+      let json = {};
+      try { json = JSON.parse(xhr.responseText || '{}'); } catch {}
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(json.data);
+      } else {
+        reject(new ApiError(json?.error?.code || 'INTERNAL_ERROR', json?.error?.message || 'Upload failed.', xhr.status, json?.error?.requestId));
+      }
+    };
+    xhr.onerror = () => reject(new ApiError('INTERNAL_ERROR', 'Upload failed — check your connection and try again.', 0));
+    xhr.send(formData);
+  });
+}
+
 /* ---------------- ADAPTERS ----------------
    Translate real API shapes into what rently.js's shared renderers
    (rcard, artDiv, renderStageTimeline) already read — see that file's
@@ -279,6 +311,16 @@ async function mapListing(l, categoryById) {
     mode: l.bookingMode,
     quantityAvailable: l.quantityAvailable || 1,
     deposit: Math.round((l.depositMinor || 0) / 100),
+    // Real uploaded photos, already resolved to signed URLs server-side
+    // (ListingsService.withPhotoUrls()) — index 0 is always the cover. Falls
+    // back to the category placeholder art below only on the
+    // (should-be-nonexistent-for-a-LIVE-listing) edge case of none at all.
+    // A list/search row only ever carries the single coverPhotoUrl (see
+    // ListingsService.withCoverPhotoUrl) — `photos` stays empty there, and
+    // callers needing just one image use `cover` instead, which works for
+    // both shapes.
+    photos: (l.photos || []).map((p) => p.url),
+    cover: l.photos?.[0]?.url || l.coverPhotoUrl || null,
     delivery: false,
     availability: 'available',
     desc: l.description,
