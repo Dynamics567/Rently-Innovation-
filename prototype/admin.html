@@ -490,6 +490,18 @@ h1,h2,h3{font-family:var(--sans);}
   </div>
 </div>
 
+<!-- ============ ADMIN SIGN-IN (not dismissible — this page has no content to see behind it until a real admin session exists) ============ -->
+<div class="overlay" id="adminLoginOverlay">
+  <div class="modal" style="max-width:380px;">
+    <h3 style="font-size:20px;margin-bottom:4px;">Admin sign in</h3>
+    <p style="font-size:12.5px;color:var(--op-text-faint);margin-bottom:22px;">This area is restricted to Rently admin accounts.</p>
+    <div id="adminLoginError" class="banner danger" style="display:none;margin-bottom:14px;"></div>
+    <div class="field-sm"><label>Email</label><input type="email" id="adminLoginEmail" autocomplete="username" /></div>
+    <div class="field-sm"><label>Password</label><input type="password" id="adminLoginPassword" autocomplete="current-password" /></div>
+    <button class="pill-btn blue block" id="adminLoginBtn">Sign in</button>
+  </div>
+</div>
+
 <!-- ============ INVITE ADMIN MODAL ============ -->
 <div class="overlay" id="teamInviteOverlay">
   <div class="modal">
@@ -506,7 +518,12 @@ h1,h2,h3{font-family:var(--sans);}
 <script src="assets/rently.js"></script>
 <script src="assets/api.js"></script>
 <script>
-const session = requireSession('admin');
+// Not requireSession('admin') — that would redirect a logged-out visitor
+// into the shared consumer /auth page (role toggle, signup copy, none of
+// which makes sense for an admin). This page gates itself instead: the
+// dashboard underneath stays inert until onAuthenticated() runs, from
+// either an already-valid admin session or a real login right here.
+let session = null;
 </script>
 <script>
 /* ================================================================
@@ -541,11 +558,6 @@ document.getElementById('linkHelpCentre').innerHTML = icon('info',{size:16})+' H
 document.getElementById('linkPermissions').innerHTML = icon('lock',{size:16})+' Permissions';
 document.getElementById('linkSystemSettings').innerHTML = icon('settings',{size:16})+' System settings';
 document.getElementById('teamInviteCloseBtn').innerHTML = icon('close',{size:15});
-/* "Team & Access" and "Permissions" are both SUPER_ADMIN-only on the backend — hide the nav entirely for a plain admin rather than show a screen that would just 403. */
-if(session && session.user.roles.includes('super_admin')){
-  document.getElementById('linkTeam').style.display='';
-  document.getElementById('linkPermissions').style.display='';
-}
 document.getElementById('mLinkOverview').innerHTML = icon('grid',{size:15})+' Overview';
 document.getElementById('mLinkBookings').innerHTML = icon('calendar',{size:15})+' Bookings';
 document.getElementById('mLinkReturns').innerHTML = icon('arrowRight',{size:15})+' Returns';
@@ -1763,7 +1775,66 @@ function goPlanned(key){
   renderPlannedTable();
 }
 
-if(session){ renderWelcome(); renderOverview(); renderVerification(); renderDisputes(); }
+/* ================================================================
+   ADMIN SIGN-IN — see adminLoginOverlay's own comment for why this isn't
+   just requireSession('admin'). Everything above this point (icons, every
+   view's event listeners) is inert until onAuthenticated() runs; the
+   overlay's backdrop blocks interaction with the dashboard underneath in
+   the meantime.
+   ================================================================ */
+function onAuthenticated(s){
+  session = s;
+  // "Team & Access" and "Permissions" are both SUPER_ADMIN-only on the backend — hide the nav entirely for a plain admin rather than show a screen that would just 403.
+  if(session.user.roles.includes('super_admin')){
+    document.getElementById('linkTeam').style.display='';
+    document.getElementById('linkPermissions').style.display='';
+  }
+  document.getElementById('adminLoginOverlay').classList.remove('open');
+  renderWelcome(); renderOverview(); renderVerification(); renderDisputes();
+}
+async function submitAdminLogin(){
+  const btn = document.getElementById('adminLoginBtn');
+  const errEl = document.getElementById('adminLoginError');
+  errEl.style.display='none';
+  const email = document.getElementById('adminLoginEmail').value.trim();
+  const password = document.getElementById('adminLoginPassword').value;
+  if(!email || !password){ errEl.textContent='Enter your email and password.'; errEl.style.display=''; return; }
+  btn.disabled = true;
+  const originalLabel = btn.textContent;
+  btn.textContent = 'Signing in…';
+  try{
+    const {data} = await apiFetch('/auth/login', {method:'POST', auth:false, body:{email,password}});
+    if(!hasRole({user:data.user}, 'admin')){
+      // A real, correct login — just not an admin account. Deliberately not
+      // calling setSession() here: a shared/office computer sitting on this
+      // page shouldn't end up quietly holding a logged-in session for
+      // whichever non-admin account someone mistakenly tried here.
+      errEl.textContent = "This account doesn't have admin access.";
+      errEl.style.display='';
+      return;
+    }
+    setSession(data.user, data);
+    onAuthenticated({ access: data.accessToken, refresh: data.refreshToken, user: data.user });
+  }catch(e){
+    errEl.textContent = apiErrorMessage(e);
+    errEl.style.display='';
+  }finally{
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  }
+}
+document.getElementById('adminLoginBtn').addEventListener('click', submitAdminLogin);
+['adminLoginEmail','adminLoginPassword'].forEach(id=>{
+  document.getElementById(id).addEventListener('keydown', (e)=>{ if(e.key==='Enter') submitAdminLogin(); });
+});
+
+const existingSession = getSession();
+if(existingSession && hasRole(existingSession, 'admin')){
+  onAuthenticated(existingSession);
+} else {
+  document.getElementById('adminLoginOverlay').classList.add('open');
+  document.getElementById('adminLoginEmail').focus();
+}
 </script>
 </body>
 </html>
