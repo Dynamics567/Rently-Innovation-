@@ -767,6 +767,11 @@ document.getElementById('drawerBody').addEventListener('click', async (e)=>{
       if(isActive && (!reason || reason.trim().length<5)){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); btn.disabled=false; return; }
       await apiFetch(`/admin/users/${id}/status`,{method:'POST',body:{status:isActive?'suspended':'active',reason}});
       closeDrawer(); loadCustomers(true);
+    } else if(action==='user-reset-password'){
+      if(!confirm('Send this account a password reset link by email?')){ btn.disabled=false; return; }
+      await apiFetch(`/admin/users/${id}/reset-password`,{method:'POST'});
+      btn.textContent='Link sent'; setTimeout(()=>{ btn.textContent='Reset password'; btn.disabled=false; },2500);
+      return; // skip the generic re-enable below — handled by the timeout above
     } else if(action==='user-save-roles'){
       const errEl=document.getElementById('roleSaveError'); if(errEl) errEl.style.display='none';
       const selected=ROLE_OPTIONS.filter(r=>document.querySelector(`[data-role="${r}"]`).checked);
@@ -1244,7 +1249,10 @@ async function openProviderDrawer(id){
     { key:'overview', label:'Overview', render: async ()=> dkv('Owner', p.user?p.user.fullName:'—')+dkv('Email', p.user?p.user.email:'—')
         +dkv('Verification', p.verificationStatus)+dkv('Account status', p.user?p.user.status:'—')
         +dkv('Avg rating', p.avgRating)+dkv('Completed bookings', p.totalCompletedBookings)
-        +`<div style="margin-top:18px;"><button class="pill-btn ${isActive?'ghost':'green'} sm" data-admin-action="provider-toggle-status" data-id="${id}" data-active="${isActive}">${isActive?'Suspend account':'Reinstate account'}</button></div>` },
+        +`<div style="margin-top:18px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="pill-btn ${isActive?'ghost':'green'} sm" data-admin-action="provider-toggle-status" data-id="${id}" data-active="${isActive}">${isActive?'Suspend account':'Reinstate account'}</button>
+            ${p.user?`<button class="pill-btn ghost sm" data-admin-action="user-reset-password" data-id="${p.user.id}">Reset password</button>`:''}
+          </div>` },
     { key:'documents', label:'Documents', render: async ()=>{
       const docs = await apiFetch(`/admin/providers/${id}/verification-documents`).then(r=>r.data).catch(()=>[]);
       if(!docs.length) return stateEmpty('No verification documents uploaded.');
@@ -1310,7 +1318,10 @@ async function openCustomerDrawer(id){
     { key:'overview', label:'Overview', render: async ()=> dkv('Email', u.email||'—')+dkv('Phone', u.phone||'—')
         +dkv('Roles', u.roles.join(', '))+dkv('Status', u.status)+dkv('Joined', new Date(u.createdAt).toLocaleDateString())
         +dkv('Last seen', u.lastLoginAt?new Date(u.lastLoginAt).toLocaleDateString():'Never')
-        +`<div style="margin-top:18px;"><button class="pill-btn ${isActive?'ghost':'green'} sm" data-admin-action="user-toggle-status" data-id="${id}" data-active="${isActive}">${isActive?'Suspend account':'Reinstate account'}</button></div>` },
+        +`<div style="margin-top:18px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="pill-btn ${isActive?'ghost':'green'} sm" data-admin-action="user-toggle-status" data-id="${id}" data-active="${isActive}">${isActive?'Suspend account':'Reinstate account'}</button>
+            <button class="pill-btn ghost sm" data-admin-action="user-reset-password" data-id="${id}">Reset password</button>
+          </div>` },
     { key:'activity', label:'Activity', render: async ()=>{
       const {data} = await apiFetch(`/admin/bookings?renterId=${id}&limit=20`);
       if(!data.length) return stateEmpty('No bookings as a renter yet.');
