@@ -6,7 +6,6 @@ import {
   IsPhoneNumber,
   IsString,
   MinLength,
-  ValidateIf,
 } from 'class-validator';
 import { UserRole } from '../enums/user-role.enum';
 
@@ -20,21 +19,19 @@ import { UserRole } from '../enums/user-role.enum';
 export const SELF_SERVICE_ROLES = [UserRole.RENTER, UserRole.PROVIDER] as const;
 
 /**
- * Either email or phone is required (FR1.1) — enforced with @ValidateIf
- * rather than making both optional at the type level and hoping the service
- * remembers to check. Validation that can live in the DTO belongs in the
- * DTO; it runs before the request ever reaches a Service.
+ * Phone is compulsory on every signup; email stays optional. Must be E.164
+ * (leading `+` and country code) — @IsPhoneNumber() with no region arg.
  */
 export class SignupDto {
   @ApiPropertyOptional()
-  @ValidateIf((o) => !o.phone)
+  @IsOptional()
   @IsEmail()
   email?: string;
 
-  @ApiPropertyOptional()
-  @ValidateIf((o) => !o.email)
+  @ApiProperty()
+  @IsString()
   @IsPhoneNumber()
-  phone?: string;
+  phone: string;
 
   @ApiProperty({ minLength: 8 })
   @IsString()

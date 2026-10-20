@@ -24,7 +24,7 @@ describe('AuthService', () => {
   // hand-rolled test doubles, not required to satisfy the full collaborator
   // interface, only the methods AuthService actually calls.
   let userRepository: Record<
-    'findByEmailOrPhone' | 'findByEmail' | 'create' | 'save' | 'findByIdOrFail',
+    'findByEmailOrPhone' | 'findByEmail' | 'findByPhone' | 'create' | 'save' | 'findByIdOrFail',
     jest.Mock
   >;
   let passwordResetTokenRepository: Record<'create' | 'save' | 'findByTokenHash', jest.Mock>;
@@ -39,6 +39,7 @@ describe('AuthService', () => {
     userRepository = {
       findByEmailOrPhone: jest.fn(),
       findByEmail: jest.fn(),
+      findByPhone: jest.fn(),
       create: jest.fn((partial) => partial),
       save: jest.fn(async (entity) => ({ ...entity, id: 'user-1' })),
       findByIdOrFail: jest.fn(),
@@ -74,12 +75,18 @@ describe('AuthService', () => {
   });
 
   describe('signup', () => {
-    it('rejects signup when the email or phone is already registered', async () => {
-      userRepository.findByEmailOrPhone.mockResolvedValue({ id: 'existing-user' } as any);
+    beforeEach(() => {
+      userRepository.findByEmail.mockResolvedValue(null);
+      userRepository.findByPhone.mockResolvedValue(null);
+    });
+
+    it('rejects signup when the email is already registered', async () => {
+      userRepository.findByEmail.mockResolvedValue({ id: 'existing-user' } as any);
 
       await expect(
         authService.signup({
           email: 'taken@example.com',
+          phone: '+2348012345678',
           password: 'password123',
           fullName: 'Test User',
         } as any),
@@ -88,11 +95,59 @@ describe('AuthService', () => {
       expect(userRepository.save).not.toHaveBeenCalled();
     });
 
-    it('creates a Renter by default when no roles are specified', async () => {
-      userRepository.findByEmailOrPhone.mockResolvedValue(null);
+    it('rejects signup when the phone is already registered, even if the email is free', async () => {
+      userRepository.findByPhone.mockResolvedValue({ id: 'existing-user' } as any);
 
+      await expect(
+        authService.signup({
+          email: 'new@example.com',
+          phone: '+2348012345678',
+          password: 'password123',
+          fullName: 'Test User',
+        } as any),
+      ).rejects.toMatchObject({ code: 'PHONE_ALREADY_REGISTERED' });
+
+      expect(userRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('does not check email uniqueness when no email is given (phone-only signup)', async () => {
+      await authService.signup({
+        phone: '+2348012345678',
+        password: 'password123',
+        fullName: 'Test User',
+      } as any);
+
+      expect(userRepository.findByEmail).not.toHaveBeenCalled();
+    });
+
+    it('requests a signup OTP for the given phone, every time (phone is compulsory)', async () => {
       await authService.signup({
         email: 'new@example.com',
+        phone: '+2348012345678',
+        password: 'password123',
+        fullName: 'Test User',
+      } as any);
+
+      expect(otpService.requestOtp).toHaveBeenCalledWith('+2348012345678');
+    });
+
+    it('does not let an OTP delivery failure fail signup (no real SMS provider yet, but must stay safe when one exists)', async () => {
+      otpService.requestOtp.mockRejectedValueOnce(new Error('provider outage'));
+
+      await expect(
+        authService.signup({
+          email: 'new@example.com',
+          phone: '+2348012345678',
+          password: 'password123',
+          fullName: 'Test User',
+        } as any),
+      ).resolves.toBeDefined();
+    });
+
+    it('creates a Renter by default when no roles are specified', async () => {
+      await authService.signup({
+        email: 'new@example.com',
+        phone: '+2348012345678',
         password: 'password123',
         fullName: 'Test User',
       } as any);
@@ -103,10 +158,9 @@ describe('AuthService', () => {
     });
 
     it('grants renter alongside an explicitly requested role, never in its place', async () => {
-      userRepository.findByEmailOrPhone.mockResolvedValue(null);
-
       await authService.signup({
         email: 'provider@example.com',
+        phone: '+2348012345678',
         password: 'password123',
         fullName: 'Test Provider',
         roles: [UserRole.PROVIDER],
@@ -118,10 +172,9 @@ describe('AuthService', () => {
     });
 
     it('never grants admin/super_admin through signup, even if requested — the DTO should already reject this, but the service re-checks (defense in depth)', async () => {
-      userRepository.findByEmailOrPhone.mockResolvedValue(null);
-
       await authService.signup({
         email: 'attacker@example.com',
+        phone: '+2348012345678',
         password: 'password123',
         fullName: 'Attacker',
         roles: [UserRole.ADMIN, UserRole.SUPER_ADMIN],
@@ -132,7 +185,6 @@ describe('AuthService', () => {
     });
 
     it('redeems a valid, matching admin invite and grants its role on the new account', async () => {
-      userRepository.findByEmailOrPhone.mockResolvedValue(null);
       const rawToken = 'a-real-invite-token';
       const tokenHash = createHash('sha256').update(rawToken).digest('hex');
       adminInviteRepository.findActiveByEmail.mockResolvedValue({
@@ -145,6 +197,7 @@ describe('AuthService', () => {
 
       await authService.signup({
         email: 'invited@example.com',
+        phone: '+2348012345678',
         password: 'password123',
         fullName: 'Invited Admin',
         inviteToken: rawToken,
@@ -158,7 +211,6 @@ describe('AuthService', () => {
     });
 
     it('ignores an invite token that does not match the stored hash (wrong/tampered token)', async () => {
-      userRepository.findByEmailOrPhone.mockResolvedValue(null);
       adminInviteRepository.findActiveByEmail.mockResolvedValue({
         id: 'invite-1',
         email: 'invited@example.com',
@@ -169,6 +221,7 @@ describe('AuthService', () => {
 
       await authService.signup({
         email: 'invited@example.com',
+        phone: '+2348012345678',
         password: 'password123',
         fullName: 'Invited Admin',
         inviteToken: 'a-wrong-guessed-token',
@@ -180,7 +233,6 @@ describe('AuthService', () => {
     });
 
     it('ignores an invite that exists but is already expired/accepted/revoked (isActive() false)', async () => {
-      userRepository.findByEmailOrPhone.mockResolvedValue(null);
       const rawToken = 'a-real-invite-token';
       adminInviteRepository.findActiveByEmail.mockResolvedValue({
         id: 'invite-1',
@@ -192,6 +244,7 @@ describe('AuthService', () => {
 
       await authService.signup({
         email: 'invited@example.com',
+        phone: '+2348012345678',
         password: 'password123',
         fullName: 'Invited Admin',
         inviteToken: rawToken,
@@ -202,10 +255,9 @@ describe('AuthService', () => {
     });
 
     it('does not even look up an invite when no inviteToken is provided (the common case)', async () => {
-      userRepository.findByEmailOrPhone.mockResolvedValue(null);
-
       await authService.signup({
         email: 'ordinary@example.com',
+        phone: '+2348012345678',
         password: 'password123',
         fullName: 'Ordinary Renter',
       } as any);

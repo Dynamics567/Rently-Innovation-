@@ -38,14 +38,20 @@ export class AuthService {
   ) {}
 
   async signup(dto: SignupDto): Promise<{ user: User; tokens: TokenPair }> {
-    const existing = await this.userRepository.findByEmailOrPhone({
-      email: dto.email,
-      phone: dto.phone,
-    });
-    if (existing) {
+    // Checked independently, not via findByEmailOrPhone's email-first
+    // fallback — phone is compulsory on every signup now, so a duplicate
+    // phone needs its own accurate error, not one that reports "email" by
+    // default when the actual collision is on phone.
+    if (dto.email && (await this.userRepository.findByEmail(dto.email))) {
       throw DomainException.conflict(
         ErrorCode.EMAIL_ALREADY_REGISTERED,
-        'An account with this email or phone already exists.',
+        'An account with this email already exists.',
+      );
+    }
+    if (await this.userRepository.findByPhone(dto.phone)) {
+      throw DomainException.conflict(
+        ErrorCode.PHONE_ALREADY_REGISTERED,
+        'An account with this phone number already exists.',
       );
     }
 
@@ -102,8 +108,13 @@ export class AuthService {
       });
     }
 
-    if (dto.phone) {
+    // Caught, not awaited-and-thrown: phone is compulsory now, so this runs
+    // on every signup — a future real SMS provider's outage must never 500
+    // an otherwise-valid signup. Same reasoning as issueAndSendPasswordReset.
+    try {
       await this.otpService.requestOtp(dto.phone);
+    } catch (err) {
+      this.logger.error(`Failed to send signup OTP to ${dto.phone}: ${(err as Error).message}`);
     }
 
     const tokens = await this.tokenService.issueTokenPair(user);
