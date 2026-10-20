@@ -1598,9 +1598,22 @@ async function loadTeam(){
   const adminsEl=document.getElementById('teamAdminsList'), invitesEl=document.getElementById('teamInvitesList');
   try{
     const {admins, invites} = await apiFetch('/admin/team').then(r=>r.data);
-    adminsEl.innerHTML = admins.length ? `<div class="optable-wrap"><table class="optable"><thead><tr><th>Name</th><th>Email</th><th>Roles</th><th>Status</th></tr></thead><tbody>${
-      admins.map(u=>`<tr><td>${u.fullName}</td><td>${u.email||'—'}</td><td>${u.roles.filter(r=>r==='admin'||r==='super_admin').join(', ')}</td><td><span class="pill-status ${u.status==='active'?'good':'bad'}">${u.status}</span></td></tr>`).join('')
+    adminsEl.innerHTML = admins.length ? `<div class="optable-wrap"><table class="optable"><thead><tr><th>Name</th><th>Email</th><th>Roles</th><th>Status</th><th></th></tr></thead><tbody>${
+      admins.map(u=>`<tr>
+        <td>${u.fullName}</td><td>${u.email||'—'}</td><td>${u.roles.filter(r=>r==='admin'||r==='super_admin').join(', ')}</td>
+        <td><span class="pill-status ${u.status==='active'?'good':'bad'}">${u.status}</span></td>
+        <td><button class="pill-btn ghost sm" data-reset-admin-password="${u.id}">Reset password</button></td>
+      </tr>`).join('')
     }</tbody></table></div>` : stateEmpty('No admin accounts yet.');
+    adminsEl.querySelectorAll('[data-reset-admin-password]').forEach(b=>b.addEventListener('click', async ()=>{
+      if(!confirm('Send this admin a password reset link by email?')) return;
+      b.disabled=true;
+      try{
+        await apiFetch(`/admin/users/${b.dataset.resetAdminPassword}/reset-password`,{method:'POST'});
+        const original=b.textContent; b.textContent='Link sent';
+        setTimeout(()=>{ b.textContent=original; b.disabled=false; },2500);
+      }catch(e){ alert(apiErrorMessage(e)); b.disabled=false; }
+    }));
     invitesEl.innerHTML = invites.length ? `<div class="optable-wrap"><table class="optable"><thead><tr><th>Email</th><th>Role</th><th>Sent</th><th>Expires</th><th></th></tr></thead><tbody>${
       invites.map(i=>`<tr>
         <td>${i.email}</td><td>${i.role}</td>
