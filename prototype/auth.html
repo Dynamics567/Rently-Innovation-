@@ -95,6 +95,7 @@ body{min-height:100vh;}
 
         <div id="nameField" class="field" style="display:none;"><label>Full name</label><input type="text" id="fullNameInput" placeholder="Your full name" /></div>
         <div class="field"><label>Email address</label><input type="email" id="emailInput" placeholder="you@example.com" /></div>
+        <div id="phoneField" class="field" style="display:none;"><label>Phone number</label><input type="tel" id="phoneInput" placeholder="+2348012345678" value="+234" /></div>
         <div class="field"><label>Password</label><input type="password" id="passwordInput" placeholder="••••••••" /></div>
         <div id="providerNote" class="banner info" style="display:none;margin-bottom:20px;"></div>
         <div id="businessNameField" class="field" style="display:none;"><label>Business name <span style="color:var(--ink-faint);font-weight:400">(optional — leave blank if you're an individual)</span></label><input type="text" id="businessNameInput" placeholder="e.g. EventCraft NG" /></div>
@@ -197,6 +198,7 @@ function renderMode(){
   document.getElementById('formSub').textContent = isSignup ? "Tell us what you'd like to do, then create your account." : 'Log in to manage your bookings, favorites and messages.';
   document.getElementById('roleBlock').style.display = isSignup ? 'block':'none';
   document.getElementById('nameField').style.display = isSignup ? 'block':'none';
+  document.getElementById('phoneField').style.display = isSignup ? 'block':'none';
   document.getElementById('forgotLink').style.display = isSignup ? 'none':'inline-flex';
   document.getElementById('submitAuthBtn').textContent = isSignup ? 'Create account' : 'Log in';
   document.getElementById('switchModeRow').innerHTML = isSignup
@@ -227,9 +229,12 @@ document.getElementById('submitAuthBtn').addEventListener('click', async ()=>{
   const email=document.getElementById('emailInput').value.trim();
   const password=document.getElementById('passwordInput').value;
   const fullName=document.getElementById('fullNameInput').value.trim();
+  const phone=document.getElementById('phoneInput').value.trim();
 
   if(!email || !password){ showAuthError('Please enter your email and password.'); return; }
   if(mode==='signup' && !fullName){ showAuthError('Please enter your full name.'); return; }
+  if(mode==='signup' && !phone){ showAuthError('Please enter your phone number.'); return; }
+  if(mode==='signup' && !/^\+[1-9]\d{7,14}$/.test(phone)){ showAuthError('Please enter a valid phone number in international format, e.g. +2348012345678.'); return; }
 
   const btn=document.getElementById('submitAuthBtn');
   btn.disabled=true;
@@ -239,7 +244,7 @@ document.getElementById('submitAuthBtn').addEventListener('click', async ()=>{
   try{
     if(mode==='signup'){
       const {data} = await apiFetch('/auth/signup',{method:'POST',auth:false,body:{
-        email, password, fullName, roles:[role], inviteToken: inviteToken||undefined,
+        email, phone, password, fullName, roles:[role], inviteToken: inviteToken||undefined,
       }});
       setSession(data.user, data);
       if(role==='provider'){
