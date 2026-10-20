@@ -1,5 +1,8 @@
 {
   "outputDirectory": "prototype",
   "cleanUrls": true,
-  "buildCommand": "node write-version.js"
+  "buildCommand": "node write-version.js",
+  "rewrites": [
+    { "source": "/", "destination": "/homepage.html" }
+  ]
 }
