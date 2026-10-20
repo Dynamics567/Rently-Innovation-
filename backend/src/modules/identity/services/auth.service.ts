@@ -171,7 +171,39 @@ export class AuthService {
   async requestPasswordReset(email: string): Promise<void> {
     const user = await this.userRepository.findByEmail(email);
     if (!user) return;
+    await this.issueAndSendPasswordReset(user);
+  }
 
+  /**
+   * [Admin] Support staff's answer to "I can't log in" / a suspected
+   * compromised account — sends the account the exact same reset link
+   * requestPasswordReset() does, rather than an admin ever choosing or
+   * seeing a password directly. No anti-enumeration no-op here (unlike
+   * requestPasswordReset): the admin already knows this account exists,
+   * they looked it up by id from the Customers/Providers drawer.
+   */
+  async adminTriggerPasswordReset(userId: string, adminId: string): Promise<void> {
+    const user = await this.userRepository.findByIdOrFail(userId, 'User');
+    if (!user.email) {
+      throw DomainException.unprocessable(
+        ErrorCode.PASSWORD_RESET_NO_EMAIL,
+        'This account has no email on file, so a reset link can\'t be sent — there is no SMS delivery for password resets.',
+      );
+    }
+    await this.issueAndSendPasswordReset(user);
+    await this.auditLogService.record({
+      actorId: adminId,
+      actorType: AuditActorType.ADMIN,
+      action: 'user.admin_trigger_password_reset',
+      entityType: 'User',
+      entityId: userId,
+      before: null,
+      after: { email: user.email },
+    });
+  }
+
+  /** Shared by requestPasswordReset() (self-service) and adminTriggerPasswordReset() — one token-mint-and-email path, not two. */
+  private async issueAndSendPasswordReset(user: User): Promise<void> {
     const rawToken = randomBytes(32).toString('hex');
     const tokenHash = this.hashToken(rawToken);
     const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MINUTES * 60 * 1000);
@@ -188,12 +220,12 @@ export class AuthService {
     // already saved either way; worst case they retry.
     try {
       await this.emailSender.send(
-        email,
+        user.email!,
         'Reset your Rently password',
         `We received a request to reset your password. This link expires in ${PASSWORD_RESET_TTL_MINUTES} minutes:\n\n${resetLink}\n\nIf you didn't request this, you can ignore this email.`,
       );
     } catch (err) {
-      this.logger.error(`Failed to send password reset email to ${email}: ${(err as Error).message}`);
+      this.logger.error(`Failed to send password reset email to ${user.email}: ${(err as Error).message}`);
     }
   }
 

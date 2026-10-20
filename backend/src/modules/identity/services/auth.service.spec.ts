@@ -274,7 +274,7 @@ describe('AuthService', () => {
     });
 
     it('saves a hashed token and emails a reset link for a known account', async () => {
-      userRepository.findByEmail.mockResolvedValue({ id: 'user-1' } as any);
+      userRepository.findByEmail.mockResolvedValue({ id: 'user-1', email: 'user@example.com' } as any);
 
       await authService.requestPasswordReset('user@example.com');
 
@@ -330,6 +330,48 @@ describe('AuthService', () => {
       expect(resetToken.usedAt).not.toBeNull();
       expect(passwordResetTokenRepository.save).toHaveBeenCalledWith(resetToken);
       expect(tokenService.revokeAllForUser).toHaveBeenCalledWith('user-1');
+    });
+  });
+
+  describe('adminTriggerPasswordReset', () => {
+    it('rejects an account with no email on file — there is no SMS delivery for a reset link', async () => {
+      userRepository.findByIdOrFail.mockResolvedValue({ id: 'user-1', email: null, phone: '+2348012345678' } as any);
+
+      await expect(authService.adminTriggerPasswordReset('user-1', 'admin-1')).rejects.toMatchObject({
+        code: 'PASSWORD_RESET_NO_EMAIL',
+      });
+      expect(emailSender.send).not.toHaveBeenCalled();
+    });
+
+    it('sends the same reset link requestPasswordReset() does and audit-logs the admin action', async () => {
+      userRepository.findByIdOrFail.mockResolvedValue({ id: 'user-1', email: 'user@example.com' } as any);
+
+      await authService.adminTriggerPasswordReset('user-1', 'admin-1');
+
+      expect(passwordResetTokenRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'user-1', tokenHash: expect.any(String) }),
+      );
+      expect(emailSender.send).toHaveBeenCalledWith(
+        'user@example.com',
+        expect.any(String),
+        expect.stringContaining('https://rentlyhub.com.ng/auth?resetToken='),
+      );
+      expect(auditLogService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actorId: 'admin-1',
+          action: 'user.admin_trigger_password_reset',
+          entityType: 'User',
+          entityId: 'user-1',
+          after: { email: 'user@example.com' },
+        }),
+      );
+    });
+
+    it('does not audit-log when the account has no email (the action never actually happened)', async () => {
+      userRepository.findByIdOrFail.mockResolvedValue({ id: 'user-1', email: null } as any);
+
+      await expect(authService.adminTriggerPasswordReset('user-1', 'admin-1')).rejects.toBeDefined();
+      expect(auditLogService.record).not.toHaveBeenCalled();
     });
   });
 });

@@ -7,6 +7,7 @@ import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { UserRole } from '../enums/user-role.enum';
 import { UsersService } from '../services/users.service';
 import { PermissionsService } from '../services/permissions.service';
+import { AuthService } from '../services/auth.service';
 import { SetUserRolesDto } from '../dto/set-user-roles.dto';
 import { SetUserStatusDto } from '../dto/set-user-status.dto';
 import { QueryAdminUsersDto } from '../dto/query-admin-users.dto';
@@ -40,6 +41,7 @@ export class AdminUsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly permissionsService: PermissionsService,
+    private readonly authService: AuthService,
   ) {}
 
   @Get('lookup')
@@ -102,6 +104,21 @@ export class AdminUsersController {
     @CurrentUser() admin: AuthenticatedUser,
   ) {
     return this.usersService.setStatus(id, dto.status, admin.id, dto.reason);
+  }
+
+  /**
+   * Sends the account the same reset-password email requestPasswordReset()
+   * does — an admin never sets or sees the new password directly. Gated by
+   * users.suspend, the same permission tier as the account-status action
+   * above: triggering a credential reset is the same blast-radius class as
+   * suspending the account, not a separate capability of its own.
+   */
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @RequirePermission('users.suspend')
+  @Post(':id/reset-password')
+  async resetPassword(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() admin: AuthenticatedUser) {
+    await this.authService.adminTriggerPasswordReset(id, admin.id);
+    return { sent: true };
   }
 
   /**
