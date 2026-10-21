@@ -11,16 +11,14 @@ import { CreateSettlementDto } from '../dto/create-settlement.dto';
 import { MarkSettlementPaidDto } from '../dto/mark-settlement-paid.dto';
 
 /**
- * `finance.view` covers every read here (Transactions, the Refunds-filtered
- * view of the same list, Wallets, Settlements); `finance.settle` is the
- * narrower grant for the two mutating routes — matches the exact split
- * Phase D's own plan predicted Finance Admin would need once this phase
- * shipped.
+ * Every read here (Transactions, the Refunds-filtered view of the same
+ * list, Wallets, Settlements) is visible to any ADMIN — only the two
+ * mutating settlement routes are gated behind the narrower `finance.settle`
+ * grant, same split Phase D's own plan predicted Finance Admin would need.
  */
 @ApiTags('admin')
 @ApiBearerAuth()
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
-@RequirePermission('finance.view')
 @Controller('admin/finance')
 export class AdminFinanceController {
   constructor(private readonly financeService: FinanceService) {}

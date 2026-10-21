@@ -12,7 +12,6 @@ import { DisputeStatus } from '../enums/dispute-status.enum';
 @ApiTags('admin')
 @ApiBearerAuth()
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
-@RequirePermission('disputes.view')
 @Controller('admin/disputes')
 export class AdminDisputesController {
   constructor(private readonly disputeService: DisputeService) {}

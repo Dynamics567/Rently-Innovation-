@@ -1,7 +1,6 @@
 import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '@common/decorators/roles.decorator';
-import { RequirePermission } from '@common/decorators/require-permission.decorator';
 import { UserRole } from '@modules/identity/enums/user-role.enum';
 import { BookingService } from '../services/booking.service';
 import { QueryAdminBookingsDto } from '../dto/query-admin-bookings.dto';
@@ -17,7 +16,6 @@ import { QueryAdminBookingsDto } from '../dto/query-admin-bookings.dto';
 @ApiTags('admin')
 @ApiBearerAuth()
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
-@RequirePermission('bookings.view')
 @Controller('admin/bookings')
 export class AdminBookingsController {
   constructor(private readonly bookingService: BookingService) {}

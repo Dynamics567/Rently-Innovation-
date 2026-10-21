@@ -48,7 +48,6 @@ class RejectVerificationDocumentDto {
 @ApiTags('admin')
 @ApiBearerAuth()
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
-@RequirePermission('providers.view')
 @Controller('admin/providers')
 export class AdminProvidersController {
   constructor(

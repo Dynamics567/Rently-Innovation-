@@ -34,7 +34,6 @@ class ListingReasonDto {
 @ApiTags('admin')
 @ApiBearerAuth()
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
-@RequirePermission('listings.view')
 @Controller('admin/listings')
 export class AdminListingsController {
   constructor(private readonly listingsService: ListingsService) {}

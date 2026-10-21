@@ -26,7 +26,6 @@ class HideReviewDto {
 @ApiTags('admin')
 @ApiBearerAuth()
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
-@RequirePermission('reviews.view')
 @Controller('admin/reviews')
 export class AdminReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}

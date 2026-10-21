@@ -67,7 +67,6 @@ export class AdminUsersController {
    * class, via Reflector.getAllAndOverride).
    */
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
-  @RequirePermission('users.view')
   @Get()
   async search(@Query() query: QueryAdminUsersDto) {
     return this.usersService.searchForAdmin(query.search, query.cursor, query.limit);
@@ -75,21 +74,18 @@ export class AdminUsersController {
 
   /** Overview's "total users" stat — registered before :id so "stats" is never parsed as a user id. */
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
-  @RequirePermission('users.view')
   @Get('stats')
   async stats() {
     return this.usersService.getStats();
   }
 
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
-  @RequirePermission('users.view')
   @Get('analytics/signups')
   async signupTrend(@Query('days') days?: string) {
     return this.usersService.getSignupTrend(days ? Number(days) : 30);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
-  @RequirePermission('users.view')
   @Get(':id')
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.usersService.getById(id);
