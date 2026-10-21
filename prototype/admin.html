@@ -204,7 +204,7 @@ h1,h2,h3{font-family:var(--sans);}
 <body class="no-grain">
 
 <nav class="app-topbar">
-  <a class="wordmark" href="homepage" style="margin-right:4px;"><img src="assets/images/logo.png" alt="Rently" style="height:22px;" /></a>
+  <a class="wordmark" href="/" style="margin-right:4px;"><img src="assets/images/logo.png" alt="Rently" style="height:22px;" /></a>
   <span class="admin-badge">Admin</span>
   <div class="search-trigger" id="searchTrigger">
     <span id="searchTriggerIcon"></span>
@@ -556,7 +556,7 @@ let session = null;
 document.querySelector('.admin-badge').innerHTML = icon('shield',{size:11,stroke:3});
 document.getElementById('searchTriggerIcon').innerHTML = icon('search',{size:15});
 document.getElementById('linkExit').innerHTML = icon('logout',{size:16})+' Log out';
-document.getElementById('linkExit').addEventListener('click', async (e)=>{ e.preventDefault(); await apiLogout(); window.location.href='homepage'; });
+document.getElementById('linkExit').addEventListener('click', async (e)=>{ e.preventDefault(); await apiLogout(); window.location.href='/'; });
 document.getElementById('linkOverview').innerHTML = icon('grid',{size:16})+' Overview';
 document.getElementById('linkBookings').innerHTML = icon('calendar',{size:16})+' Bookings';
 document.getElementById('linkReturns').innerHTML = icon('arrowRight',{size:16})+' Returns';
