@@ -249,6 +249,8 @@ export class ListingsService {
   /** DRAFT/REJECTED/CHANGES_REQUESTED submit (or resubmit) for moderation; PAUSED reactivates directly (already approved once). */
   async publish(id: string): Promise<Listing> {
     const listing = await this.findByIdOrFail(id);
+    const provider = await this.providerProfileService.getById(listing.providerId);
+    this.providerProfileService.assertVerified(provider);
     const photoCount = await this.photoRepository.countByListing(id);
     if (photoCount < MIN_LISTING_PHOTOS) {
       throw DomainException.unprocessable(
@@ -288,6 +290,16 @@ export class ListingsService {
 
   async pause(id: string): Promise<Listing> {
     const listing = await this.findByIdOrFail(id);
+    // Only a LIVE listing can be paused — without this guard, a never-
+    // submitted DRAFT could be paused then reinstated by an admin straight
+    // to LIVE (reinstateAsAdmin only checks "is it paused," never "was it
+    // ever approved"), skipping moderation review entirely.
+    if (listing.status !== ListingStatus.LIVE) {
+      throw DomainException.conflict(
+        ErrorCode.BOOKING_INVALID_STATE_TRANSITION,
+        `Only a live listing can be paused (current status: "${listing.status}").`,
+      );
+    }
     listing.status = ListingStatus.PAUSED;
     return this.listingRepository.save(listing);
   }
@@ -326,6 +338,12 @@ export class ListingsService {
 
   async reject(id: string, adminId: string, reason: string): Promise<Listing> {
     const listing = await this.findByIdOrFail(id);
+    if (listing.status !== ListingStatus.PENDING_REVIEW) {
+      throw DomainException.conflict(
+        ErrorCode.BOOKING_INVALID_STATE_TRANSITION,
+        `Only listings pending review can be rejected (current status: "${listing.status}").`,
+      );
+    }
     const before = { status: listing.status };
     listing.status = ListingStatus.REJECTED;
     listing.rejectionReason = reason;

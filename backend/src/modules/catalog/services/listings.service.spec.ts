@@ -16,7 +16,7 @@ describe('ListingsService', () => {
   let attributeValidator: Record<'validate', jest.Mock>;
   let auditLogService: Record<'record', jest.Mock>;
   let eventEmitter: Record<'emit', jest.Mock>;
-  let providerProfileService: Record<'getById', jest.Mock>;
+  let providerProfileService: Record<'getById' | 'assertVerified', jest.Mock>;
   let storage: Record<'getUrl' | 'upload' | 'delete', jest.Mock>;
 
   const activeCategory = {
@@ -49,7 +49,10 @@ describe('ListingsService', () => {
     attributeValidator = { validate: jest.fn() };
     auditLogService = { record: jest.fn(async () => undefined) };
     eventEmitter = { emit: jest.fn() };
-    providerProfileService = { getById: jest.fn(async () => ({ userId: 'provider-user-1' })) };
+    providerProfileService = {
+      getById: jest.fn(async () => ({ userId: 'provider-user-1' })),
+      assertVerified: jest.fn(),
+    };
     storage = {
       getUrl: jest.fn(async (key: string) => `https://signed.example.com/${key}`),
       upload: jest.fn(async () => undefined),
@@ -222,6 +225,33 @@ describe('ListingsService', () => {
 
       expect(eventEmitter.emit).not.toHaveBeenCalledWith('listing.submitted', expect.anything());
     });
+
+    it('rejects an unverified provider before any photo/status check runs — closes the moderation-bypass gap', async () => {
+      listingRepository.findByIdOrFail.mockResolvedValue({ id: 'l1', providerId: 'provider-1', status: ListingStatus.DRAFT });
+      providerProfileService.assertVerified.mockImplementation(() => {
+        throw { code: 'PROVIDER_NOT_VERIFIED' };
+      });
+
+      await expect(service.publish('l1')).rejects.toMatchObject({ code: 'PROVIDER_NOT_VERIFIED' });
+      expect(listingRepository.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('pause', () => {
+    it('rejects pausing a listing that was never approved (e.g. still DRAFT) — a DRAFT paused then admin-reinstated would reach LIVE without ever being reviewed', async () => {
+      listingRepository.findByIdOrFail.mockResolvedValue({ id: 'l1', status: ListingStatus.DRAFT });
+
+      await expect(service.pause('l1')).rejects.toMatchObject({ code: 'BOOKING_INVALID_STATE_TRANSITION' });
+      expect(listingRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('allows pausing a LIVE listing', async () => {
+      listingRepository.findByIdOrFail.mockResolvedValue({ id: 'l1', status: ListingStatus.LIVE });
+
+      const result: any = await service.pause('l1');
+
+      expect(result.status).toBe(ListingStatus.PAUSED);
+    });
   });
 
   describe('reject', () => {
@@ -239,6 +269,15 @@ describe('ListingsService', () => {
         'listing.rejected',
         expect.objectContaining({ reason: 'Photos are too blurry to review.' }),
       );
+    });
+
+    it('rejects rejecting a listing that is not pending review (e.g. already LIVE) — prevents a stale admin drawer from silently pulling a live listing offline', async () => {
+      listingRepository.findByIdOrFail.mockResolvedValue({ id: 'l1', status: ListingStatus.LIVE });
+
+      await expect(service.reject('l1', 'admin-1', 'Some reason here')).rejects.toMatchObject({
+        code: 'BOOKING_INVALID_STATE_TRANSITION',
+      });
+      expect(listingRepository.save).not.toHaveBeenCalled();
     });
   });
 
