@@ -16,6 +16,7 @@ describe('UsersService', () => {
   let auditLogService: Record<'record', jest.Mock>;
   let configService: { get: jest.Mock };
   let emailSender: Record<'send', jest.Mock>;
+  let tokenService: Record<'revokeAllForUser', jest.Mock>;
 
   beforeEach(() => {
     userRepository = {
@@ -37,12 +38,14 @@ describe('UsersService', () => {
     auditLogService = { record: jest.fn(async () => undefined) };
     configService = { get: jest.fn(() => ({ frontendUrl: 'https://rentlyhub.com.ng' })) };
     emailSender = { send: jest.fn(async () => undefined) };
+    tokenService = { revokeAllForUser: jest.fn(async () => undefined) };
     service = new UsersService(
       userRepository as unknown as UserRepository,
       adminInviteRepository as unknown as AdminInviteRepository,
       auditLogService as unknown as AuditLogService,
       configService as any,
       emailSender as unknown as any,
+      tokenService as unknown as any,
     );
   });
 
@@ -85,6 +88,20 @@ describe('UsersService', () => {
       const result = await service.setStatus('user-1', UserAccountStatus.ACTIVE, 'admin-1');
 
       expect(result.status).toBe(UserAccountStatus.ACTIVE);
+    });
+
+    it('revokes every refresh token when suspending, so the account cannot keep renewing its session', async () => {
+      await service.setStatus('user-1', UserAccountStatus.SUSPENDED, 'admin-1', 'Repeated no-shows');
+
+      expect(tokenService.revokeAllForUser).toHaveBeenCalledWith('user-1');
+    });
+
+    it('does not revoke tokens when reinstating to active', async () => {
+      userRepository.findByIdOrFail.mockResolvedValue({ id: 'user-1', status: UserAccountStatus.SUSPENDED });
+
+      await service.setStatus('user-1', UserAccountStatus.ACTIVE, 'admin-1');
+
+      expect(tokenService.revokeAllForUser).not.toHaveBeenCalled();
     });
   });
 

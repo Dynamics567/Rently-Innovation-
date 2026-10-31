@@ -14,6 +14,7 @@ import { AdminInvite } from '../entities/admin-invite.entity';
 import { UserRole } from '../enums/user-role.enum';
 import { UserAccountStatus } from '../enums/verification-status.enum';
 import { EMAIL_SENDER, EmailSender } from './email-sender.port';
+import { TokenService } from './token.service';
 
 const ADMIN_INVITE_TTL_DAYS = 7;
 
@@ -25,6 +26,7 @@ export class UsersService {
     private readonly auditLogService: AuditLogService,
     private readonly configService: ConfigService,
     @Inject(EMAIL_SENDER) private readonly emailSender: EmailSender,
+    private readonly tokenService: TokenService,
   ) {}
 
   async getById(id: string): Promise<User> {
@@ -112,6 +114,14 @@ export class UsersService {
       before,
       after: { status: saved.status, reason: reason?.trim() },
     });
+    // A status change away from ACTIVE must cut off access immediately, not
+    // just block the next login — revoking every refresh token means the
+    // account can no longer renew its session; combined with AuthService's
+    // own check on login()/refresh(), the only residual window is whatever
+    // is left on an already-issued access token (15 minutes by default).
+    if (status !== UserAccountStatus.ACTIVE) {
+      await this.tokenService.revokeAllForUser(id);
+    }
     return saved;
   }
 

@@ -29,7 +29,10 @@ describe('AuthService', () => {
   >;
   let passwordResetTokenRepository: Record<'create' | 'save' | 'findByTokenHash', jest.Mock>;
   let adminInviteRepository: Record<'findActiveByEmail' | 'save', jest.Mock>;
-  let tokenService: Record<'issueTokenPair' | 'revokeAllForUser', jest.Mock>;
+  let tokenService: Record<
+    'issueTokenPair' | 'revokeAllForUser' | 'findUserIdByRefreshToken' | 'rotateRefreshToken',
+    jest.Mock
+  >;
   let otpService: Record<'requestOtp', jest.Mock>;
   let configService: { get: jest.Mock };
   let auditLogService: Record<'record', jest.Mock>;
@@ -56,6 +59,8 @@ describe('AuthService', () => {
     tokenService = {
       issueTokenPair: jest.fn(async () => ({ accessToken: 'access', refreshToken: 'refresh' })),
       revokeAllForUser: jest.fn(async () => undefined),
+      findUserIdByRefreshToken: jest.fn(async () => 'user-1'),
+      rotateRefreshToken: jest.fn(async () => ({ accessToken: 'new-access', refreshToken: 'new-refresh' })),
     };
     otpService = { requestOtp: jest.fn(async () => undefined) };
     configService = { get: jest.fn(() => ({ frontendUrl: 'https://rentlyhub.com.ng' })) };
@@ -313,6 +318,25 @@ describe('AuthService', () => {
 
       expect(tokenService.issueTokenPair).toHaveBeenCalledWith(user);
       expect(result.tokens).toEqual({ accessToken: 'access', refreshToken: 'refresh' });
+    });
+  });
+
+  describe('refresh', () => {
+    it('rejects a suspended account even with a valid refresh token — without this, suspension never actually locks anyone out', async () => {
+      userRepository.findByIdOrFail.mockResolvedValue({ id: 'user-1', status: UserAccountStatus.SUSPENDED } as any);
+
+      await expect(authService.refresh('a-valid-refresh-token')).rejects.toMatchObject({
+        code: 'ACCOUNT_SUSPENDED',
+      });
+      expect(tokenService.rotateRefreshToken).not.toHaveBeenCalled();
+    });
+
+    it('rotates the token pair for an active account', async () => {
+      userRepository.findByIdOrFail.mockResolvedValue({ id: 'user-1', status: UserAccountStatus.ACTIVE } as any);
+
+      const result = await authService.refresh('a-valid-refresh-token');
+
+      expect(result).toEqual({ accessToken: 'new-access', refreshToken: 'new-refresh' });
     });
   });
 

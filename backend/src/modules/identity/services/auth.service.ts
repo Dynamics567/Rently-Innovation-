@@ -159,6 +159,12 @@ export class AuthService {
   async refresh(rawRefreshToken: string): Promise<TokenPair> {
     const userId = await this.tokenService.findUserIdByRefreshToken(rawRefreshToken);
     const user = await this.userRepository.findByIdOrFail(userId, 'User');
+    // Same check login() already makes — without this, a suspended account's
+    // refresh token keeps minting fresh 15-minute access tokens forever,
+    // making suspension cosmetic for anyone already signed in.
+    if (user.status !== UserAccountStatus.ACTIVE) {
+      throw DomainException.forbidden(ErrorCode.ACCOUNT_SUSPENDED, 'This account is suspended.');
+    }
     return this.tokenService.rotateRefreshToken(rawRefreshToken, user);
   }
 
