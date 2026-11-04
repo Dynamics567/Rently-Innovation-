@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
 import { IsOptional, IsString, MinLength } from 'class-validator';
 import { CursorPaginationDto } from '@common/dto/cursor-pagination.dto';
@@ -98,6 +98,19 @@ export class AdminProvidersController {
     @CurrentUser() admin: AuthenticatedUser,
   ) {
     return this.providerService.rejectVerification(id, admin.id, dto.reason);
+  }
+
+  /**
+   * Deliberately overrides this controller's class-level @Roles(ADMIN,
+   * SUPER_ADMIN) down to SUPER_ADMIN only, same reasoning as
+   * AdminUsersController.remove() — removing a provider record outright is
+   * a bigger blast radius than the verify/reject/status actions above.
+   */
+  @Roles(UserRole.SUPER_ADMIN)
+  @Delete(':id')
+  async remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() admin: AuthenticatedUser) {
+    await this.providerService.removeAsAdmin(id, admin.id);
+    return { removed: true };
   }
 
   @Get(':id/verification-documents')

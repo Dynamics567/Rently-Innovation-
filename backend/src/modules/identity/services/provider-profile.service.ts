@@ -96,6 +96,28 @@ export class ProviderProfileService {
     return this.providerRepository.findByIdOrFail(id, 'Provider profile');
   }
 
+  /**
+   * [Admin] Soft-deletes a provider profile (e.g. test/E2E-run junk data
+   * cleanup) — reversible via deleted_at, audit-logged. Mirrors
+   * UsersService.removeAsAdmin(). Many of these profiles have no live user
+   * (the test user that created them was already cleaned up separately),
+   * so this is a direct ProviderProfile delete, not a cascade from
+   * UsersService.removeAsAdmin() — this is the only way to remove them.
+   */
+  async removeAsAdmin(id: string, adminId: string): Promise<void> {
+    const profile = await this.providerRepository.findByIdOrFail(id, 'Provider profile');
+    await this.providerRepository.softDelete(id);
+    await this.auditLogService.record({
+      actorId: adminId,
+      actorType: AuditActorType.ADMIN,
+      action: 'provider_profile.remove',
+      entityType: 'ProviderProfile',
+      entityId: id,
+      before: { businessName: profile.businessName, userId: profile.userId },
+      after: { deleted: true },
+    });
+  }
+
   /** [Admin] Full profile + the linked user (email, status, roles) for the Providers detail drawer — unlike getPublicProfile()'s narrow projection. */
   async getDetailForAdmin(id: string): Promise<ProviderProfile> {
     const profile = await this.providerRepository.findByIdWithUser(id);
