@@ -272,6 +272,41 @@ export class AuthService {
     await this.tokenService.revokeAllForUser(user.id);
   }
 
+  /**
+   * Phone-based alternative to requestPasswordReset() — same anti-
+   * enumeration guarantee: always resolves silently whether or not the
+   * phone is registered, and the OTP is only actually sent when a matching
+   * user exists.
+   */
+  async requestPasswordResetOtp(phone: string): Promise<void> {
+    const user = await this.userRepository.findByPhone(phone);
+    if (!user) return;
+    await this.otpService.requestOtp(phone);
+  }
+
+  /**
+   * Single-use like resetPassword() — OtpService's own store deletes the
+   * code the moment it verifies successfully, so the same code can't reset
+   * the password twice; every outstanding refresh token is revoked the same
+   * way, forcing a fresh login everywhere.
+   */
+  async resetPasswordWithOtp(phone: string, code: string, newPassword: string): Promise<void> {
+    this.otpService.verifyOtp(phone, code);
+    const user = await this.userRepository.findByPhone(phone);
+    if (!user) {
+      // Only reachable if the account was deleted between request and
+      // verify — OtpService already guarantees the code was valid, so there
+      // is no real account-enumeration risk in this edge case.
+      throw DomainException.unprocessable(
+        ErrorCode.OTP_INVALID_OR_EXPIRED,
+        'This code has expired.',
+      );
+    }
+    user.passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await this.userRepository.save(user);
+    await this.tokenService.revokeAllForUser(user.id);
+  }
+
   private hashToken(value: string): string {
     return createHash('sha256').update(value).digest('hex');
   }

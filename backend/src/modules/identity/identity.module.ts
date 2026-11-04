@@ -3,7 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthConfig, EmailConfig } from '@config/configuration';
+import { AuthConfig, EmailConfig, SmsConfig } from '@config/configuration';
 import { StorageModule } from '@common/storage/storage.module';
 import { AuditLogModule } from '@common/audit/audit-log.module';
 
@@ -38,6 +38,7 @@ import { PermissionsService } from './services/permissions.service';
 import { ConsoleSmsSender, SMS_SENDER } from './services/sms-sender.port';
 import { ConsoleEmailSender, EMAIL_SENDER } from './services/email-sender.port';
 import { ResendEmailSender } from './services/resend-email-sender';
+import { TwilioSmsSender } from './services/twilio-sms-sender';
 
 import { AuthController } from './controllers/auth.controller';
 import { UsersController } from './controllers/users.controller';
@@ -112,7 +113,16 @@ import { IsSelfOrAdminPolicy } from './policies/is-self-or-admin.policy';
     PermissionsService,
     JwtStrategy,
     IsSelfOrAdminPolicy,
-    { provide: SMS_SENDER, useClass: ConsoleSmsSender },
+    {
+      provide: SMS_SENDER,
+      useFactory: (configService: ConfigService) => {
+        const sms = configService.get<SmsConfig>('sms')!;
+        return sms.twilioAccountSid && sms.twilioAuthToken && sms.twilioFromNumber
+          ? new TwilioSmsSender(sms)
+          : new ConsoleSmsSender();
+      },
+      inject: [ConfigService],
+    },
     {
       provide: EMAIL_SENDER,
       useFactory: (configService: ConfigService) => {

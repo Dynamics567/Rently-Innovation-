@@ -45,6 +45,12 @@ export interface EmailConfig {
   from: string;
 }
 
+export interface SmsConfig {
+  twilioAccountSid?: string;
+  twilioAuthToken?: string;
+  twilioFromNumber?: string;
+}
+
 export default () => ({
   app: {
     env: process.env.NODE_ENV ?? 'development',
@@ -95,4 +101,13 @@ export default () => ({
     // EMAIL_FROM is set to something like "Rently <noreply@rentlyhub.com.ng>".
     from: process.env.EMAIL_FROM ?? 'Rently <onboarding@resend.dev>',
   } as EmailConfig,
+  sms: {
+    // Optional — unset means no real provider is configured yet, and
+    // IdentityModule falls back to ConsoleSmsSender (see identity.module.ts).
+    twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
+    twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
+    // The Twilio number OTP texts are sent from — must be a real number
+    // provisioned on the account, SMS-capable, and able to send to NG numbers.
+    twilioFromNumber: process.env.TWILIO_FROM_NUMBER,
+  } as SmsConfig,
 });

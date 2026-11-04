@@ -33,7 +33,7 @@ describe('AuthService', () => {
     'issueTokenPair' | 'revokeAllForUser' | 'findUserIdByRefreshToken' | 'rotateRefreshToken',
     jest.Mock
   >;
-  let otpService: Record<'requestOtp', jest.Mock>;
+  let otpService: Record<'requestOtp' | 'verifyOtp', jest.Mock>;
   let configService: { get: jest.Mock };
   let auditLogService: Record<'record', jest.Mock>;
   let emailSender: Record<'send', jest.Mock>;
@@ -62,7 +62,7 @@ describe('AuthService', () => {
       findUserIdByRefreshToken: jest.fn(async () => 'user-1'),
       rotateRefreshToken: jest.fn(async () => ({ accessToken: 'new-access', refreshToken: 'new-refresh' })),
     };
-    otpService = { requestOtp: jest.fn(async () => undefined) };
+    otpService = { requestOtp: jest.fn(async () => undefined), verifyOtp: jest.fn(() => true) };
     configService = { get: jest.fn(() => ({ frontendUrl: 'https://rentlyhub.com.ng' })) };
     auditLogService = { record: jest.fn(async () => undefined) };
     emailSender = { send: jest.fn(async () => undefined) };
@@ -405,6 +405,52 @@ describe('AuthService', () => {
       );
       expect(resetToken.usedAt).not.toBeNull();
       expect(passwordResetTokenRepository.save).toHaveBeenCalledWith(resetToken);
+      expect(tokenService.revokeAllForUser).toHaveBeenCalledWith('user-1');
+    });
+  });
+
+  describe('requestPasswordResetOtp', () => {
+    it('does not send an OTP when the phone is not registered — anti-enumeration', async () => {
+      userRepository.findByPhone.mockResolvedValue(null);
+
+      await authService.requestPasswordResetOtp('+2348012345678');
+
+      expect(otpService.requestOtp).not.toHaveBeenCalled();
+    });
+
+    it('sends an OTP when the phone is registered', async () => {
+      userRepository.findByPhone.mockResolvedValue({ id: 'user-1' } as any);
+
+      await authService.requestPasswordResetOtp('+2348012345678');
+
+      expect(otpService.requestOtp).toHaveBeenCalledWith('+2348012345678');
+    });
+  });
+
+  describe('resetPasswordWithOtp', () => {
+    it('rejects an invalid or expired code — delegates to OtpService', async () => {
+      otpService.verifyOtp.mockImplementation(() => {
+        throw { code: 'OTP_INVALID_OR_EXPIRED' };
+      });
+
+      await expect(
+        authService.resetPasswordWithOtp('+2348012345678', '000000', 'newpassword123'),
+      ).rejects.toMatchObject({ code: 'OTP_INVALID_OR_EXPIRED' });
+      expect(userRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('updates the password and revokes every session once the code verifies', async () => {
+      userRepository.findByPhone.mockResolvedValue({
+        id: 'user-1',
+        passwordHash: 'old-hash',
+      } as any);
+
+      await authService.resetPasswordWithOtp('+2348012345678', '123456', 'newpassword123');
+
+      expect(otpService.verifyOtp).toHaveBeenCalledWith('+2348012345678', '123456');
+      expect(userRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ passwordHash: expect.not.stringMatching('old-hash') }),
+      );
       expect(tokenService.revokeAllForUser).toHaveBeenCalledWith('user-1');
     });
   });
