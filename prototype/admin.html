@@ -45,7 +45,19 @@ h1,h2,h3{font-family:var(--sans);}
 
 /* ---- sidebar: grouped, flat, no rounded-pill nav items ---- */
 .app-shell{display:flex;min-height:100vh;padding-top:0;}
-.app-side{width:232px;flex-shrink:0;border-right:1px solid var(--nav-border);padding:20px 12px;position:sticky;top:57px;height:calc(100vh - 57px);overflow-y:auto;background:var(--nav-bg);}
+.app-side{width:232px;flex-shrink:0;border-right:1px solid var(--nav-border);padding:20px 12px;position:sticky;top:57px;height:calc(100vh - 57px);overflow-y:auto;overflow-x:hidden;background:var(--nav-bg);transition:width .16s ease;}
+.app-side.collapsed{width:60px;}
+.app-side.collapsed .side-group-lbl{display:none;}
+/* Link labels are a plain text node after the icon (icon(...)+' Label'), not
+   a wrapped span — font-size:0 collapses that text to nothing while the SVG
+   icon keeps its own explicit px width/height (see icon() in rently.js) and
+   stays fully visible. Cheaper than rewriting every nav-label call site. */
+.app-side.collapsed .side-link{font-size:0;justify-content:center;gap:0;padding:10px 0;}
+.sidebar-toggle{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:8px;margin-bottom:14px;border-radius:6px;color:var(--nav-text-faint);cursor:pointer;background:transparent;border:1px solid var(--nav-border);transition:.15s;font-size:13px;font-weight:600;}
+.sidebar-toggle:hover{background:var(--nav-hover-bg);color:#fff;}
+.sidebar-toggle svg{transition:transform .16s ease;flex-shrink:0;}
+.app-side.collapsed .sidebar-toggle{font-size:0;}
+.app-side.collapsed .sidebar-toggle svg{transform:rotate(180deg);}
 .side-group-lbl{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--nav-text-faint);margin:18px 10px 6px;}
 .side-group-lbl:first-child{margin-top:4px;}
 .side-link{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;font-size:13px;font-weight:600;color:var(--nav-text);margin-bottom:1px;}
@@ -230,7 +242,8 @@ h1,h2,h3{font-family:var(--sans);}
 </div>
 
 <div class="app-shell">
-  <aside class="app-side">
+  <aside class="app-side" id="appSide">
+    <button class="sidebar-toggle" id="sidebarToggleBtn"></button>
     <div class="side-group-lbl">Overview</div>
     <a class="side-link active" data-view="overview" id="linkOverview"></a>
 
@@ -240,11 +253,13 @@ h1,h2,h3{font-family:var(--sans);}
     <a class="side-link" data-view="disputes" id="linkDisputes"></a>
     <a class="side-link planned" href="#" data-planned="support" id="linkSupport"></a>
 
+    <div class="side-group-lbl">Users</div>
+    <a class="side-link" data-view="providers" id="linkProviders"></a>
+    <a class="side-link" data-view="customers" id="linkCustomers"></a>
+
     <div class="side-group-lbl">Marketplace</div>
     <a class="side-link" data-view="listings" id="linkListings"></a>
     <a class="side-link" data-view="categories" id="linkCategories"></a>
-    <a class="side-link" data-view="providers" id="linkProviders"></a>
-    <a class="side-link" data-view="customers" id="linkCustomers"></a>
     <a class="side-link planned" href="#" data-planned="locations" id="linkLocations"></a>
 
     <div class="side-group-lbl">Finance</div>
@@ -309,6 +324,7 @@ h1,h2,h3{font-family:var(--sans);}
     <!-- ============ BOOKINGS / RETURNS ============ -->
     <div class="d-view" id="view-bookings">
       <div class="app-head"><div><h1 id="bookingsTitle">Bookings</h1><p id="bookingsSub">Every booking on Rently, across every provider and renter.</p></div></div>
+      <div class="kpi-row-sm" id="bookingsKpiRow" style="margin-bottom:16px;"></div>
       <div class="filter-bar">
         <select id="bkStatusFilter"><option value="">Any status</option></select>
         <input type="date" id="bkFromFilter" title="From" />
@@ -321,6 +337,7 @@ h1,h2,h3{font-family:var(--sans);}
     <!-- ============ DISPUTES ============ -->
     <div class="d-view" id="view-disputes">
       <div class="app-head"><div><h1>Disputes</h1><p>Damage claims flagged by a provider at inspection — resolve from any state, whether or not the two parties have agreed.</p></div></div>
+      <div class="kpi-row-sm" id="disputesKpiRow" style="margin-bottom:16px;"></div>
       <div class="chip-filter" id="disputeStatusFilter" style="margin-bottom:14px;"></div>
       <div id="disputesList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
     </div>
@@ -328,6 +345,7 @@ h1,h2,h3{font-family:var(--sans);}
     <!-- ============ LISTINGS ============ -->
     <div class="d-view" id="view-listings">
       <div class="app-head"><div><h1>Listings</h1><p>Every listing on Rently, any status — approve new submissions, pause one that's causing problems, or dig into any single listing.</p></div></div>
+      <div class="kpi-row-sm" id="listingsKpiRow" style="margin-bottom:16px;"></div>
       <div class="filter-bar">
         <input type="search" id="lstSearch" placeholder="Search title, description, location…" />
         <div class="chip-filter" id="lstStatusFilter"></div>
@@ -355,6 +373,7 @@ h1,h2,h3{font-family:var(--sans);}
     <!-- ============ PROVIDERS ============ -->
     <div class="d-view" id="view-providers">
       <div class="app-head"><div><h1>Providers</h1><p>Every provider on Rently, any verification status.</p></div></div>
+      <div class="kpi-row-sm" id="providersKpiRow" style="margin-bottom:16px;"></div>
       <div class="filter-bar"><input type="search" id="provSearch" placeholder="Search business name, owner, email…" /></div>
       <div id="providersList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
       <div style="margin-top:14px;text-align:center;"><button class="pill-btn ghost sm" id="provLoadMore" style="display:none;">Load more</button></div>
@@ -600,6 +619,36 @@ document.getElementById('lightboxPrev').innerHTML = icon('chevronLeft',{size:20}
 document.getElementById('lightboxNext').innerHTML = icon('chevronRight',{size:20});
 document.getElementById('catCloseBtn').innerHTML = icon('close',{size:15});
 
+/**
+ * Collapsed state is a per-viewer convenience (which screen real estate
+ * they'd rather have), not shared or meaningful across devices — localStorage
+ * is the right persistence layer here, not a backend preference.
+ */
+(function initSidebarToggle(){
+  const side = document.getElementById('appSide');
+  const btn = document.getElementById('sidebarToggleBtn');
+  function render(collapsed){
+    side.classList.toggle('collapsed', collapsed);
+    btn.innerHTML = icon('chevronLeft',{size:15}) + '<span class="label">Collapse</span>';
+    btn.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+  }
+  let collapsed = false;
+  try{ collapsed = localStorage.getItem('adminSidebarCollapsed')==='1'; }catch(e){}
+  render(collapsed);
+  btn.addEventListener('click', ()=>{
+    collapsed = !side.classList.contains('collapsed');
+    render(collapsed);
+    try{ localStorage.setItem('adminSidebarCollapsed', collapsed?'1':'0'); }catch(e){}
+  });
+  // Hover tooltips for every nav link — needed once labels disappear at
+  // collapsed width, cheap to derive from the text each link already has
+  // rather than hand-writing a title for 20+ individual links.
+  document.querySelectorAll('.app-side .side-link').forEach(l=>{
+    const t = l.textContent.trim();
+    if(t) l.title = t;
+  });
+})();
+
 function goView(v){
   // "Returns" has no DOM of its own — it's the Bookings view's exact table,
   // pre-filtered to return-related stages (see loadBookings's second arg).
@@ -612,11 +661,11 @@ function goView(v){
   const el = document.getElementById('view-'+domView);
   (el||document.getElementById('view-overview')).classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
-  if(v==='bookings') loadBookings(true);
-  if(v==='returns') loadBookings(true, RETURN_STAGES);
-  if(v==='listings') loadListings(true);
+  if(v==='bookings'){ loadBookings(true); renderBookingsKpis(); }
+  if(v==='returns'){ loadBookings(true, RETURN_STAGES); document.getElementById('bookingsKpiRow').innerHTML=''; }
+  if(v==='listings'){ loadListings(true); renderListingsKpis(); }
   if(v==='categories') loadCategories();
-  if(v==='providers') loadProviders(true);
+  if(v==='providers'){ loadProviders(true); renderProvidersKpis(); }
   if(v==='customers') loadCustomers(true);
   if(v==='reviews') loadReviews(true);
   if(v==='audit') loadAuditLog(true);
@@ -967,6 +1016,23 @@ const BOOKING_STATUS_PILL={pending:'warn',confirmed:'good',declined:'bad',cancel
 const BOOKING_STATUS_COLOR={pending:'#C6820B',confirmed:'#155EEF',completed:'#00A896',declined:'#C4392B',cancelled:'#8A5FBF',disputed:'#A8325E'};
 let bkCursor=null, bkRows=[], bkReturnsMode=false;
 document.getElementById('bkStatusFilter').innerHTML = '<option value="">Any status</option>'+['pending','confirmed','declined','cancelled','completed','disputed'].map(s=>`<option value="${s}">${s}</option>`).join('');
+/** Same real-filter pattern as Listings — /admin/bookings?status=X is a genuine server-side filter, not a client tally of one loaded page. */
+async function renderBookingsKpis(){
+  const [total, pending, confirmed, completed, disputed] = await Promise.all([
+    countFor('/admin/bookings'),
+    countFor('/admin/bookings?status=pending'),
+    countFor('/admin/bookings?status=confirmed'),
+    countFor('/admin/bookings?status=completed'),
+    countFor('/admin/bookings?status=disputed'),
+  ]);
+  document.getElementById('bookingsKpiRow').innerHTML = [
+    {lbl:'Total bookings', c:total},
+    {lbl:'Pending', c:pending},
+    {lbl:'Confirmed', c:confirmed},
+    {lbl:'Completed', c:completed},
+    {lbl:'Disputed', c:disputed},
+  ].map(k=>`<div class="kpi-sm"><div class="lbl">${k.lbl}</div><div class="val">${k.c.n}${k.c.plus?'+':''}</div></div>`).join('');
+}
 async function loadBookings(reset, forcedStages){
   // `forcedStages` only arrives from the Returns nav link's own call — every
   // other call site (filter Apply, Load more) omits it, so the mode has to
@@ -1056,6 +1122,21 @@ document.querySelectorAll('#lstStatusFilter [data-s]').forEach(b=>b.addEventList
 }));
 let lstSearchDebounce=null;
 document.getElementById('lstSearch').addEventListener('input',()=>{ clearTimeout(lstSearchDebounce); lstSearchDebounce=setTimeout(()=>loadListings(true),300); });
+/** Each count is its own honest countFor() call (same "100+" pattern as Overview) — status filter is real server-side filtering, not a tally of whatever page happens to be loaded. */
+async function renderListingsKpis(){
+  const [total, pending, live, rejected] = await Promise.all([
+    countFor('/admin/listings'),
+    countFor('/admin/listings?status=pending_review'),
+    countFor('/admin/listings?status=live'),
+    countFor('/admin/listings?status=rejected'),
+  ]);
+  document.getElementById('listingsKpiRow').innerHTML = [
+    {lbl:'Total listings', c:total},
+    {lbl:'Pending review', c:pending},
+    {lbl:'Live', c:live},
+    {lbl:'Rejected', c:rejected},
+  ].map(k=>`<div class="kpi-sm"><div class="lbl">${k.lbl}</div><div class="val">${k.c.n}${k.c.plus?'+':''}</div></div>`).join('');
+}
 async function loadListings(reset){
   if(reset){ lstCursor=null; lstRows=[]; document.getElementById('listingsList').innerHTML='<div class="skel-row-sm"></div><div class="skel-row-sm"></div>'; }
   const q=document.getElementById('lstSearch').value.trim();
@@ -1215,6 +1296,25 @@ document.getElementById('catSaveBtn').addEventListener('click', async ()=>{
 let provCursor=null, provRows=[];
 let provSearchDebounce=null;
 document.getElementById('provSearch').addEventListener('input',()=>{ clearTimeout(provSearchDebounce); provSearchDebounce=setTimeout(()=>loadProviders(true),300); });
+/**
+ * /admin/providers has no server-side verificationStatus filter, so this
+ * tallies one real (not fabricated) limit=100 page client-side — honest
+ * today since the whole provider roster fits in one page; the "+" suffix
+ * keeps it honest if that ever stops being true, same as countFor().
+ */
+async function renderProvidersKpis(){
+  try{
+    const {data,meta} = await apiFetch('/admin/providers?limit=100');
+    const plus = meta.hasMore ? '+' : '';
+    const pending = data.filter(p=>p.verificationStatus==='pending').length;
+    const verified = data.filter(p=>p.verificationStatus==='verified').length;
+    document.getElementById('providersKpiRow').innerHTML = [
+      {lbl:'Total providers', val:data.length+plus},
+      {lbl:'Pending verification', val:pending+plus},
+      {lbl:'Verified', val:verified+plus},
+    ].map(k=>`<div class="kpi-sm"><div class="lbl">${k.lbl}</div><div class="val">${k.val}</div></div>`).join('');
+  }catch(e){ /* non-fatal — the table below still loads and shows its own error */ }
+}
 async function loadProviders(reset){
   if(reset){ provCursor=null; provRows=[]; document.getElementById('providersList').innerHTML='<div class="skel-row-sm"></div>'; }
   const q=document.getElementById('provSearch').value.trim();
@@ -1549,7 +1649,20 @@ async function renderDisputes(){
     disputeQueue=data;
     disputeFilterTabs();
     renderDisputeRows();
+    renderDisputesKpis();
   }catch(e){ el.innerHTML = stateError(e); }
+}
+/** Exact counts, not estimates — /admin/disputes already returns every dispute unpaginated, so this is the real total, not a page of it. */
+function renderDisputesKpis(){
+  const open = disputeQueue.filter(d=>d.status==='open'||d.status==='proposed').length;
+  const contested = disputeQueue.filter(d=>d.status==='contested').length;
+  const resolved = disputeQueue.filter(d=>d.status==='resolved').length;
+  document.getElementById('disputesKpiRow').innerHTML = [
+    {lbl:'Needs attention', val:open},
+    {lbl:'Contested', val:contested},
+    {lbl:'Resolved', val:resolved},
+    {lbl:'Total disputes', val:disputeQueue.length},
+  ].map(k=>`<div class="kpi-sm"><div class="lbl">${k.lbl}</div><div class="val">${k.val}</div></div>`).join('');
 }
 
 /**
