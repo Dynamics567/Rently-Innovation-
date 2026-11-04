@@ -128,7 +128,19 @@ body{min-height:100vh;}
         <div id="forgotSuccess" class="banner success" style="display:none;margin-bottom:20px;"></div>
         <div class="field"><label>Email address</label><input type="email" id="forgotEmailInput" placeholder="you@example.com" /></div>
         <button class="pill-btn blue lg block" id="sendResetBtn" style="margin-bottom:16px;">Send reset link</button>
+        <a class="text-link faint" id="useOtpInsteadLink" style="cursor:pointer;display:inline-flex;margin-bottom:12px;">Reset using your phone number instead</a>
         <a class="text-link faint" id="backToLoginLink" style="cursor:pointer;">Back to log in</a>
+      </div>
+
+      <!-- SCREEN: forgot password via phone — request an SMS code -->
+      <div id="screenForgotPhone" style="display:none;">
+        <h1>Reset your password</h1>
+        <p class="sub">Enter your phone number and we'll text you a 6-digit code.</p>
+        <div id="forgotPhoneError" class="banner danger" style="display:none;margin-bottom:20px;"></div>
+        <div class="field"><label>Phone number</label><input type="tel" id="forgotPhoneInput" placeholder="+2348012345678" value="+234" /></div>
+        <button class="pill-btn blue lg block" id="sendOtpBtn" style="margin-bottom:16px;">Send code</button>
+        <a class="text-link faint" id="useEmailInsteadLink" style="cursor:pointer;display:inline-flex;margin-bottom:12px;">Reset using email instead</a>
+        <a class="text-link faint" id="backToLoginLinkPhone" style="cursor:pointer;">Back to log in</a>
       </div>
 
       <!-- SCREEN: set new password — reached via the emailed ?resetToken= link -->
@@ -141,6 +153,21 @@ body{min-height:100vh;}
           <div class="field"><label>New password</label><input type="password" id="newPasswordInput" placeholder="••••••••" /></div>
           <div class="field"><label>Confirm new password</label><input type="password" id="confirmPasswordInput" placeholder="••••••••" /></div>
           <button class="pill-btn blue lg block" id="submitResetBtn">Set new password</button>
+        </div>
+      </div>
+
+      <!-- SCREEN: set new password via OTP — reached from screenForgotPhone after a code is sent -->
+      <div id="screenResetOtp" style="display:none;">
+        <h1>Enter your code</h1>
+        <p class="sub">We sent a 6-digit code by SMS to <span id="otpPhoneLabel"></span>. It expires in 5 minutes.</p>
+        <div id="resetOtpError" class="banner danger" style="display:none;margin-bottom:20px;"></div>
+        <div id="resetOtpSuccess" class="banner success" style="display:none;margin-bottom:20px;"></div>
+        <div id="resetOtpFormFields">
+          <div class="field"><label>6-digit code</label><input type="text" inputmode="numeric" maxlength="6" id="otpCodeInput" placeholder="123456" /></div>
+          <div class="field"><label>New password</label><input type="password" id="otpNewPasswordInput" placeholder="••••••••" /></div>
+          <div class="field"><label>Confirm new password</label><input type="password" id="otpConfirmPasswordInput" placeholder="••••••••" /></div>
+          <button class="pill-btn blue lg block" id="submitResetOtpBtn" style="margin-bottom:16px;">Set new password</button>
+          <a class="text-link faint" id="resendOtpLink" style="cursor:pointer;">Didn't get a code? Resend</a>
         </div>
       </div>
 
@@ -281,7 +308,7 @@ document.getElementById('submitAuthBtn').addEventListener('click', async ()=>{
    FORGOT PASSWORD
    ================================================================ */
 function showScreen(name){
-  ['screenForm','screenForgot','screenReset'].forEach(id=>{
+  ['screenForm','screenForgot','screenForgotPhone','screenReset','screenResetOtp'].forEach(id=>{
     document.getElementById(id).style.display = id===name ? 'block' : 'none';
   });
 }
@@ -310,6 +337,84 @@ document.getElementById('sendResetBtn').addEventListener('click', async ()=>{
   }catch(err){
     errEl.innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(err)}</div>`; errEl.style.display='flex';
   }finally{
+    btn.disabled=false; btn.textContent=original;
+  }
+});
+
+/* ---- forgot password via phone (SMS OTP) ---- */
+let currentOtpPhone = '';
+
+document.getElementById('useOtpInsteadLink').addEventListener('click',()=>{
+  document.getElementById('forgotPhoneError').style.display='none';
+  document.getElementById('forgotPhoneInput').value = document.getElementById('phoneInput').value || '+234';
+  showScreen('screenForgotPhone');
+});
+document.getElementById('useEmailInsteadLink').addEventListener('click',()=>showScreen('screenForgot'));
+document.getElementById('backToLoginLinkPhone').addEventListener('click',()=>showScreen('screenForm'));
+
+async function sendResetOtp(){
+  const errEl=document.getElementById('forgotPhoneError');
+  errEl.style.display='none';
+  const phone=document.getElementById('forgotPhoneInput').value.trim();
+  if(!/^\+[1-9]\d{7,14}$/.test(phone)){ errEl.innerHTML=icon('alert',{size:15})+'<div>Please enter a valid phone number in international format, e.g. +2348012345678.</div>'; errEl.style.display='flex'; return false; }
+
+  const btn=document.getElementById('sendOtpBtn');
+  btn.disabled=true; const original=btn.textContent; btn.textContent='Sending…';
+  try{
+    await apiFetch('/auth/password/otp-request',{method:'POST',auth:false,body:{phone}});
+    currentOtpPhone = phone;
+    document.getElementById('otpPhoneLabel').textContent = phone;
+    document.getElementById('otpCodeInput').value='';
+    document.getElementById('resetOtpError').style.display='none';
+    document.getElementById('resetOtpSuccess').style.display='none';
+    showScreen('screenResetOtp');
+    return true;
+  }catch(err){
+    errEl.innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(err)}</div>`; errEl.style.display='flex';
+    return false;
+  }finally{
+    btn.disabled=false; btn.textContent=original;
+  }
+}
+document.getElementById('sendOtpBtn').addEventListener('click', sendResetOtp);
+
+document.getElementById('resendOtpLink').addEventListener('click', async ()=>{
+  const okEl=document.getElementById('resetOtpSuccess'), errEl=document.getElementById('resetOtpError');
+  okEl.style.display='none'; errEl.style.display='none';
+  document.getElementById('forgotPhoneInput').value = currentOtpPhone;
+  const link=document.getElementById('resendOtpLink');
+  const original=link.textContent; link.textContent='Sending…';
+  try{
+    await apiFetch('/auth/password/otp-request',{method:'POST',auth:false,body:{phone:currentOtpPhone}});
+    okEl.innerHTML=icon('check',{size:15})+'<div>A new code is on its way.</div>'; okEl.style.display='flex';
+  }catch(err){
+    errEl.innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(err)}</div>`; errEl.style.display='flex';
+  }finally{
+    link.textContent=original;
+  }
+});
+
+document.getElementById('submitResetOtpBtn').addEventListener('click', async ()=>{
+  const errEl=document.getElementById('resetOtpError'), okEl=document.getElementById('resetOtpSuccess');
+  errEl.style.display='none'; okEl.style.display='none';
+  const code=document.getElementById('otpCodeInput').value.trim();
+  const newPassword=document.getElementById('otpNewPasswordInput').value;
+  const confirmPassword=document.getElementById('otpConfirmPasswordInput').value;
+
+  if(!/^\d{6}$/.test(code)){ errEl.innerHTML=icon('alert',{size:15})+'<div>Please enter the 6-digit code.</div>'; errEl.style.display='flex'; return; }
+  if(!newPassword || newPassword.length<8){ errEl.innerHTML=icon('alert',{size:15})+'<div>Password must be at least 8 characters.</div>'; errEl.style.display='flex'; return; }
+  if(newPassword!==confirmPassword){ errEl.innerHTML=icon('alert',{size:15})+'<div>Passwords don\'t match.</div>'; errEl.style.display='flex'; return; }
+
+  const btn=document.getElementById('submitResetOtpBtn');
+  btn.disabled=true; const original=btn.textContent; btn.textContent='Saving…';
+  try{
+    await apiFetch('/auth/password/otp-reset',{method:'POST',auth:false,body:{phone:currentOtpPhone,code,newPassword}});
+    document.getElementById('resetOtpFormFields').style.display='none';
+    okEl.innerHTML=icon('check',{size:15})+'<div>Your password has been reset. You can now log in with your new password.</div>';
+    okEl.style.display='flex';
+    setTimeout(()=>{ window.location.href='auth'; }, 2500);
+  }catch(err){
+    errEl.innerHTML=icon('alert',{size:15})+`<div>${apiErrorMessage(err)}</div>`; errEl.style.display='flex';
     btn.disabled=false; btn.textContent=original;
   }
 });

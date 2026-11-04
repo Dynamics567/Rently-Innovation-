@@ -814,3 +814,28 @@ function createDateRangePicker(calEl,onChange){
   checkVersion();
   setInterval(checkVersion, 60000);
 })();
+
+/* ================================================================
+   FLOATING WHATSAPP CONTACT BUTTON
+   ================================================================
+   Runs on every page automatically since this file is loaded
+   everywhere — no per-page wiring needed. Skipped on /admin: that's
+   an internal staff tool, not a customer-support surface, same
+   reasoning Google Analytics and the PWA install prompt already use
+   to exclude it. */
+(function mountWhatsAppButton(){
+  const page = location.pathname.replace(/\/+$/,'').split('/').pop() || 'index';
+  if(page==='admin' || page==='admin.html') return;
+  if(document.getElementById('waFloatBtn')) return;
+
+  const a = document.createElement('a');
+  a.id = 'waFloatBtn';
+  a.href = 'https://wa.me/2347063260000';
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.setAttribute('aria-label', 'Chat with Rently on WhatsApp');
+  a.title = 'Chat with us on WhatsApp';
+  a.style.cssText = 'position:fixed;right:20px;bottom:20px;width:56px;height:56px;border-radius:50%;background:#25D366;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px rgba(0,0,0,.25);z-index:9997;transition:transform .15s ease;';
+  a.innerHTML = '<svg width="30" height="30" viewBox="0 0 32 32" fill="#fff" aria-hidden="true"><path d="M16.001 2.667c-7.364 0-13.334 5.97-13.334 13.333 0 2.45.666 4.744 1.825 6.716L2.667 29.333l6.8-1.78a13.27 13.27 0 0 0 6.534 1.78c7.363 0 13.333-5.97 13.333-13.333S23.364 2.667 16.001 2.667zm0 24.228c-2.112 0-4.09-.59-5.776-1.613l-.414-.246-4.034 1.057 1.078-3.932-.27-.404a10.904 10.904 0 0 1-1.696-5.89c0-6.043 4.918-10.961 10.962-10.961 6.043 0 10.961 4.918 10.961 10.961 0 6.044-4.918 10.962-10.961 10.962h-.004zm6.012-8.212c-.33-.165-1.947-.96-2.25-1.07-.302-.11-.522-.165-.742.165-.22.33-.852 1.07-1.044 1.29-.192.22-.385.248-.714.083-.33-.165-1.39-.512-2.646-1.633-.978-.872-1.638-1.95-1.83-2.28-.192-.33-.02-.508.153-.673.165-.165.37-.43.556-.645.185-.215.247-.37.37-.618.123-.248.062-.463-.03-.645-.093-.183-.84-2.027-1.152-2.775-.303-.728-.61-.63-.84-.642-.216-.01-.465-.012-.714-.012-.248 0-.65.093-.991.463-.34.37-1.302 1.273-1.302 3.102 0 1.83 1.333 3.598 1.518 3.846.185.248 2.555 3.9 6.19 5.313 3.634 1.413 3.634.942 4.29.883.654-.06 1.947-.797 2.223-1.567.275-.77.275-1.43.192-1.567-.08-.14-.3-.22-.63-.385z"/></svg>';
+  document.body.appendChild(a);
+})();
