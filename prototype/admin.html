@@ -668,6 +668,7 @@ function goView(v){
   const el = document.getElementById('view-'+domView);
   (el||document.getElementById('view-overview')).classList.add('active');
   window.scrollTo({top:0,behavior:'smooth'});
+  if(v==='overview') renderOverview();
   if(v==='bookings'){ loadBookings(true); renderBookingsKpis(); }
   if(v==='returns'){ loadBookings(true, RETURN_STAGES); document.getElementById('bookingsKpiRow').innerHTML=''; }
   if(v==='listings'){ loadListings(true); renderListingsKpis(); }
