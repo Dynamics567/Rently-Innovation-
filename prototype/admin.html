@@ -66,7 +66,7 @@ h1,h2,h3{font-family:var(--sans);}
   .mobile-tabbar .side-link.active{border-color:var(--blue);}
 }
 
-.app-main{flex:1;min-width:0;padding:28px 32px 80px;max-width:1280px;}
+.app-main{flex:1;min-width:0;padding:28px 32px 80px;}
 .app-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;gap:20px;flex-wrap:wrap;}
 .app-head h1{font-size:22px;font-weight:700;color:var(--op-text);}
 .app-head p{color:var(--op-text-soft);font-size:13px;margin-top:4px;max-width:540px;}
@@ -87,7 +87,8 @@ h1,h2,h3{font-family:var(--sans);}
 
 /* ---- secondary KPI row: smaller, flatter than the old marketing-style cards ---- */
 .kpi-row-sm{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
-.kpi-sm{background:var(--op-surface);border:1px solid var(--op-border);border-radius:8px;padding:14px 16px;}
+.kpi-sm{background:var(--op-surface);border:1px solid var(--op-border);border-radius:8px;padding:14px 16px;cursor:pointer;transition:.15s;}
+.kpi-sm:hover{background:var(--op-bg);border-color:var(--op-border-strong);}
 .kpi-sm .lbl{font-size:11px;color:var(--op-text-faint);font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
 .kpi-sm .val{font-size:22px;font-weight:700;color:var(--op-text);margin-top:4px;font-variant-numeric:tabular-nums;}
 @media(max-width:760px){.kpi-row-sm{grid-template-columns:repeat(2,1fr);}}
@@ -919,13 +920,15 @@ async function renderOverview(){
     </div>`).join('') : `<div class="attn-empty">Nothing needs attention right now.</div>`;
   list.querySelectorAll('[data-go]').forEach(el=>el.addEventListener('click',()=>goView(el.dataset.go)));
 
-  document.getElementById('kpiRowSm').innerHTML = [
-    {lbl:'Total users', val:userStats.totalUsers!=null?userStats.totalUsers:'—'},
-    {lbl:'Pending listings', val:listings.n+(listings.plus?'+':'')},
-    {lbl:'Pending verifications', val:verif.n+(verif.plus?'+':'')},
-    {lbl:'Open disputes', val:disputesOpen},
-    {lbl:'Returns in progress', val:returns.n+(returns.plus?'+':'')},
-  ].map(k=>`<div class="kpi-sm"><div class="lbl">${k.lbl}</div><div class="val">${k.val}</div></div>`).join('');
+  const kpiRow=document.getElementById('kpiRowSm');
+  kpiRow.innerHTML = [
+    {lbl:'Total users', val:userStats.totalUsers!=null?userStats.totalUsers:'—', go:'customers'},
+    {lbl:'Pending listings', val:listings.n+(listings.plus?'+':''), go:'listings'},
+    {lbl:'Pending verifications', val:verif.n+(verif.plus?'+':''), go:'verification'},
+    {lbl:'Open disputes', val:disputesOpen, go:'disputes'},
+    {lbl:'Returns in progress', val:returns.n+(returns.plus?'+':''), go:'returns'},
+  ].map(k=>`<div class="kpi-sm" data-go="${k.go}"><div class="lbl">${k.lbl}</div><div class="val">${k.val}</div></div>`).join('');
+  kpiRow.querySelectorAll('[data-go]').forEach(el=>el.addEventListener('click',()=>goView(el.dataset.go)));
 }
 
 /**
