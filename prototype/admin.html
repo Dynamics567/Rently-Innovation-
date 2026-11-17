@@ -276,6 +276,16 @@ h1,h2,h3{font-family:var(--sans);}
     <a class="side-link planned" href="#" data-planned="promotions" id="linkPromotions"></a>
     <a class="side-link planned" href="#" data-planned="notifications" id="linkNotifications"></a>
 
+    <div class="side-group-lbl">Campaigns</div>
+    <a class="side-link" data-view="ambassadors" id="linkAmbassadors"></a>
+    <a class="side-link" data-view="referrals" id="linkReferrals"></a>
+    <a class="side-link planned" href="#" data-planned="campaignPoints" id="linkCampaignPoints"></a>
+    <a class="side-link planned" href="#" data-planned="campaignLeaderboard" id="linkCampaignLeaderboard"></a>
+    <a class="side-link planned" href="#" data-planned="campaignWinner" id="linkCampaignWinner"></a>
+    <a class="side-link planned" href="#" data-planned="campaignSwapConnect" id="linkCampaignSwapConnect"></a>
+    <a class="side-link planned" href="#" data-planned="campaignFulfilment" id="linkCampaignFulfilment"></a>
+    <a class="side-link planned" href="#" data-planned="campaignAnalytics" id="linkCampaignAnalytics"></a>
+
     <div class="side-group-lbl">Content</div>
     <a class="side-link planned" href="#" data-planned="cms" id="linkCms"></a>
     <a class="side-link planned" href="#" data-planned="helpCentre" id="linkHelpCentre"></a>
@@ -386,6 +396,22 @@ h1,h2,h3{font-family:var(--sans);}
       <div class="filter-bar"><input type="search" id="custSearch" placeholder="Search name or email…" /></div>
       <div id="customersList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
       <div style="margin-top:14px;text-align:center;"><button class="pill-btn ghost sm" id="custLoadMore" style="display:none;">Load more</button></div>
+    </div>
+
+    <!-- ============ AMBASSADORS ============ -->
+    <div class="d-view" id="view-ambassadors">
+      <div class="app-head"><div><h1>Ambassadors</h1><p>Referral Ambassadors for the Refer, Onboard &amp; Win campaign.</p></div></div>
+      <div class="kpi-row-sm" id="ambassadorsKpiRow" style="margin-bottom:16px;"></div>
+      <div id="ambassadorsList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
+      <div style="margin-top:14px;text-align:center;"><button class="pill-btn ghost sm" id="ambLoadMore" style="display:none;">Load more</button></div>
+    </div>
+
+    <!-- ============ REFERRALS ============ -->
+    <div class="d-view" id="view-referrals">
+      <div class="app-head"><div><h1>Referrals</h1><p>Every attributed referral across all ambassadors.</p></div></div>
+      <div class="kpi-row-sm" id="referralsKpiRow" style="margin-bottom:16px;"></div>
+      <div id="referralsList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
+      <div style="margin-top:14px;text-align:center;"><button class="pill-btn ghost sm" id="refLoadMore" style="display:none;">Load more</button></div>
     </div>
 
     <!-- ============ VERIFICATION ============ -->
@@ -604,6 +630,14 @@ document.getElementById('linkRefunds').innerHTML = icon('minus',{size:16})+' Ref
 document.getElementById('linkWallets').innerHTML = icon('wallet',{size:16})+' Wallets';
 document.getElementById('linkPromotions').innerHTML = icon('star',{size:16})+' Promotions';
 document.getElementById('linkNotifications').innerHTML = icon('bell',{size:16})+' Notifications';
+document.getElementById('linkAmbassadors').innerHTML = icon('share',{size:16})+' Ambassadors';
+document.getElementById('linkReferrals').innerHTML = icon('arrowUpRight',{size:16})+' Referrals';
+document.getElementById('linkCampaignPoints').innerHTML = icon('star',{size:16})+' Points &amp; milestones';
+document.getElementById('linkCampaignLeaderboard').innerHTML = icon('list',{size:16})+' Leaderboard';
+document.getElementById('linkCampaignWinner').innerHTML = icon('check',{size:16})+' Winner verification';
+document.getElementById('linkCampaignSwapConnect').innerHTML = icon('settings',{size:16})+' SwapConnect integration';
+document.getElementById('linkCampaignFulfilment').innerHTML = icon('truck',{size:16})+' Prize fulfilment';
+document.getElementById('linkCampaignAnalytics').innerHTML = icon('grid',{size:16})+' Campaign analytics';
 document.getElementById('linkCms').innerHTML = icon('edit',{size:16})+' CMS';
 document.getElementById('linkHelpCentre').innerHTML = icon('info',{size:16})+' Help centre';
 document.getElementById('linkPermissions').innerHTML = icon('lock',{size:16})+' Permissions';
@@ -675,6 +709,8 @@ function goView(v){
   if(v==='categories') loadCategories();
   if(v==='providers'){ loadProviders(true); renderProvidersKpis(); }
   if(v==='customers'){ loadCustomers(true); renderCustomersKpis(); }
+  if(v==='ambassadors'){ loadAmbassadors(true); renderAmbassadorsKpis(); }
+  if(v==='referrals'){ loadReferrals(true); renderReferralsKpis(); }
   if(v==='reviews'){ loadReviews(true); renderReviewsKpis(); }
   if(v==='audit') loadAuditLog(true);
   if(v==='team') loadTeam();
@@ -866,6 +902,23 @@ document.getElementById('drawerBody').addEventListener('click', async (e)=>{
       if(!reference||reference.trim().length<3){ if(reference!==null) alert('Please provide a reference of at least 3 characters.'); btn.disabled=false; return; }
       await apiFetch(`/admin/finance/settlements/${id}/paid`,{method:'PATCH',body:{reference:reference.trim()}});
       closeDrawer(); loadSettlements(true);
+    } else if(action==='ambassador-approve'){
+      await apiFetch(`/admin/ambassadors/${id}/approve`,{method:'POST'}); closeDrawer(); loadAmbassadors(true);
+    } else if(action==='ambassador-suspend'){
+      const reason=prompt('Reason for suspending this ambassador (visible in the audit log):');
+      if(!reason||reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); btn.disabled=false; return; }
+      await apiFetch(`/admin/ambassadors/${id}/suspend`,{method:'POST',body:{reason:reason.trim()}}); closeDrawer(); loadAmbassadors(true);
+    } else if(action==='ambassador-reinstate'){
+      await apiFetch(`/admin/ambassadors/${id}/reinstate`,{method:'POST'}); closeDrawer(); loadAmbassadors(true);
+    } else if(action==='ambassador-disqualify'){
+      const reason=prompt('Reason for disqualifying this ambassador — this is a campaign-ending action (visible in the audit log):');
+      if(!reason||reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); btn.disabled=false; return; }
+      if(!confirm('Disqualify this ambassador from the campaign? This cannot be undone from here.')){ btn.disabled=false; return; }
+      await apiFetch(`/admin/ambassadors/${id}/disqualify`,{method:'POST',body:{reason:reason.trim()}}); closeDrawer(); loadAmbassadors(true);
+    } else if(action==='referral-reject'){
+      const reason=prompt('Reason this referral is being rejected (visible to the ambassador):');
+      if(!reason||reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); btn.disabled=false; return; }
+      await apiFetch(`/admin/referrals/${id}/reject`,{method:'POST',body:{reason:reason.trim()}}); closeDrawer(); loadReferrals(true);
     }
   }catch(err){
     alert(apiErrorMessage(err));
@@ -1491,6 +1544,141 @@ async function openCustomerDrawer(id){
 }
 
 /* ================================================================
+   AMBASSADORS — Rently x SwapConnect "Refer, Onboard & Win" campaign,
+   Phase 2 (ambassador management + referral attribution). No search
+   filter here yet — the backend doesn't support one on this endpoint.
+   ================================================================ */
+let ambCursor=null, ambRows=[];
+async function renderAmbassadorsKpis(){
+  try{
+    const {data,meta} = await apiFetch('/admin/ambassadors?limit=100');
+    const plus = meta.hasMore ? '+' : '';
+    const pending = data.filter(a=>a.status==='pending').length;
+    const activeIsh = data.filter(a=>a.status==='approved'||a.status==='active').length;
+    const disqualified = data.filter(a=>a.status==='disqualified').length;
+    document.getElementById('ambassadorsKpiRow').innerHTML = [
+      {lbl:'Total ambassadors', val:data.length+plus},
+      {lbl:'Pending approval', val:pending+plus},
+      {lbl:'Approved / active', val:activeIsh+plus},
+      {lbl:'Disqualified', val:disqualified+plus},
+    ].map(k=>`<div class="kpi-sm"><div class="lbl">${k.lbl}</div><div class="val">${k.val}</div></div>`).join('');
+  }catch(e){ /* non-fatal — the table below still loads and shows its own error */ }
+}
+async function loadAmbassadors(reset){
+  if(reset){ ambCursor=null; ambRows=[]; document.getElementById('ambassadorsList').innerHTML='<div class="skel-row-sm"></div>'; }
+  const params=new URLSearchParams({limit:'20'});
+  if(ambCursor) params.set('cursor',ambCursor);
+  try{
+    const {data,meta} = await apiFetch(`/admin/ambassadors?${params}`);
+    ambRows = reset ? data : ambRows.concat(data);
+    ambCursor = meta.nextCursor;
+    document.getElementById('ambLoadMore').style.display = meta.hasMore ? '' : 'none';
+    renderAmbassadorsTable();
+  }catch(e){ document.getElementById('ambassadorsList').innerHTML = stateError(e); }
+}
+const AMBASSADOR_STATUS_CLASS={pending:'',approved:'good',active:'good',suspended:'bad',disqualified:'bad'};
+function renderAmbassadorsTable(){
+  const el=document.getElementById('ambassadorsList');
+  if(!ambRows.length){ el.innerHTML = stateEmpty('No ambassadors have registered yet.'); return; }
+  el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th>Name</th><th>Referral code</th><th>Status</th><th>Joined</th></tr></thead><tbody>${
+    ambRows.map(a=>`<tr class="clickable" data-amb="${a.id}">
+      <td>${a.user?a.user.fullName:'—'}</td><td><code>${a.referralCode}</code></td>
+      <td><span class="pill-status ${AMBASSADOR_STATUS_CLASS[a.status]||''}">${a.status}</span></td>
+      <td>${new Date(a.createdAt).toLocaleDateString()}</td>
+    </tr>`).join('')
+  }</tbody></table></div>`;
+  el.querySelectorAll('[data-amb]').forEach(r=>r.addEventListener('click',()=>openAmbassadorDrawer(r.dataset.amb)));
+}
+document.getElementById('ambLoadMore').addEventListener('click',()=>loadAmbassadors(false));
+
+async function openAmbassadorDrawer(id){
+  const a = await apiFetch(`/admin/ambassadors/${id}`).then(r=>r.data).catch(()=>null);
+  if(!a){ alert('Could not load this ambassador.'); return; }
+  const actions=[];
+  if(a.status==='pending') actions.push(`<button class="pill-btn blue sm" data-admin-action="ambassador-approve" data-id="${id}">Approve</button>`);
+  if(a.status==='suspended') actions.push(`<button class="pill-btn green sm" data-admin-action="ambassador-reinstate" data-id="${id}">Reinstate</button>`);
+  else if(a.status!=='disqualified') actions.push(`<button class="pill-btn ghost sm" data-admin-action="ambassador-suspend" data-id="${id}">Suspend</button>`);
+  if(a.status!=='disqualified') actions.push(`<button class="pill-btn danger sm" data-admin-action="ambassador-disqualify" data-id="${id}">Disqualify</button>`);
+  openDrawer(a.user?a.user.fullName:'Ambassador', a.user?(a.user.email||a.user.phone||''):'', [
+    { key:'overview', label:'Overview', render: async ()=> dkv('Referral code', a.referralCode)+dkv('Status', a.status)
+        +dkv('Agreed to rules', new Date(a.agreementAcceptedAt).toLocaleDateString())
+        +(a.approvedAt?dkv('Approved', new Date(a.approvedAt).toLocaleDateString()):'')
+        +(a.suspendedReason?dkv('Suspension reason', a.suspendedReason):'')
+        +(a.disqualifiedReason?dkv('Disqualification reason', a.disqualifiedReason):'')
+        +`<div style="margin-top:18px;display:flex;gap:8px;flex-wrap:wrap;">${actions.join('')}</div>` },
+    { key:'referrals', label:'Referrals', render: async ()=>{
+      const {data} = await apiFetch(`/admin/ambassadors/${id}/referrals?limit=50`);
+      if(!data.length) return stateEmpty('No referrals yet.');
+      return data.map(r=>`<div class="dkv"><span class="k">${r.referredUser?r.referredUser.fullName:r.referredUserId}</span><span class="v">${r.status}</span></div>`).join('');
+    }},
+    auditTabFor('AmbassadorProfile', id),
+  ]);
+}
+
+/* ================================================================
+   REFERRALS — every attributed referral across all ambassadors.
+   Milestone achievements show up in the Audit tab below (the
+   milestone listener audit-logs onto the ReferralAttribution entity),
+   so there's no separate "Milestones" tab duplicating that history.
+   ================================================================ */
+let refCursor=null, refRows=[];
+async function renderReferralsKpis(){
+  try{
+    const {data,meta} = await apiFetch('/admin/referrals?limit=100');
+    const plus = meta.hasMore ? '+' : '';
+    const pending = data.filter(r=>r.status==='pending').length;
+    const qualified = data.filter(r=>r.status==='qualified').length;
+    const rejected = data.filter(r=>r.status==='rejected').length;
+    document.getElementById('referralsKpiRow').innerHTML = [
+      {lbl:'Total referrals', val:data.length+plus},
+      {lbl:'Pending', val:pending+plus},
+      {lbl:'Qualified', val:qualified+plus},
+      {lbl:'Rejected', val:rejected+plus},
+    ].map(k=>`<div class="kpi-sm"><div class="lbl">${k.lbl}</div><div class="val">${k.val}</div></div>`).join('');
+  }catch(e){ /* non-fatal */ }
+}
+async function loadReferrals(reset){
+  if(reset){ refCursor=null; refRows=[]; document.getElementById('referralsList').innerHTML='<div class="skel-row-sm"></div>'; }
+  const params=new URLSearchParams({limit:'20'});
+  if(refCursor) params.set('cursor',refCursor);
+  try{
+    const {data,meta} = await apiFetch(`/admin/referrals?${params}`);
+    refRows = reset ? data : refRows.concat(data);
+    refCursor = meta.nextCursor;
+    document.getElementById('refLoadMore').style.display = meta.hasMore ? '' : 'none';
+    renderReferralsTable();
+  }catch(e){ document.getElementById('referralsList').innerHTML = stateError(e); }
+}
+const REFERRAL_STATUS_CLASS={pending:'',qualified:'good',rejected:'bad',reversed:'bad'};
+function renderReferralsTable(){
+  const el=document.getElementById('referralsList');
+  if(!refRows.length){ el.innerHTML = stateEmpty('No referrals yet.'); return; }
+  el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th>Referred account</th><th>Ambassador</th><th>Source</th><th>Status</th></tr></thead><tbody>${
+    refRows.map(r=>`<tr class="clickable" data-ref="${r.id}">
+      <td>${r.referredUser?r.referredUser.fullName:r.referredUserId}</td>
+      <td>${r.ambassadorName||'—'}</td><td>${r.source}</td>
+      <td><span class="pill-status ${REFERRAL_STATUS_CLASS[r.status]||''}">${r.status}</span></td>
+    </tr>`).join('')
+  }</tbody></table></div>`;
+  el.querySelectorAll('[data-ref]').forEach(r=>r.addEventListener('click',()=>openReferralDrawer(r.dataset.ref)));
+}
+document.getElementById('refLoadMore').addEventListener('click',()=>loadReferrals(false));
+
+async function openReferralDrawer(id){
+  const r = await apiFetch(`/admin/referrals/${id}`).then(x=>x.data).catch(()=>null);
+  if(!r){ alert('Could not load this referral.'); return; }
+  openDrawer(r.referredUser?r.referredUser.fullName:'Referral', r.ambassadorName?`Referred by ${r.ambassadorName}`:'', [
+    { key:'overview', label:'Overview', render: async ()=> dkv('Status', r.status)+dkv('Source', r.source)
+        +dkv('Referred', new Date(r.createdAt).toLocaleDateString())
+        +(r.rejectionReason?dkv('Rejection reason', r.rejectionReason):'')
+        +(r.status!=='rejected'?`<div style="margin-top:18px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="pill-btn ghost sm" data-admin-action="referral-reject" data-id="${id}">Reject</button>
+          </div>`:'') },
+    auditTabFor('ReferralAttribution', id),
+  ]);
+}
+
+/* ================================================================
    VERIFICATION (real, carried over) — restyled onto the new table
    pattern, same endpoints/logic/bulk actions as before.
    ================================================================ */
@@ -2088,6 +2276,12 @@ const PLANNED_MODULES = {
   locations: { label:'Locations', group:'Marketplace', blurb:"A structured city/region taxonomy for listings, instead of today's free-text location field." },
   promotions: { label:'Promotions', group:'Growth', blurb:'Discount codes and campaigns to grow bookings.' },
   notifications: { label:'Notifications', group:'Growth', blurb:'Admin-authored broadcast notifications to customers or Rental Partners.' },
+  campaignPoints: { label:'Points &amp; milestones', group:'Campaigns', blurb:'Manual point adjustments and the full per-referral milestone ledger for the Refer, Onboard &amp; Win campaign.' },
+  campaignLeaderboard: { label:'Leaderboard', group:'Campaigns', blurb:'Live ambassador ranking by verified points, with the official tie-break rule applied.' },
+  campaignWinner: { label:'Winner verification', group:'Campaigns', blurb:'Reviewing the locked final leaderboard and confirming the campaign winner.' },
+  campaignSwapConnect: { label:'SwapConnect integration', group:'Campaigns', blurb:'Prize sync status and connection health with the SwapConnect partner API.' },
+  campaignFulfilment: { label:'Prize fulfilment', group:'Campaigns', blurb:'Allocation and delivery status for the confirmed winner’s prize.' },
+  campaignAnalytics: { label:'Campaign analytics', group:'Campaigns', blurb:'Traffic attribution, funnel, and fraud-review reporting for the campaign.' },
   cms: { label:'CMS', group:'Content', blurb:'Editable static pages (About, Help articles) without a code deploy.' },
   helpCentre: { label:'Help Centre', group:'Content', blurb:'A searchable self-serve help article library.' },
   systemSettings: { label:'System Settings', group:'Control', blurb:'Platform-wide configuration (commission defaults, booking windows, feature flags).' },
