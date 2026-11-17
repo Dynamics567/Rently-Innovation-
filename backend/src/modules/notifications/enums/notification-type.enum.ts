@@ -18,4 +18,9 @@ export enum NotificationType {
   LISTING_FLAGGED = 'listing_flagged',
   VERIFICATION_DOCUMENT_REVIEWED = 'verification_document_reviewed',
   MESSAGE_RECEIVED = 'message_received',
+  AMBASSADOR_REGISTERED = 'ambassador_registered',
+  AMBASSADOR_APPROVED = 'ambassador_approved',
+  REFERRAL_ATTRIBUTED = 'referral_attributed',
+  REFERRAL_MILESTONE_ACHIEVED = 'referral_milestone_achieved',
+  REFERRAL_REJECTED = 'referral_rejected',
 }

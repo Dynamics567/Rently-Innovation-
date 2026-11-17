@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import * as bcrypt from 'bcrypt';
 import { randomBytes, createHash } from 'crypto';
 import { DomainException } from '@common/errors/domain.exception';
@@ -7,6 +8,7 @@ import { ErrorCode } from '@common/errors/error-codes.enum';
 import { AppConfig } from '@config/configuration';
 import { AuditLogService } from '@common/audit/audit-log.service';
 import { AuditActorType } from '@common/audit/audit-actor-type.enum';
+import { DomainEvents } from '@common/events/domain-events';
 import { UserRepository } from '../repositories/user.repository';
 import { PasswordResetTokenRepository } from '../repositories/password-reset-token.repository';
 import { AdminInviteRepository } from '../repositories/admin-invite.repository';
@@ -35,6 +37,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly auditLogService: AuditLogService,
     @Inject(EMAIL_SENDER) private readonly emailSender: EmailSender,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async signup(dto: SignupDto): Promise<{ user: User; tokens: TokenPair }> {
@@ -116,6 +119,17 @@ export class AuthService {
     } catch (err) {
       this.logger.error(`Failed to send signup OTP to ${dto.phone}: ${(err as Error).message}`);
     }
+
+    // Fire-and-forget on the in-process event bus — Identity never imports
+    // the Campaigns module (module-boundary rule); its own listener there
+    // resolves/validates the code and silently no-ops on an unknown or
+    // absent one. Emitted unconditionally, not just when referralCode is
+    // present, so this stays a plain "a user signed up" signal other
+    // modules could reuse later, same spirit as every other DomainEvents entry.
+    this.eventEmitter.emit(DomainEvents.UserSignedUp, {
+      userId: user.id,
+      referralCode: dto.referralCode ?? null,
+    });
 
     const tokens = await this.tokenService.issueTokenPair(user);
     return { user, tokens };

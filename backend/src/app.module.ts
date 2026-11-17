@@ -31,6 +31,7 @@ import { FinanceModule } from '@modules/finance/finance.module';
 import { NotificationsModule } from '@modules/notifications/notifications.module';
 import { TrustModule } from '@modules/trust/trust.module';
 import { MessagingModule } from '@modules/messaging/messaging.module';
+import { CampaignsModule } from '@modules/campaigns/campaigns.module';
 import { HealthModule } from './health/health.module';
 
 /**
@@ -77,6 +78,7 @@ import { HealthModule } from './health/health.module';
     NotificationsModule,
     TrustModule,
     MessagingModule,
+    CampaignsModule,
     // PaymentsModule, SearchModule — registered here as each is built.
   ],
   providers: [

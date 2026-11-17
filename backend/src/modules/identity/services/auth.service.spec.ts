@@ -1,5 +1,6 @@
 import * as bcrypt from 'bcrypt';
 import { createHash } from 'crypto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AuthService } from './auth.service';
 import { UserRepository } from '../repositories/user.repository';
 import { PasswordResetTokenRepository } from '../repositories/password-reset-token.repository';
@@ -37,6 +38,7 @@ describe('AuthService', () => {
   let configService: { get: jest.Mock };
   let auditLogService: Record<'record', jest.Mock>;
   let emailSender: Record<'send', jest.Mock>;
+  let eventEmitter: Record<'emit', jest.Mock>;
 
   beforeEach(() => {
     userRepository = {
@@ -66,6 +68,7 @@ describe('AuthService', () => {
     configService = { get: jest.fn(() => ({ frontendUrl: 'https://rentlyhub.com.ng' })) };
     auditLogService = { record: jest.fn(async () => undefined) };
     emailSender = { send: jest.fn(async () => undefined) };
+    eventEmitter = { emit: jest.fn() };
 
     authService = new AuthService(
       userRepository as unknown as UserRepository,
@@ -76,6 +79,7 @@ describe('AuthService', () => {
       configService as any,
       auditLogService as unknown as AuditLogService,
       emailSender as unknown as EmailSender,
+      eventEmitter as unknown as EventEmitter2,
     );
   });
 

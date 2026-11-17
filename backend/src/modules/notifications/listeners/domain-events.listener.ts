@@ -2,12 +2,17 @@ import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { UsersService } from '@modules/identity/services/users.service';
 import {
+  AmbassadorApprovedEventPayload,
+  AmbassadorRegisteredEventPayload,
   BookingLifecycleEventPayload,
   DomainEvents,
   ListingFlaggedEventPayload,
   ListingModerationEventPayload,
   ProviderRejectedEventPayload,
   ProviderVerificationEventPayload,
+  ReferralAttributedEventPayload,
+  ReferralMilestoneAchievedEventPayload,
+  ReferralRejectedEventPayload,
   VerificationDocumentReviewedEventPayload,
 } from '@common/events/domain-events';
 import { NotificationsService } from '../services/notifications.service';
@@ -200,6 +205,53 @@ export class DomainEventsListener {
   @OnEvent(DomainEvents.VerificationDocumentReviewed)
   async onVerificationDocumentReviewed(payload: VerificationDocumentReviewedEventPayload) {
     await this.deliver(payload.recipientId, NotificationType.VERIFICATION_DOCUMENT_REVIEWED, payload);
+  }
+
+  @OnEvent(DomainEvents.AmbassadorRegistered)
+  async onAmbassadorRegistered(payload: AmbassadorRegisteredEventPayload) {
+    await this.deliver(payload.recipientId, NotificationType.AMBASSADOR_REGISTERED, payload, {
+      subject: 'Your Referral Ambassador application was received',
+      body: "Thanks for applying to become a Rently Referral Ambassador. We're reviewing your application and will let you know as soon as it's approved.",
+    });
+  }
+
+  @OnEvent(DomainEvents.AmbassadorApproved)
+  async onAmbassadorApproved(payload: AmbassadorApprovedEventPayload) {
+    await this.deliver(payload.recipientId, NotificationType.AMBASSADOR_APPROVED, payload, {
+      subject: "You're an approved Rently Referral Ambassador",
+      body: 'Your Referral Ambassador application has been approved. Log in to get your referral link and start tracking your referrals.',
+    });
+  }
+
+  @OnEvent(DomainEvents.ReferralAttributed)
+  async onReferralAttributed(payload: ReferralAttributedEventPayload) {
+    await this.deliver(payload.recipientId, NotificationType.REFERRAL_ATTRIBUTED, payload, {
+      subject: 'A new referral signed up',
+      body: "Someone just signed up to Rently through your referral link. We'll notify you as they hit each onboarding milestone.",
+    });
+  }
+
+  @OnEvent(DomainEvents.ReferralMilestoneAchieved)
+  async onReferralMilestoneAchieved(payload: ReferralMilestoneAchievedEventPayload) {
+    const milestoneLabel: Record<string, string> = {
+      provider_registered: 'registered as a Rental Partner',
+      provider_verified: 'completed verification',
+      listing_approved: 'got their first listing approved',
+      first_genuine_inquiry: 'received their first booking inquiry',
+    };
+    const what = milestoneLabel[payload.milestoneType] ?? 'hit a new milestone';
+    await this.deliver(payload.recipientId, NotificationType.REFERRAL_MILESTONE_ACHIEVED, payload, {
+      subject: 'One of your referrals hit a milestone',
+      body: `One of your referrals just ${what}. Check your Ambassador dashboard for the details.`,
+    });
+  }
+
+  @OnEvent(DomainEvents.ReferralRejected)
+  async onReferralRejected(payload: ReferralRejectedEventPayload) {
+    await this.deliver(payload.recipientId, NotificationType.REFERRAL_REJECTED, payload, {
+      subject: 'A referral was not counted',
+      body: `One of your referrals could not be counted.${this.reasonSuffix(payload.reason)}`,
+    });
   }
 
   private reasonSuffix(reason?: string | null): string {

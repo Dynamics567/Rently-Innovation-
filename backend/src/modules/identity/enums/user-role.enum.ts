@@ -10,4 +10,6 @@ export enum UserRole {
   PROVIDER_STAFF = 'provider_staff',
   ADMIN = 'admin',
   SUPER_ADMIN = 'super_admin',
+  /** Referral Ambassador (Rently x SwapConnect campaign) — additive, same as PROVIDER; see AmbassadorProfile for the real lifecycle/status. */
+  AMBASSADOR = 'ambassador',
 }

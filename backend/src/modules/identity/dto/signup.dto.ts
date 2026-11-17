@@ -59,4 +59,17 @@ export class SignupDto {
   @IsOptional()
   @IsString()
   inviteToken?: string;
+
+  /**
+   * An ambassador's referral code (see AmbassadorProfile.referralCode in the
+   * campaigns module) — AuthService.signup() just carries this through on
+   * DomainEvents.UserSignedUp; it never resolves or validates it itself,
+   * per the module-boundary rule (Identity never imports Campaigns). A
+   * bad/unknown code is silently dropped by Campaigns' own listener — it
+   * must never block an otherwise-valid signup.
+   */
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  referralCode?: string;
 }

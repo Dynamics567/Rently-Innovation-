@@ -30,6 +30,13 @@ export const DomainEvents = {
   ListingChangesRequested: 'listing.changes_requested',
   ListingFlagged: 'listing.flagged',
   VerificationDocumentReviewed: 'verification_document.reviewed',
+  ProviderProfileCreated: 'provider_profile.created',
+  UserSignedUp: 'user.signed_up',
+  AmbassadorRegistered: 'ambassador.registered',
+  AmbassadorApproved: 'ambassador.approved',
+  ReferralAttributed: 'referral.attributed',
+  ReferralMilestoneAchieved: 'referral.milestone_achieved',
+  ReferralRejected: 'referral.rejected',
 } as const;
 
 /** Shared shape for every booking-lifecycle event — one loose interface rather than 13 near-identical ones. */
@@ -72,4 +79,38 @@ export interface VerificationDocumentReviewedEventPayload {
   docType: string;
   status: string;
   reviewNotes?: string | null;
+}
+
+/** Internal signal only — no NotificationType/listener in NotificationsModule reacts to this; it exists purely for Campaigns' milestone listener to react to provider-profile creation without Identity importing Campaigns. */
+export interface ProviderProfileCreatedEventPayload {
+  userId: string;
+}
+
+/** Emitted on every signup, referralCode null unless one was supplied — Campaigns' signup listener no-ops when it's null. */
+export interface UserSignedUpEventPayload {
+  userId: string;
+  referralCode: string | null;
+}
+
+export interface AmbassadorRegisteredEventPayload {
+  recipientId: string;
+}
+
+export interface AmbassadorApprovedEventPayload {
+  recipientId: string;
+}
+
+export interface ReferralAttributedEventPayload {
+  /** The ambassador's own userId — they're the one notified "referral successfully registered." */
+  recipientId: string;
+}
+
+export interface ReferralMilestoneAchievedEventPayload {
+  recipientId: string;
+  milestoneType: string;
+}
+
+export interface ReferralRejectedEventPayload {
+  recipientId: string;
+  reason: string;
 }

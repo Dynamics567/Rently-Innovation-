@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { BaseRepository } from '@common/base/base.repository';
 import { CursorPage } from '@common/dto/cursor-pagination.dto';
 import { User } from '../entities/user.entity';
@@ -73,6 +73,12 @@ export class UserRepository extends BaseRepository<User> {
       .orderBy('date', 'ASC')
       .getRawMany<{ date: string; count: string }>();
     return rows.map((r) => ({ date: r.date, count: Number(r.count) }));
+  }
+
+  /** Batch lookup for other modules resolving a bare userId FK into a display name (module-boundary rule) — e.g. Campaigns' Ambassadors/Referrals admin lists. */
+  async findByIds(ids: string[]): Promise<User[]> {
+    if (!ids.length) return [];
+    return this.repository.findBy({ id: In(ids) });
   }
 
   async findByEmail(email: string): Promise<User | null> {

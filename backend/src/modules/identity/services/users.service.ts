@@ -81,6 +81,18 @@ export class UsersService {
     return saved;
   }
 
+  /**
+   * [Admin] Batch name/email/phone lookup for another module's list view
+   * that holds a bare userId FK, not a relation — module-boundary rule
+   * (e.g. Campaigns' Ambassadors/Referrals admin tables). Narrower than a
+   * full User but not as narrow as getPublicProfile(), since this is
+   * admin-facing, same information admins already see in Customers.
+   */
+  async getBasicProfilesByIds(ids: string[]): Promise<Array<{ id: string; fullName: string; email?: string; phone?: string }>> {
+    const users = await this.userRepository.findByIds(ids);
+    return users.map((u) => ({ id: u.id, fullName: u.fullName, email: u.email, phone: u.phone }));
+  }
+
   /** [Admin] Customers view search — partial name/email match, paginated. */
   async searchForAdmin(query: string | undefined, cursor?: string, limit?: number): Promise<CursorPage<User>> {
     return this.userRepository.searchForAdmin(query, cursor, limit);
@@ -176,6 +188,30 @@ export class UsersService {
       actorId: adminId,
       actorType: AuditActorType.ADMIN,
       action: 'user.add_role',
+      entityType: 'User',
+      entityId: id,
+      before,
+      after: { roles: saved.roles },
+    });
+    return saved;
+  }
+
+  /**
+   * Self-granted role (e.g. becoming a Referral Ambassador) — unlike
+   * addRole(), the actor IS the user, not an admin acting on them, so this
+   * audit-logs actorType USER with actorId === the same id. Idempotent:
+   * registering twice is a no-op, not an error.
+   */
+  async addSelfServiceRole(id: string, role: UserRole): Promise<User> {
+    const user = await this.userRepository.findByIdOrFail(id, 'User');
+    if (user.roles.includes(role)) return user;
+    const before = { roles: user.roles };
+    user.roles = [...new Set([...user.roles, role])];
+    const saved = await this.userRepository.save(user);
+    await this.auditLogService.record({
+      actorId: id,
+      actorType: AuditActorType.USER,
+      action: 'user.add_self_service_role',
       entityType: 'User',
       entityId: id,
       before,

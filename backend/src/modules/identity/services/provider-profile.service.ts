@@ -40,7 +40,18 @@ export class ProviderProfileService {
       businessRegistrationNo: dto.businessRegistrationNo,
       verificationStatus: ProviderVerificationStatus.PENDING,
     });
-    return this.providerRepository.save(profile);
+    const saved = await this.providerRepository.save(profile);
+    // Internal signal only (no NotificationType reacts to this) — Campaigns'
+    // milestone listener uses it to record the "provider_registered"
+    // milestone without Identity importing Campaigns.
+    this.eventEmitter.emit(DomainEvents.ProviderProfileCreated, { userId });
+    return saved;
+  }
+
+  /** Used by other modules via the module-boundary rule — e.g. Campaigns checks this before attributing a referral, since an existing provider shouldn't qualify as a "new" referral (brief §6 rule 2). */
+  async existsForUser(userId: string): Promise<boolean> {
+    const profile = await this.providerRepository.findByUserId(userId);
+    return !!profile;
   }
 
   async getByUserId(userId: string): Promise<ProviderProfile> {
