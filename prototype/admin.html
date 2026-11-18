@@ -1826,6 +1826,10 @@ async function loadCampaignFunnel(){
     renderLineChart('campaignDailyChart', [], {});
   }
 }
+/** A fraud flag's referralCode/message come straight from a signup request body — never trust them into innerHTML unescaped (an attacker could submit a script payload as "referralCode" to target whichever admin opens this screen). */
+function escHtml(s){
+  return String(s).replace(/[&<>"']/g, (c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 async function loadFraudFlags(reset){
   const el=document.getElementById('fraudFlagsList');
   if(reset) el.innerHTML='<div class="skel-row-sm"></div>';
@@ -1834,9 +1838,9 @@ async function loadFraudFlags(reset){
     if(!data.length){ el.innerHTML = stateEmpty('No open fraud flags — every referral attempt has passed the basic rules.'); return; }
     el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th>Referral code</th><th>Reason</th><th>Message</th><th>Flagged</th><th></th></tr></thead><tbody>${
       data.map(f=>`<tr>
-        <td>${f.referralCode||'—'}</td>
-        <td><span class="pill-status warn">${f.reasonCode}</span></td>
-        <td style="max-width:280px;">${f.message}</td>
+        <td>${f.referralCode?escHtml(f.referralCode):'—'}</td>
+        <td><span class="pill-status warn">${escHtml(f.reasonCode)}</span></td>
+        <td style="max-width:280px;">${escHtml(f.message)}</td>
         <td>${new Date(f.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td>
         <td><button class="pill-btn ghost sm" data-ack="${f.id}">Acknowledge</button></td>
       </tr>`).join('')

@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsPhoneNumber,
   IsString,
+  MaxLength,
   MinLength,
 } from 'class-validator';
 import { UserRole } from '../enums/user-role.enum';
@@ -71,5 +72,6 @@ export class SignupDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @MaxLength(40)
   referralCode?: string;
 }
