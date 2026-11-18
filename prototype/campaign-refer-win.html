@@ -192,9 +192,10 @@
       <div class="prize-art" id="prizeArt"></div>
       <div class="prize-copy">
         <div class="eyebrow">This challenge's prize</div>
-        <h3>An Airtel Outdoor Unit</h3>
+        <h3 id="prizeName">An Airtel Outdoor Unit</h3>
         <p>Hosted and fulfilled through Rently's partner integration with SwapConnect — the winning Ambassador's prize is confirmed by Rently and handed off to SwapConnect for fulfilment once the challenge closes.</p>
-        <p style="color:var(--ink-faint);font-size:12.5px;">Full prize fulfilment tracking is rolling out as the next part of this integration.</p>
+        <p style="color:var(--ink-faint);font-size:12.5px;" id="prizeSyncNote">Full prize fulfilment tracking is rolling out as the next part of this integration.</p>
+        <a href="#" id="prizeExternalLink" class="pill-btn outline-blue sm" style="display:none;margin-top:10px;width:fit-content;" target="_blank" rel="noopener">View on SwapConnect</a>
       </div>
     </div>
   </div>
@@ -284,6 +285,24 @@ document.getElementById('scoreMaxRow').innerHTML = icon('check',{size:14,stroke:
   }catch(e){
     el.innerHTML = `<p style="color:var(--ink-faint);font-size:13px;padding:20px">Couldn't load the leaderboard right now.</p>`;
   }
+})();
+
+/* ============ SYNCED PRIZE DATA (public, no auth) ============
+   Only ever shows what an admin has actually synced from SwapConnect's
+   partner API (see admin's SwapConnect Integration view) — before the
+   first sync, the static honest copy above stays as-is. */
+(async function loadPrize(){
+  try{
+    const {data} = await apiFetch('/campaigns/prize',{auth:false});
+    if(!data) return;
+    if(data.prizeName) document.getElementById('prizeName').textContent = data.prizeName;
+    document.getElementById('prizeSyncNote').textContent = `Synced from SwapConnect on ${new Date(data.syncedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}.`;
+    if(data.campaignExternalUrl){
+      const link = document.getElementById('prizeExternalLink');
+      link.href = data.campaignExternalUrl;
+      link.style.display = 'inline-flex';
+    }
+  }catch(e){ /* keep the static fallback copy */ }
 })();
 
 initMarketingNav();

@@ -282,7 +282,7 @@ h1,h2,h3{font-family:var(--sans);}
     <a class="side-link planned" href="#" data-planned="campaignPoints" id="linkCampaignPoints"></a>
     <a class="side-link" data-view="leaderboard" id="linkCampaignLeaderboard"></a>
     <a class="side-link planned" href="#" data-planned="campaignWinner" id="linkCampaignWinner"></a>
-    <a class="side-link planned" href="#" data-planned="campaignSwapConnect" id="linkCampaignSwapConnect"></a>
+    <a class="side-link" data-view="swapconnect" id="linkCampaignSwapConnect"></a>
     <a class="side-link planned" href="#" data-planned="campaignFulfilment" id="linkCampaignFulfilment"></a>
     <a class="side-link planned" href="#" data-planned="campaignAnalytics" id="linkCampaignAnalytics"></a>
 
@@ -418,6 +418,12 @@ h1,h2,h3{font-family:var(--sans);}
     <div class="d-view" id="view-leaderboard">
       <div class="app-head"><div><h1>Leaderboard</h1><p>Ranked by verified points. Tied scores are broken by whoever reached that score first.</p></div></div>
       <div id="leaderboardList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
+    </div>
+
+    <!-- ============ SWAPCONNECT INTEGRATION ============ -->
+    <div class="d-view" id="view-swapconnect">
+      <div class="app-head"><div><h1>SwapConnect integration</h1><p>Prize data for the campaign's Airtel Outdoor Unit, pulled from SwapConnect's partner API.</p></div></div>
+      <div id="swapconnectPanel"><div class="skel-row-sm"></div></div>
     </div>
 
     <!-- ============ VERIFICATION ============ -->
@@ -718,6 +724,7 @@ function goView(v){
   if(v==='ambassadors'){ loadAmbassadors(true); renderAmbassadorsKpis(); }
   if(v==='referrals'){ loadReferrals(true); renderReferralsKpis(); }
   if(v==='leaderboard') loadLeaderboard();
+  if(v==='swapconnect') loadSwapConnect();
   if(v==='reviews'){ loadReviews(true); renderReviewsKpis(); }
   if(v==='audit') loadAuditLog(true);
   if(v==='team') loadTeam();
@@ -1723,6 +1730,52 @@ async function loadLeaderboard(){
 }
 
 /* ================================================================
+   SWAPCONNECT INTEGRATION — Phase 5: status + a manual "Sync now"
+   (no live webhook receiver yet, so this is the only way the prize
+   snapshot ever refreshes). Connection state is read straight from
+   the backend, never assumed — "Pending credentials" is a real,
+   valid state here, not a loading placeholder.
+   ================================================================ */
+async function loadSwapConnect(){
+  const el=document.getElementById('swapconnectPanel');
+  el.innerHTML='<div class="skel-row-sm"></div>';
+  try{
+    const status = await apiFetch('/admin/campaigns/swapconnect/status').then(r=>r.data);
+    renderSwapConnectPanel(status);
+  }catch(e){ el.innerHTML = stateError(e); }
+}
+function renderSwapConnectPanel(status){
+  const el=document.getElementById('swapconnectPanel');
+  const badge = status.configured
+    ? `<span class="pill-status good">${icon('check',{size:12})} Connected</span>`
+    : `<span class="pill-status warn">${icon('alert',{size:12})} Pending credentials</span>`;
+  el.innerHTML = `<div class="optable-wrap" style="padding:18px 20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px;">
+      <div style="font-weight:700;font-size:14px;">Connection status</div>
+      ${badge}
+    </div>
+    ${dkv('Partner', status.partner ? status.partner.name : '—')}
+    ${dkv('Partner status', status.partner ? status.partner.status : '—')}
+    ${dkv('Last synced', status.lastSyncedAt ? new Date(status.lastSyncedAt).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'}) : 'Never')}
+    <div style="margin-top:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <button class="pill-btn blue sm" id="swapconnectSyncBtn" ${status.configured?'':'disabled'}>Sync now</button>
+      ${status.configured ? '' : `<span style="font-size:12.5px;color:var(--op-text-faint);">Set SWAPCONNECT_API_BASE, SWAPCONNECT_PARTNER_API_KEY and SWAPCONNECT_CAMPAIGN_ID to connect.</span>`}
+    </div>
+  </div>`;
+  const btn=document.getElementById('swapconnectSyncBtn');
+  if(btn) btn.addEventListener('click', async ()=>{
+    btn.disabled=true; btn.textContent='Syncing…';
+    try{
+      await apiFetch('/admin/campaigns/swapconnect/sync',{method:'POST'});
+      await loadSwapConnect();
+    }catch(e){
+      btn.disabled=false; btn.textContent='Sync now';
+      alert(e.message||'Sync failed.');
+    }
+  });
+}
+
+/* ================================================================
    VERIFICATION (real, carried over) — restyled onto the new table
    pattern, same endpoints/logic/bulk actions as before.
    ================================================================ */
@@ -2322,7 +2375,6 @@ const PLANNED_MODULES = {
   notifications: { label:'Notifications', group:'Growth', blurb:'Admin-authored broadcast notifications to customers or Rental Partners.' },
   campaignPoints: { label:'Points &amp; milestones', group:'Campaigns', blurb:'A dedicated cross-ambassador ledger view. Per-ambassador history and manual adjustments are already live today — open an ambassador in the Ambassadors view and use its Points tab.' },
   campaignWinner: { label:'Winner verification', group:'Campaigns', blurb:'Reviewing the locked final leaderboard and confirming the campaign winner.' },
-  campaignSwapConnect: { label:'SwapConnect integration', group:'Campaigns', blurb:'Prize sync status and connection health with the SwapConnect partner API.' },
   campaignFulfilment: { label:'Prize fulfilment', group:'Campaigns', blurb:'Allocation and delivery status for the confirmed winner’s prize.' },
   campaignAnalytics: { label:'Campaign analytics', group:'Campaigns', blurb:'Traffic attribution, funnel, and fraud-review reporting for the campaign.' },
   cms: { label:'CMS', group:'Content', blurb:'Editable static pages (About, Help articles) without a code deploy.' },

@@ -40,4 +40,11 @@ export const validationSchema = Joi.object({
   // Optional — omitted means ConsoleEmailSender (log-only) stays active.
   RESEND_API_KEY: Joi.string().optional(),
   EMAIL_FROM: Joi.string().optional(),
+
+  // Optional — omitted means the SwapConnect prize integration (Phase 5)
+  // stays in its "pending credentials" state. See CampaignsModule.
+  SWAPCONNECT_API_BASE: Joi.string().optional(),
+  SWAPCONNECT_PARTNER_API_KEY: Joi.string().optional(),
+  SWAPCONNECT_CAMPAIGN_ID: Joi.string().optional(),
+  SWAPCONNECT_WEBHOOK_SECRET: Joi.string().optional(),
 });

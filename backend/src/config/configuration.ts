@@ -51,6 +51,13 @@ export interface SmsConfig {
   twilioFromNumber?: string;
 }
 
+export interface SwapConnectConfig {
+  apiBase?: string;
+  partnerApiKey?: string;
+  campaignId?: string;
+  webhookSecret?: string;
+}
+
 export default () => ({
   app: {
     env: process.env.NODE_ENV ?? 'development',
@@ -110,4 +117,15 @@ export default () => ({
     // provisioned on the account, SMS-capable, and able to send to NG numbers.
     twilioFromNumber: process.env.TWILIO_FROM_NUMBER,
   } as SmsConfig,
+  swapConnect: {
+    // All optional — unset means Phase 5's integration stays in its
+    // "pending credentials" state (see CampaignsModule's SWAPCONNECT_CLIENT
+    // factory). campaignId is SwapConnect's own id for the campaign this
+    // Rently competition's prize lives under, from its Partner Workspace.
+    apiBase: process.env.SWAPCONNECT_API_BASE,
+    partnerApiKey: process.env.SWAPCONNECT_PARTNER_API_KEY,
+    campaignId: process.env.SWAPCONNECT_CAMPAIGN_ID,
+    // Reserved for Phase 6's webhook receiver — unused until then.
+    webhookSecret: process.env.SWAPCONNECT_WEBHOOK_SECRET,
+  } as SwapConnectConfig,
 });
