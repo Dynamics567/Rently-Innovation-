@@ -35,12 +35,18 @@ describe('SwapConnectIntegrationService', () => {
     });
 
     it('reports configured and the partner identity when a client exists', async () => {
-      const client = { getMe: jest.fn(async () => ({ partner: { id: 'p1', name: 'Rently', status: 'ACTIVE' } })) };
+      const client = {
+        getMe: jest.fn(async () => ({ partner: { id: 'p1', name: 'Rently', status: 'ACTIVE' } })),
+      };
       const service = build(client as unknown as SwapConnectClient);
 
       const status = await service.getStatus();
 
-      expect(status).toEqual({ configured: true, partner: { id: 'p1', name: 'Rently', status: 'ACTIVE' }, lastSyncedAt: null });
+      expect(status).toEqual({
+        configured: true,
+        partner: { id: 'p1', name: 'Rently', status: 'ACTIVE' },
+        lastSyncedAt: null,
+      });
     });
   });
 

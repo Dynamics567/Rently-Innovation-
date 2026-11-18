@@ -1,11 +1,13 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query, Res } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Response } from 'express';
 import { CursorPaginationDto } from '@common/dto/cursor-pagination.dto';
 import { Roles } from '@common/decorators/roles.decorator';
 import { RequirePermission } from '@common/decorators/require-permission.decorator';
 import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { UserRole } from '@modules/identity/enums/user-role.enum';
 import { AuthenticatedUser } from '@modules/identity/strategies/jwt.strategy';
+import { toCsv, sendCsv } from '@common/utils/csv-export.util';
 import { AmbassadorService } from '../services/ambassador.service';
 import { ReferralAttributionService } from '../services/referral-attribution.service';
 import { PointsLedgerService } from '../services/points-ledger.service';
@@ -34,6 +36,36 @@ export class AdminAmbassadorsController {
   @Get('leaderboard')
   async leaderboard(@Query('limit') limit?: string) {
     return this.pointsLedgerService.getLeaderboard(limit ? Number(limit) : undefined);
+  }
+
+  /** CSV export (Phase 7) — also registered before :id. */
+  @Get('export')
+  async exportCsv(@Res() res: Response) {
+    const rows = await this.ambassadorService.listAllForExport();
+    const csv = toCsv(rows as any[], [
+      { header: 'Ambassador', value: (r: any) => r.user?.fullName ?? r.userId },
+      { header: 'Email', value: (r: any) => r.user?.email ?? '' },
+      { header: 'Phone', value: (r: any) => r.user?.phone ?? '' },
+      { header: 'Referral code', value: (r: any) => r.referralCode },
+      { header: 'Status', value: (r: any) => r.status },
+      { header: 'Points balance', value: (r: any) => r.pointsBalance },
+      { header: 'Registered at', value: (r: any) => r.createdAt.toISOString() },
+    ]);
+    sendCsv(res, 'ambassadors.csv', csv);
+  }
+
+  /** CSV export (Phase 7), points ledger across every ambassador. */
+  @Get('points/export')
+  async exportPointsCsv(@Res() res: Response) {
+    const rows = await this.pointsLedgerService.listAllForExport();
+    const csv = toCsv(rows, [
+      { header: 'Ambassador', value: (r) => r.ambassadorName ?? r.ambassadorId },
+      { header: 'Type', value: (r) => r.type },
+      { header: 'Points delta', value: (r) => r.pointsDelta },
+      { header: 'Reason', value: (r) => r.reason ?? '' },
+      { header: 'Date', value: (r) => r.createdAt.toISOString() },
+    ]);
+    sendCsv(res, 'points-ledger.csv', csv);
   }
 
   @Get(':id')
@@ -100,6 +132,11 @@ export class AdminAmbassadorsController {
     @Body() dto: ManualAttributeReferralDto,
     @CurrentUser() admin: AuthenticatedUser,
   ) {
-    return this.referralAttributionService.manualAttribute(id, dto.referredUserId, admin.id, dto.reason);
+    return this.referralAttributionService.manualAttribute(
+      id,
+      dto.referredUserId,
+      admin.id,
+      dto.reason,
+    );
   }
 }

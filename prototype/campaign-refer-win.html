@@ -287,6 +287,41 @@ document.getElementById('scoreMaxRow').innerHTML = icon('check',{size:14,stroke:
   }
 })();
 
+/* ============ TRAFFIC TRACKING (public, no auth, no PII) ============
+   One page_view per tab per page load (deduped via sessionStorage so a
+   client-side re-render never double-fires) + one cta_click on the
+   primary CTA. Referrer host only, never the full referrer URL — see
+   CampaignTrafficEvent's own doc comment on the backend. Best-effort:
+   a failure here must never affect the page itself. */
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  let sessionKey;
+  try{
+    sessionKey = sessionStorage.getItem('rently_traffic_session');
+    if(!sessionKey){ sessionKey = `${Date.now()}-${Math.random().toString(36).slice(2)}`; sessionStorage.setItem('rently_traffic_session', sessionKey); }
+  }catch(e){ sessionKey = `${Date.now()}-${Math.random().toString(36).slice(2)}`; }
+
+  const common = {
+    sessionKey,
+    referralCode: params.get('ref') || undefined,
+    utmSource: params.get('utm_source') || undefined,
+    utmMedium: params.get('utm_medium') || undefined,
+    utmCampaign: params.get('utm_campaign') || undefined,
+    referrerHost: document.referrer ? (()=>{ try{ return new URL(document.referrer).host; }catch(e){ return undefined; } })() : undefined,
+  };
+
+  let viewed = false;
+  try{ viewed = sessionStorage.getItem('rently_traffic_view_campaign-refer-win') === '1'; }catch(e){}
+  if(!viewed){
+    apiFetch('/campaigns/events', { method:'POST', auth:false, body:{ ...common, type:'page_view', path:'/campaign-refer-win' } }).catch(()=>{});
+    try{ sessionStorage.setItem('rently_traffic_view_campaign-refer-win','1'); }catch(e){}
+  }
+  const cta = document.getElementById('primaryCta');
+  if(cta) cta.addEventListener('click', ()=>{
+    apiFetch('/campaigns/events', { method:'POST', auth:false, body:{ ...common, type:'cta_click', path:'/campaign-refer-win' } }).catch(()=>{});
+  });
+})();
+
 /* ============ SYNCED PRIZE DATA (public, no auth) ============
    Only ever shows what an admin has actually synced from SwapConnect's
    partner API (see admin's SwapConnect Integration view) — before the

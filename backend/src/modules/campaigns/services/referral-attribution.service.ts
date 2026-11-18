@@ -32,10 +32,17 @@ export class ReferralAttributionService {
    * on every rule violation; SignupReferralListener (the only caller for
    * source=LINK) swallows that, since a bad code must never block a signup.
    */
-  async attribute(referralCode: string, referredUserId: string, source: ReferralSource): Promise<ReferralAttribution> {
+  async attribute(
+    referralCode: string,
+    referredUserId: string,
+    source: ReferralSource,
+  ): Promise<ReferralAttribution> {
     const ambassador = await this.ambassadorRepository.findByReferralCode(referralCode);
     if (!ambassador) {
-      throw DomainException.notFound(ErrorCode.REFERRAL_CODE_INVALID, 'This referral code does not exist.');
+      throw DomainException.notFound(
+        ErrorCode.REFERRAL_CODE_INVALID,
+        'This referral code does not exist.',
+      );
     }
     return this.createAttribution(ambassador, referredUserId, referralCode, source);
   }
@@ -47,7 +54,10 @@ export class ReferralAttributionService {
     adminId: string,
     reason: string,
   ): Promise<ReferralAttribution> {
-    const ambassador = await this.ambassadorRepository.findByIdOrFail(ambassadorId, 'Ambassador profile');
+    const ambassador = await this.ambassadorRepository.findByIdOrFail(
+      ambassadorId,
+      'Ambassador profile',
+    );
     const attribution = await this.createAttribution(
       ambassador,
       referredUserId,
@@ -69,7 +79,10 @@ export class ReferralAttributionService {
 
   async reject(id: string, adminId: string, reason: string): Promise<ReferralAttribution> {
     const attribution = await this.attributionRepository.findByIdOrFail(id, 'Referral attribution');
-    const ambassador = await this.ambassadorRepository.findByIdOrFail(attribution.ambassadorId, 'Ambassador profile');
+    const ambassador = await this.ambassadorRepository.findByIdOrFail(
+      attribution.ambassadorId,
+      'Ambassador profile',
+    );
     const before = { status: attribution.status };
     attribution.status = ReferralStatus.REJECTED;
     attribution.rejectionReason = reason;
@@ -83,7 +96,10 @@ export class ReferralAttributionService {
       before,
       after: { status: saved.status, reason },
     });
-    this.eventEmitter.emit(DomainEvents.ReferralRejected, { recipientId: ambassador.userId, reason });
+    this.eventEmitter.emit(DomainEvents.ReferralRejected, {
+      recipientId: ambassador.userId,
+      reason,
+    });
     return saved;
   }
 
@@ -126,7 +142,11 @@ export class ReferralAttributionService {
   }
 
   /** [Admin] Attaches the referred person's name and the referring ambassador's name — two small batch lookups, never a per-row query, same Object.assign pattern as AmbassadorService.search(). */
-  async search(ambassadorId?: string, cursor?: string, limit?: number): Promise<CursorPage<ReferralAttribution>> {
+  async search(
+    ambassadorId?: string,
+    cursor?: string,
+    limit?: number,
+  ): Promise<CursorPage<ReferralAttribution>> {
     const page = await this.attributionRepository.search(ambassadorId, cursor, limit);
     if (!page.data.length) return page;
 
@@ -136,7 +156,10 @@ export class ReferralAttributionService {
     ).filter((a): a is AmbassadorProfile => !!a);
     const ambassadorById = new Map(ambassadors.map((a) => [a.id, a]));
 
-    const userIds = [...page.data.map((r) => r.referredUserId), ...ambassadors.map((a) => a.userId)];
+    const userIds = [
+      ...page.data.map((r) => r.referredUserId),
+      ...ambassadors.map((a) => a.userId),
+    ];
     const users = await this.usersService.getBasicProfilesByIds([...new Set(userIds)]);
     const userById = new Map(users.map((u) => [u.id, u]));
 
@@ -150,6 +173,31 @@ export class ReferralAttributionService {
     return page;
   }
 
+  /** CSV export (Phase 7) — same enrichment as search(), just unpaginated/capped. */
+  async listAllForExport(): Promise<ReferralAttribution[]> {
+    const rows = await this.attributionRepository.listAllForExport();
+    if (!rows.length) return [];
+
+    const ambassadorIds = [...new Set(rows.map((r) => r.ambassadorId))];
+    const ambassadors = (
+      await Promise.all(ambassadorIds.map((id) => this.ambassadorRepository.findById(id)))
+    ).filter((a): a is AmbassadorProfile => !!a);
+    const ambassadorById = new Map(ambassadors.map((a) => [a.id, a]));
+
+    const userIds = [...rows.map((r) => r.referredUserId), ...ambassadors.map((a) => a.userId)];
+    const users = await this.usersService.getBasicProfilesByIds([...new Set(userIds)]);
+    const userById = new Map(users.map((u) => [u.id, u]));
+
+    for (const row of rows) {
+      const ambassador = ambassadorById.get(row.ambassadorId);
+      Object.assign(row, {
+        referredUser: userById.get(row.referredUserId) ?? null,
+        ambassadorName: ambassador ? (userById.get(ambassador.userId)?.fullName ?? null) : null,
+      });
+    }
+    return rows;
+  }
+
   private async createAttribution(
     ambassador: AmbassadorProfile,
     referredUserId: string,
@@ -158,10 +206,14 @@ export class ReferralAttributionService {
     adminId?: string,
   ): Promise<ReferralAttribution> {
     if (ambassador.userId === referredUserId) {
-      throw DomainException.conflict(ErrorCode.REFERRAL_SELF_REFERRAL, 'An ambassador cannot refer themselves.');
+      throw DomainException.conflict(
+        ErrorCode.REFERRAL_SELF_REFERRAL,
+        'An ambassador cannot refer themselves.',
+      );
     }
 
-    const existingAttribution = await this.attributionRepository.findByReferredUserId(referredUserId);
+    const existingAttribution =
+      await this.attributionRepository.findByReferredUserId(referredUserId);
     if (existingAttribution) {
       throw DomainException.conflict(
         ErrorCode.REFERRAL_ALREADY_ATTRIBUTED,

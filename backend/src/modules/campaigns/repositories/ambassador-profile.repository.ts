@@ -11,7 +11,9 @@ interface Cursor {
 }
 
 function encodeCursor(row: AmbassadorProfile): string {
-  return Buffer.from(JSON.stringify({ createdAt: row.createdAt.toISOString(), id: row.id })).toString('base64');
+  return Buffer.from(
+    JSON.stringify({ createdAt: row.createdAt.toISOString(), id: row.id }),
+  ).toString('base64');
 }
 
 function decodeCursor(cursor: string): Cursor {
@@ -38,11 +40,22 @@ export class AmbassadorProfileRepository extends BaseRepository<AmbassadorProfil
     qb.orderBy('ambassador.createdAt', 'DESC').addOrderBy('ambassador.id', 'DESC');
     if (cursor) {
       const { createdAt, id } = decodeCursor(cursor);
-      qb.andWhere('(ambassador.createdAt, ambassador.id) < (:cAt, :cId)', { cAt: createdAt, cId: id });
+      qb.andWhere('(ambassador.createdAt, ambassador.id) < (:cAt, :cId)', {
+        cAt: createdAt,
+        cId: id,
+      });
     }
     const rows = await qb.take(limit + 1).getMany();
     const hasMore = rows.length > limit;
     const data = hasMore ? rows.slice(0, limit) : rows;
-    return { data, meta: { hasMore, nextCursor: hasMore ? encodeCursor(data[data.length - 1]) : null } };
+    return {
+      data,
+      meta: { hasMore, nextCursor: hasMore ? encodeCursor(data[data.length - 1]) : null },
+    };
+  }
+
+  /** CSV export (Phase 7) — capped, not cursor-paginated like search(); an export is one download, not a browsing session. */
+  async listAllForExport(limit = 2000): Promise<AmbassadorProfile[]> {
+    return this.repository.find({ order: { createdAt: 'DESC' }, take: limit });
   }
 }

@@ -11,7 +11,9 @@ interface Cursor {
 }
 
 function encodeCursor(row: PointsLedgerEntry): string {
-  return Buffer.from(JSON.stringify({ createdAt: row.createdAt.toISOString(), id: row.id })).toString('base64');
+  return Buffer.from(
+    JSON.stringify({ createdAt: row.createdAt.toISOString(), id: row.id }),
+  ).toString('base64');
 }
 
 function decodeCursor(cursor: string): Cursor {
@@ -55,8 +57,14 @@ export class PointsLedgerRepository extends BaseRepository<PointsLedgerEntry> {
     return new Map(rows.map((r) => [r.ambassadorId, Number(r.balance)]));
   }
 
-  async findByAmbassadorId(ambassadorId: string, cursor?: string, limit = 20): Promise<CursorPage<PointsLedgerEntry>> {
-    const qb = this.repository.createQueryBuilder('p').andWhere('p.ambassadorId = :ambassadorId', { ambassadorId });
+  async findByAmbassadorId(
+    ambassadorId: string,
+    cursor?: string,
+    limit = 20,
+  ): Promise<CursorPage<PointsLedgerEntry>> {
+    const qb = this.repository
+      .createQueryBuilder('p')
+      .andWhere('p.ambassadorId = :ambassadorId', { ambassadorId });
     qb.orderBy('p.createdAt', 'DESC').addOrderBy('p.id', 'DESC');
     if (cursor) {
       const { createdAt, id } = decodeCursor(cursor);
@@ -65,7 +73,10 @@ export class PointsLedgerRepository extends BaseRepository<PointsLedgerEntry> {
     const rows = await qb.take(limit + 1).getMany();
     const hasMore = rows.length > limit;
     const data = hasMore ? rows.slice(0, limit) : rows;
-    return { data, meta: { hasMore, nextCursor: hasMore ? encodeCursor(data[data.length - 1]) : null } };
+    return {
+      data,
+      meta: { hasMore, nextCursor: hasMore ? encodeCursor(data[data.length - 1]) : null },
+    };
   }
 
   /**
@@ -120,8 +131,9 @@ export class PointsLedgerRepository extends BaseRepository<PointsLedgerEntry> {
    * when the ambassador isn't approved/active, i.e. not on the board at all.
    */
   async getRank(ambassadorId: string): Promise<{ rank: number; totalParticipants: number } | null> {
-    const rows: Array<{ rank: number; totalParticipants: number }> = await this.repository.manager.query(
-      `
+    const rows: Array<{ rank: number; totalParticipants: number }> =
+      await this.repository.manager.query(
+        `
       WITH balances AS (
         SELECT ambassador_id, COALESCE(SUM(points_delta), 0) AS balance
         FROM points_ledger_entries
@@ -151,8 +163,13 @@ export class PointsLedgerRepository extends BaseRepository<PointsLedgerEntry> {
       FROM ranked
       WHERE ambassador_id = $1
       `,
-      [ambassadorId],
-    );
+        [ambassadorId],
+      );
     return rows[0] ?? null;
+  }
+
+  /** CSV export (Phase 7) — every ambassador's ledger, newest first, capped so one export can never pull the whole table unbounded. */
+  async listAllForExport(limit = 5000): Promise<PointsLedgerEntry[]> {
+    return this.repository.find({ order: { createdAt: 'DESC' }, take: limit });
   }
 }

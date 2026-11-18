@@ -33,7 +33,9 @@ export class PointsLedgerService {
   /** Append-only — same optional-manager convention as AuditLogService.record() / finance's Transaction recorders, for a future caller needing same-transaction atomicity. No current call site needs it yet. */
   async record(params: RecordPointsParams, manager?: EntityManager): Promise<PointsLedgerEntry> {
     const row = this.pointsLedgerRepository.create(params);
-    return manager ? manager.getRepository(PointsLedgerEntry).save(row) : this.pointsLedgerRepository.save(row);
+    return manager
+      ? manager.getRepository(PointsLedgerEntry).save(row)
+      : this.pointsLedgerRepository.save(row);
   }
 
   async getBalance(ambassadorId: string): Promise<number> {
@@ -44,15 +46,27 @@ export class PointsLedgerService {
     return this.pointsLedgerRepository.getBalances(ambassadorIds);
   }
 
-  async getHistory(ambassadorId: string, cursor?: string, limit?: number): Promise<CursorPage<PointsLedgerEntry>> {
+  async getHistory(
+    ambassadorId: string,
+    cursor?: string,
+    limit?: number,
+  ): Promise<CursorPage<PointsLedgerEntry>> {
     return this.pointsLedgerRepository.findByAmbassadorId(ambassadorId, cursor, limit);
   }
 
   /** [Admin] Brief §7's "authorized manual adjustments" — required reason, audited the same as every other admin override in this module. pointsDelta may be negative (a correction). */
-  async manualAdjust(ambassadorId: string, pointsDelta: number, adminId: string, reason: string): Promise<PointsLedgerEntry> {
+  async manualAdjust(
+    ambassadorId: string,
+    pointsDelta: number,
+    adminId: string,
+    reason: string,
+  ): Promise<PointsLedgerEntry> {
     await this.ambassadorRepository.findByIdOrFail(ambassadorId, 'Ambassador profile');
     if (!Number.isInteger(pointsDelta) || pointsDelta === 0) {
-      throw DomainException.unprocessable(ErrorCode.VALIDATION_FAILED, 'Points adjustment must be a non-zero whole number.');
+      throw DomainException.unprocessable(
+        ErrorCode.VALIDATION_FAILED,
+        'Points adjustment must be a non-zero whole number.',
+      );
     }
     const entry = await this.record({
       ambassadorId,
@@ -94,12 +108,37 @@ export class PointsLedgerService {
    * competition driving public excitement needs *a* board, not everyone
    * else's private identifiers.
    */
-  async getPublicLeaderboard(limit?: number): Promise<Array<{ rank: number; name: string; balance: number }>> {
+  async getPublicLeaderboard(
+    limit?: number,
+  ): Promise<Array<{ rank: number; name: string; balance: number }>> {
     const rows = await this.pointsLedgerRepository.getLeaderboard(limit);
     if (!rows.length) return [];
     const users = await this.usersService.getBasicProfilesByIds(rows.map((r) => r.userId));
     const nameById = new Map(users.map((u) => [u.id, u.fullName]));
-    return rows.map((r, i) => ({ rank: i + 1, name: maskName(nameById.get(r.userId)), balance: r.balance }));
+    return rows.map((r, i) => ({
+      rank: i + 1,
+      name: maskName(nameById.get(r.userId)),
+      balance: r.balance,
+    }));
+  }
+
+  /** CSV export (Phase 7) — full names here, unlike getPublicLeaderboard's masked ones, since this is an admin-only download. */
+  async listAllForExport(): Promise<Array<PointsLedgerEntry & { ambassadorName: string | null }>> {
+    const entries = await this.pointsLedgerRepository.listAllForExport();
+    if (!entries.length) return [];
+    const ambassadorIds = [...new Set(entries.map((e) => e.ambassadorId))];
+    const ambassadors = (
+      await Promise.all(ambassadorIds.map((id) => this.ambassadorRepository.findById(id)))
+    ).filter((a): a is NonNullable<typeof a> => !!a);
+    const userIds = [...new Set(ambassadors.map((a) => a.userId))];
+    const users = await this.usersService.getBasicProfilesByIds(userIds);
+    const userById = new Map(users.map((u) => [u.id, u]));
+    const ambassadorById = new Map(ambassadors.map((a) => [a.id, a]));
+    return entries.map((e) => {
+      const ambassador = ambassadorById.get(e.ambassadorId);
+      const user = ambassador ? userById.get(ambassador.userId) : null;
+      return Object.assign(e, { ambassadorName: user?.fullName ?? null });
+    });
   }
 }
 

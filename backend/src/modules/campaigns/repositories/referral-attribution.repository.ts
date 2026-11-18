@@ -11,7 +11,9 @@ interface Cursor {
 }
 
 function encodeCursor(row: ReferralAttribution): string {
-  return Buffer.from(JSON.stringify({ createdAt: row.createdAt.toISOString(), id: row.id })).toString('base64');
+  return Buffer.from(
+    JSON.stringify({ createdAt: row.createdAt.toISOString(), id: row.id }),
+  ).toString('base64');
 }
 
 function decodeCursor(cursor: string): Cursor {
@@ -41,8 +43,24 @@ export class ReferralAttributionRepository extends BaseRepository<ReferralAttrib
     return Object.fromEntries(rows.map((r) => [r.status, Number(r.count)]));
   }
 
+  /** Global counts by status since a given date — backs the campaign analytics funnel (Phase 7). */
+  async countsSince(since: Date): Promise<Record<string, number>> {
+    const rows = await this.repository
+      .createQueryBuilder('referral')
+      .select('referral.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('referral.createdAt >= :since', { since })
+      .groupBy('referral.status')
+      .getRawMany();
+    return Object.fromEntries(rows.map((r) => [r.status, Number(r.count)]));
+  }
+
   /** [Admin] Referrals view, optionally scoped to one ambassador (their own "my referrals" list reuses this with ambassadorId set). */
-  async search(ambassadorId?: string, cursor?: string, limit = 20): Promise<CursorPage<ReferralAttribution>> {
+  async search(
+    ambassadorId?: string,
+    cursor?: string,
+    limit = 20,
+  ): Promise<CursorPage<ReferralAttribution>> {
     const qb = this.repository.createQueryBuilder('referral');
     if (ambassadorId) {
       qb.andWhere('referral.ambassadorId = :ambassadorId', { ambassadorId });
@@ -55,6 +73,14 @@ export class ReferralAttributionRepository extends BaseRepository<ReferralAttrib
     const rows = await qb.take(limit + 1).getMany();
     const hasMore = rows.length > limit;
     const data = hasMore ? rows.slice(0, limit) : rows;
-    return { data, meta: { hasMore, nextCursor: hasMore ? encodeCursor(data[data.length - 1]) : null } };
+    return {
+      data,
+      meta: { hasMore, nextCursor: hasMore ? encodeCursor(data[data.length - 1]) : null },
+    };
+  }
+
+  /** CSV export (Phase 7) — capped, not cursor-paginated like search(); an export is one download, not a browsing session. */
+  async listAllForExport(limit = 2000): Promise<ReferralAttribution[]> {
+    return this.repository.find({ order: { createdAt: 'DESC' }, take: limit });
   }
 }

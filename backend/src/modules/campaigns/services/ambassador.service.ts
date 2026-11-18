@@ -61,7 +61,10 @@ export class AmbassadorService {
   async getByUserId(userId: string): Promise<AmbassadorProfile> {
     const profile = await this.ambassadorRepository.findByUserId(userId);
     if (!profile) {
-      throw DomainException.notFound(ErrorCode.RESOURCE_NOT_FOUND, 'No ambassador profile exists for this user.');
+      throw DomainException.notFound(
+        ErrorCode.RESOURCE_NOT_FOUND,
+        'No ambassador profile exists for this user.',
+      );
     }
     const pointsBalance = await this.pointsLedgerService.getBalance(profile.id);
     return Object.assign(profile, { pointsBalance });
@@ -87,7 +90,10 @@ export class AmbassadorService {
     ]);
     const userById = new Map(users.map((u) => [u.id, u]));
     for (const row of page.data) {
-      Object.assign(row, { user: userById.get(row.userId) ?? null, pointsBalance: balances.get(row.id) ?? 0 });
+      Object.assign(row, {
+        user: userById.get(row.userId) ?? null,
+        pointsBalance: balances.get(row.id) ?? 0,
+      });
     }
     return page;
   }
@@ -192,6 +198,24 @@ export class AmbassadorService {
       before,
       after: { status: saved.status },
     });
+  }
+
+  /** CSV export (Phase 7) — same enrichment as search(), just unpaginated/capped. */
+  async listAllForExport(): Promise<AmbassadorProfile[]> {
+    const rows = await this.ambassadorRepository.listAllForExport();
+    if (!rows.length) return [];
+    const ids = rows.map((a) => a.id);
+    const [users, balances] = await Promise.all([
+      this.usersService.getBasicProfilesByIds([...new Set(rows.map((a) => a.userId))]),
+      this.pointsLedgerService.getBalances(ids),
+    ]);
+    const userById = new Map(users.map((u) => [u.id, u]));
+    return rows.map((row) =>
+      Object.assign(row, {
+        user: userById.get(row.userId) ?? null,
+        pointsBalance: balances.get(row.id) ?? 0,
+      }),
+    );
   }
 
   private async generateUniqueReferralCode(): Promise<string> {

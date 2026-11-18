@@ -284,7 +284,7 @@ h1,h2,h3{font-family:var(--sans);}
     <a class="side-link planned" href="#" data-planned="campaignWinner" id="linkCampaignWinner"></a>
     <a class="side-link" data-view="swapconnect" id="linkCampaignSwapConnect"></a>
     <a class="side-link planned" href="#" data-planned="campaignFulfilment" id="linkCampaignFulfilment"></a>
-    <a class="side-link planned" href="#" data-planned="campaignAnalytics" id="linkCampaignAnalytics"></a>
+    <a class="side-link" data-view="campaignAnalytics" id="linkCampaignAnalytics"></a>
 
     <div class="side-group-lbl">Content</div>
     <a class="side-link planned" href="#" data-planned="cms" id="linkCms"></a>
@@ -424,6 +424,25 @@ h1,h2,h3{font-family:var(--sans);}
     <div class="d-view" id="view-swapconnect">
       <div class="app-head"><div><h1>SwapConnect integration</h1><p>Prize data for the campaign's Airtel Outdoor Unit, pulled from SwapConnect's partner API.</p></div></div>
       <div id="swapconnectPanel"><div class="skel-row-sm"></div></div>
+    </div>
+
+    <!-- ============ CAMPAIGN ANALYTICS ============ -->
+    <div class="d-view" id="view-campaignAnalytics">
+      <div class="app-head">
+        <div><h1>Campaign analytics</h1><p>Traffic funnel, CSV exports, and referrals flagged by the fraud rules.</p></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="pill-btn ghost sm" data-export="/admin/ambassadors/export" data-filename="ambassadors.csv">Export ambassadors</button>
+          <button class="pill-btn ghost sm" data-export="/admin/referrals/export" data-filename="referrals.csv">Export referrals</button>
+          <button class="pill-btn ghost sm" data-export="/admin/ambassadors/points/export" data-filename="points-ledger.csv">Export points</button>
+        </div>
+      </div>
+      <div class="kpi-row-sm" id="campaignFunnelKpiRow" style="margin-bottom:16px;"></div>
+      <div class="chart-grid-2" style="margin-bottom:24px;">
+        <div class="chart-card"><div id="campaignFunnelChart"></div></div>
+        <div class="chart-card"><div id="campaignDailyChart"></div></div>
+      </div>
+      <div class="app-head" style="margin-bottom:10px;"><div><h1 style="font-size:16px;">Fraud review</h1><p>Referral codes the basic fraud rules rejected at signup — nothing here ever blocked the signup itself.</p></div></div>
+      <div id="fraudFlagsList"><div class="skel-row-sm"></div></div>
     </div>
 
     <!-- ============ VERIFICATION ============ -->
@@ -725,6 +744,7 @@ function goView(v){
   if(v==='referrals'){ loadReferrals(true); renderReferralsKpis(); }
   if(v==='leaderboard') loadLeaderboard();
   if(v==='swapconnect') loadSwapConnect();
+  if(v==='campaignAnalytics') loadCampaignAnalytics();
   if(v==='reviews'){ loadReviews(true); renderReviewsKpis(); }
   if(v==='audit') loadAuditLog(true);
   if(v==='team') loadTeam();
@@ -1776,6 +1796,76 @@ function renderSwapConnectPanel(status){
 }
 
 /* ================================================================
+   CAMPAIGN ANALYTICS — Phase 7: traffic funnel (reuses the dataviz
+   chart primitives, same empty-state convention as Overview's own
+   charts) + CSV exports (downloaded via fetch+Blob, not a plain link,
+   since these are Bearer-token-authenticated routes) + fraud review.
+   ================================================================ */
+async function loadCampaignAnalytics(){
+  loadCampaignFunnel();
+  loadFraudFlags(true);
+}
+async function loadCampaignFunnel(){
+  try{
+    const funnel = await apiFetch('/admin/campaigns/analytics/funnel?days=30').then(r=>r.data);
+    document.getElementById('campaignFunnelKpiRow').innerHTML = [
+      {lbl:'Page views (30d)', val:funnel.pageViews},
+      {lbl:'CTA clicks (30d)', val:funnel.ctaClicks},
+      {lbl:'Referred signups (30d)', val:funnel.referredSignups},
+      {lbl:'Qualified referrals (30d)', val:funnel.qualifiedReferrals},
+    ].map(k=>`<div class="kpi-sm"><div class="lbl">${k.lbl}</div><div class="val">${k.val}</div></div>`).join('');
+    renderBarChart('campaignFunnelChart', [
+      {label:'Views', value:funnel.pageViews},
+      {label:'CTA clicks', value:funnel.ctaClicks},
+      {label:'Signups', value:funnel.referredSignups},
+      {label:'Qualified', value:funnel.qualifiedReferrals},
+    ], {color:'var(--blue)', formatValue:v=>`${v}`});
+    renderLineChart('campaignDailyChart', funnel.daily.map(d=>({label:d.day.slice(5), value:d.pageViews})), {formatValue:v=>`${v} view${v===1?'':'s'}`, color:'var(--green)'});
+  }catch(e){
+    renderBarChart('campaignFunnelChart', [], {});
+    renderLineChart('campaignDailyChart', [], {});
+  }
+}
+async function loadFraudFlags(reset){
+  const el=document.getElementById('fraudFlagsList');
+  if(reset) el.innerHTML='<div class="skel-row-sm"></div>';
+  try{
+    const {data} = await apiFetch('/admin/campaigns/analytics/fraud-flags?limit=50');
+    if(!data.length){ el.innerHTML = stateEmpty('No open fraud flags — every referral attempt has passed the basic rules.'); return; }
+    el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th>Referral code</th><th>Reason</th><th>Message</th><th>Flagged</th><th></th></tr></thead><tbody>${
+      data.map(f=>`<tr>
+        <td>${f.referralCode||'—'}</td>
+        <td><span class="pill-status warn">${f.reasonCode}</span></td>
+        <td style="max-width:280px;">${f.message}</td>
+        <td>${new Date(f.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td>
+        <td><button class="pill-btn ghost sm" data-ack="${f.id}">Acknowledge</button></td>
+      </tr>`).join('')
+    }</tbody></table></div>`;
+    el.querySelectorAll('[data-ack]').forEach(btn=>btn.addEventListener('click', async ()=>{
+      btn.disabled=true;
+      try{ await apiFetch(`/admin/campaigns/analytics/fraud-flags/${btn.dataset.ack}/acknowledge`,{method:'POST'}); loadFraudFlags(true); }
+      catch(e){ btn.disabled=false; alert(e.message||'Could not acknowledge.'); }
+    }));
+  }catch(e){ el.innerHTML = stateError(e); }
+}
+document.querySelectorAll('[data-export]').forEach(btn=>btn.addEventListener('click', async ()=>{
+  const original = btn.textContent;
+  btn.disabled=true; btn.textContent='Preparing…';
+  try{
+    const session = getSession();
+    const res = await fetch(`${API_BASE}${btn.dataset.export}`, { headers: session ? { Authorization: `Bearer ${session.access}` } : {} });
+    if(!res.ok) throw new Error('Export failed.');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = btn.dataset.filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }catch(e){ alert(e.message||'Export failed.'); }
+  finally{ btn.disabled=false; btn.textContent=original; }
+}));
+
+/* ================================================================
    VERIFICATION (real, carried over) — restyled onto the new table
    pattern, same endpoints/logic/bulk actions as before.
    ================================================================ */
@@ -2376,7 +2466,6 @@ const PLANNED_MODULES = {
   campaignPoints: { label:'Points &amp; milestones', group:'Campaigns', blurb:'A dedicated cross-ambassador ledger view. Per-ambassador history and manual adjustments are already live today — open an ambassador in the Ambassadors view and use its Points tab.' },
   campaignWinner: { label:'Winner verification', group:'Campaigns', blurb:'Reviewing the locked final leaderboard and confirming the campaign winner.' },
   campaignFulfilment: { label:'Prize fulfilment', group:'Campaigns', blurb:'Allocation and delivery status for the confirmed winner’s prize.' },
-  campaignAnalytics: { label:'Campaign analytics', group:'Campaigns', blurb:'Traffic attribution, funnel, and fraud-review reporting for the campaign.' },
   cms: { label:'CMS', group:'Content', blurb:'Editable static pages (About, Help articles) without a code deploy.' },
   helpCentre: { label:'Help Centre', group:'Content', blurb:'A searchable self-serve help article library.' },
   systemSettings: { label:'System Settings', group:'Control', blurb:'Platform-wide configuration (commission defaults, booking windows, feature flags).' },

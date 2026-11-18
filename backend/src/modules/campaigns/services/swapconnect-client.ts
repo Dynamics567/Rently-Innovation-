@@ -28,7 +28,9 @@ export class SwapConnectClient {
   private readonly logger = new Logger(SwapConnectClient.name);
 
   constructor(
-    private readonly config: Required<Pick<SwapConnectConfig, 'apiBase' | 'partnerApiKey' | 'campaignId'>>,
+    private readonly config: Required<
+      Pick<SwapConnectConfig, 'apiBase' | 'partnerApiKey' | 'campaignId'>
+    >,
   ) {}
 
   async getMe(): Promise<{ partner: { id: string; name: string; status: string } }> {

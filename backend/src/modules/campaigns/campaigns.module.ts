@@ -10,18 +10,27 @@ import { ReferralAttribution } from './entities/referral-attribution.entity';
 import { ReferralMilestone } from './entities/referral-milestone.entity';
 import { PointsLedgerEntry } from './entities/points-ledger-entry.entity';
 import { CampaignPrizeSnapshot } from './entities/campaign-prize-snapshot.entity';
+import { CampaignTrafficEvent } from './entities/campaign-traffic-event.entity';
+import { ReferralFraudFlag } from './entities/referral-fraud-flag.entity';
 
 import { AmbassadorProfileRepository } from './repositories/ambassador-profile.repository';
 import { ReferralAttributionRepository } from './repositories/referral-attribution.repository';
 import { ReferralMilestoneRepository } from './repositories/referral-milestone.repository';
 import { PointsLedgerRepository } from './repositories/points-ledger.repository';
 import { CampaignPrizeSnapshotRepository } from './repositories/campaign-prize-snapshot.repository';
+import { CampaignTrafficEventRepository } from './repositories/campaign-traffic-event.repository';
+import { ReferralFraudFlagRepository } from './repositories/referral-fraud-flag.repository';
 
 import { AmbassadorService } from './services/ambassador.service';
 import { ReferralAttributionService } from './services/referral-attribution.service';
 import { PointsLedgerService } from './services/points-ledger.service';
 import { SwapConnectClient } from './services/swapconnect-client';
-import { SwapConnectIntegrationService, SWAPCONNECT_CLIENT } from './services/swapconnect-integration.service';
+import {
+  SwapConnectIntegrationService,
+  SWAPCONNECT_CLIENT,
+} from './services/swapconnect-integration.service';
+import { CampaignTrafficService } from './services/campaign-traffic.service';
+import { ReferralFraudFlagService } from './services/referral-fraud-flag.service';
 
 import { ReferralMilestoneListener } from './listeners/referral-milestone.listener';
 import { SignupReferralListener } from './listeners/signup-referral.listener';
@@ -30,6 +39,7 @@ import { AmbassadorsController } from './controllers/ambassadors.controller';
 import { AdminAmbassadorsController } from './controllers/admin-ambassadors.controller';
 import { AdminReferralsController } from './controllers/admin-referrals.controller';
 import { AdminSwapConnectController } from './controllers/admin-swapconnect.controller';
+import { AdminCampaignAnalyticsController } from './controllers/admin-campaign-analytics.controller';
 import { CampaignsPublicController } from './controllers/campaigns-public.controller';
 
 /**
@@ -43,7 +53,15 @@ import { CampaignsPublicController } from './controllers/campaigns-public.contro
  */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([AmbassadorProfile, ReferralAttribution, ReferralMilestone, PointsLedgerEntry, CampaignPrizeSnapshot]),
+    TypeOrmModule.forFeature([
+      AmbassadorProfile,
+      ReferralAttribution,
+      ReferralMilestone,
+      PointsLedgerEntry,
+      CampaignPrizeSnapshot,
+      CampaignTrafficEvent,
+      ReferralFraudFlag,
+    ]),
     AuditLogModule,
     IdentityModule,
     ConfigModule,
@@ -53,6 +71,7 @@ import { CampaignsPublicController } from './controllers/campaigns-public.contro
     AdminAmbassadorsController,
     AdminReferralsController,
     AdminSwapConnectController,
+    AdminCampaignAnalyticsController,
     CampaignsPublicController,
   ],
   providers: [
@@ -61,10 +80,14 @@ import { CampaignsPublicController } from './controllers/campaigns-public.contro
     ReferralMilestoneRepository,
     PointsLedgerRepository,
     CampaignPrizeSnapshotRepository,
+    CampaignTrafficEventRepository,
+    ReferralFraudFlagRepository,
     PointsLedgerService,
     AmbassadorService,
     ReferralAttributionService,
     SwapConnectIntegrationService,
+    CampaignTrafficService,
+    ReferralFraudFlagService,
     ReferralMilestoneListener,
     SignupReferralListener,
     {
@@ -74,7 +97,11 @@ import { CampaignsPublicController } from './controllers/campaigns-public.contro
       useFactory: (configService: ConfigService) => {
         const cfg = configService.get<SwapConnectConfig>('swapConnect')!;
         return cfg.apiBase && cfg.partnerApiKey && cfg.campaignId
-          ? new SwapConnectClient({ apiBase: cfg.apiBase, partnerApiKey: cfg.partnerApiKey, campaignId: cfg.campaignId })
+          ? new SwapConnectClient({
+              apiBase: cfg.apiBase,
+              partnerApiKey: cfg.partnerApiKey,
+              campaignId: cfg.campaignId,
+            })
           : null;
       },
       inject: [ConfigService],

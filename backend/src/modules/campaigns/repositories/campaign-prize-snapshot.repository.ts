@@ -6,7 +6,9 @@ import { CampaignPrizeSnapshot } from '../entities/campaign-prize-snapshot.entit
 
 @Injectable()
 export class CampaignPrizeSnapshotRepository extends BaseRepository<CampaignPrizeSnapshot> {
-  constructor(@InjectRepository(CampaignPrizeSnapshot) repository: Repository<CampaignPrizeSnapshot>) {
+  constructor(
+    @InjectRepository(CampaignPrizeSnapshot) repository: Repository<CampaignPrizeSnapshot>,
+  ) {
     super(repository);
   }
 
