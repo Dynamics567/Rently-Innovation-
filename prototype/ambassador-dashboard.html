@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-EQ5R7PVBP7"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-EQ5R7PVBP7');
+</script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ambassador dashboard — Rently</title>
+<link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="assets/images/favicon-16.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="assets/images/favicon-180.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/rently.css" />
+<style>
+body{padding-top:0;}
+.d-view{display:none;}
+.d-view.active{display:block;animation:fadeUp .35s var(--ease);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.section-block{margin-bottom:44px;}
+.section-block .sb-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+.section-block .sb-head h3{font-size:16px;font-weight:600;font-family:var(--sans);}
+
+/* ---- join / agreement screen (shown instead of the shell until registered) ---- */
+.join-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 20px;}
+.join-card{max-width:480px;width:100%;text-align:center;}
+.join-card .ic-big{width:56px;height:56px;border-radius:16px;background:var(--amber-soft,var(--bg-alt));color:var(--amber,var(--ink));display:flex;align-items:center;justify-content:center;margin:0 auto 22px;}
+.join-card h1{font-size:24px;font-weight:400;margin-bottom:10px;}
+.join-card p{color:var(--ink-soft);font-size:14px;line-height:1.7;margin-bottom:28px;}
+.join-rules{text-align:left;border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:28px;}
+.join-rules li{font-size:13px;color:var(--ink-soft);line-height:1.8;display:flex;gap:10px;}
+.join-rules li .ic{color:var(--green);flex-shrink:0;margin-top:2px;}
+
+/* ---- referral link share widget ---- */
+.share-card{border:1px solid var(--line);border-radius:18px;padding:24px;margin-bottom:44px;background:var(--bg-alt);}
+.share-card .s-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:16px;}
+.share-card h3{font-size:16px;font-weight:600;}
+.share-card .s-sub{font-size:12.5px;color:var(--ink-faint);margin-top:4px;}
+.share-link-row{display:flex;gap:8px;}
+.share-link-row input{flex:1;background:var(--surface);border:1px solid var(--line-strong);border-radius:11px;padding:11px 14px;font-size:13.5px;font-family:var(--mono,monospace);color:var(--ink-soft);}
+.share-actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;}
+
+/* ---- referral / points rows ---- */
+.ref-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;margin-bottom:10px;}
+.ref-row .r-main{flex:1;min-width:0;}
+.ref-row .r-title{font-size:13.5px;font-weight:600;}
+.ref-row .r-sub{font-size:12px;color:var(--ink-faint);margin-top:2px;}
+.milestone-chip-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.milestone-chip{font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--bg-alt);color:var(--ink-faint);}
+.milestone-chip.done{background:var(--green-soft);color:var(--green-dark);}
+
+.ledger-row{display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--line);}
+.ledger-row:last-child{border-bottom:none;}
+.ledger-row .l-main{flex:1;min-width:0;}
+.ledger-row .l-title{font-size:13.5px;font-weight:600;}
+.ledger-row .l-sub{font-size:11.5px;color:var(--ink-faint);margin-top:2px;}
+.ledger-row .l-pts{font-family:var(--serif);font-size:16px;font-variant-numeric:tabular-nums;flex-shrink:0;}
+.ledger-row .l-pts.pos{color:var(--green);}
+.ledger-row .l-pts.neg{color:var(--red);}
+
+.rank-card{display:flex;align-items:center;gap:18px;padding:22px;border:1px solid var(--line);border-radius:18px;margin-bottom:44px;}
+.rank-card .rk{font-family:var(--serif);font-size:38px;color:var(--amber,var(--ink));flex-shrink:0;}
+.rank-card .rk-sub{font-size:12.5px;color:var(--ink-faint);margin-top:4px;}
+
+@media(max-width:680px){
+  .app-head{flex-direction:column;align-items:stretch;}
+  .share-link-row{flex-direction:column;}
+  .rank-card{flex-wrap:wrap;}
+}
+</style>
+</head>
+<body class="no-grain">
+
+<!-- ============ JOIN / AGREEMENT SCREEN (shown until an ambassador profile exists) ============ -->
+<div class="join-wrap" id="joinScreen" style="display:none;">
+  <div class="join-card">
+    <div class="ic-big" id="joinIcon"></div>
+    <h1>Join the Rently Ambassador Programme</h1>
+    <p>Refer Rental Partners, earn points automatically as they onboard, and compete for this challenge's prize.</p>
+    <ul class="join-rules">
+      <li><span class="ic" id="ruleIcon1"></span><span>You get a personal referral code the moment you join — share it anywhere.</span></li>
+      <li><span class="ic" id="ruleIcon2"></span><span>Points are only ever awarded for real onboarding progress, never for a click.</span></li>
+      <li><span class="ic" id="ruleIcon3"></span><span>Your score and rank update automatically — no manual tracking needed.</span></li>
+    </ul>
+    <div id="joinError" class="banner danger" style="display:none;margin-bottom:20px;text-align:left;"></div>
+    <button class="pill-btn blue lg block" id="joinBtn">I agree — become an Ambassador</button>
+  </div>
+</div>
+
+<!-- ============ DASHBOARD SHELL ============ -->
+<div id="shellRoot" style="display:none;">
+<nav class="nav app-nav">
+  <div class="container nav-inner">
+    <a class="wordmark" href="/"><img src="assets/images/logo.png" alt="Rently" /></a>
+    <div class="nav-links">
+      <a href="campaign-refer-win#leaderboard">Public leaderboard</a>
+      <a href="browse">Marketplace</a>
+    </div>
+    <div class="nav-avatar-menu" style="margin-left:auto;">
+      <button class="nav-avatar" id="avatarBtn" style="background:var(--amber,var(--blue));"></button>
+      <div class="avatar-dropdown" id="avatarDropdown">
+        <div class="who"><div class="n"></div><div class="e"></div></div>
+        <a class="dd-item" href="dashboard-renter" id="ddSwitch"></a>
+        <a class="dd-item danger" href="auth" id="ddLogout"></a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="mobile-tabbar">
+  <a class="side-link active" data-view="overview" id="mLinkOverview"></a>
+  <a class="side-link" data-view="referrals" id="mLinkReferrals"></a>
+  <a class="side-link" data-view="points" id="mLinkPoints"></a>
+  <a class="side-link" href="dashboard-renter" id="mLinkRenterSwitch"></a>
+</div>
+
+<div class="app-shell">
+  <aside class="app-side">
+    <div class="side-group-lbl">Ambassador</div>
+    <a class="side-link active" data-view="overview" id="linkOverview"></a>
+    <a class="side-link" data-view="referrals" id="linkReferrals"></a>
+    <a class="side-link" data-view="points" id="linkPoints"></a>
+    <div class="side-group-lbl">Switch role</div>
+    <a class="side-link" href="dashboard-renter" id="linkRenterSwitch"></a>
+  </aside>
+
+  <main class="app-main">
+    <!-- ============ OVERVIEW ============ -->
+    <div class="d-view active" id="view-overview">
+      <div class="app-head">
+        <div><h1 id="overviewGreeting">Your Ambassador scorecard</h1><p>Points, rank and referral progress — updated automatically.</p></div>
+      </div>
+
+      <div class="banner" id="statusBanner" style="margin-bottom:32px;display:none;"></div>
+
+      <div class="kpi-row" style="margin-bottom:36px;" id="overviewKpiRow"></div>
+
+      <div class="rank-card" id="rankCard" style="display:none;">
+        <div class="rk" id="rankValue">—</div>
+        <div><div style="font-size:14px;font-weight:600;" id="rankLabel">Your rank</div><div class="rk-sub" id="rankSub"></div></div>
+      </div>
+
+      <div class="share-card">
+        <div class="s-top">
+          <div><h3>Your referral link</h3><div class="s-sub">Every signup through this link is tracked to you automatically.</div></div>
+        </div>
+        <div class="share-link-row">
+          <input type="text" id="shareLinkInput" readonly />
+          <button class="pill-btn blue" id="copyLinkBtn">Copy</button>
+        </div>
+        <div class="share-actions">
+          <a class="pill-btn green sm" id="waShareBtn" target="_blank" rel="noopener"></a>
+          <div style="font-size:12.5px;color:var(--ink-faint);align-self:center;">Your code: <code id="shareCodeText"></code></div>
+        </div>
+      </div>
+
+      <div class="section-block">
+        <div class="sb-head"><h3>How scoring works</h3></div>
+        <div class="score-row-sm" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+          <div class="kpi" style="padding:16px;"><div class="val" style="font-size:20px;">+5</div><div class="lbl" style="margin-bottom:0;">Referral registers</div></div>
+          <div class="kpi" style="padding:16px;"><div class="val" style="font-size:20px;">+5</div><div class="lbl" style="margin-bottom:0;">ID verified</div></div>
+          <div class="kpi" style="padding:16px;"><div class="val" style="font-size:20px;">+5</div><div class="lbl" style="margin-bottom:0;">Listing approved</div></div>
+          <div class="kpi" style="padding:16px;"><div class="val" style="font-size:20px;">+10</div><div class="lbl" style="margin-bottom:0;">First inquiry</div></div>
+        </div>
+      </div>
+
+      <div class="section-block">
+        <div class="sb-head"><h3>Recent referrals</h3><a class="text-link faint" data-view-link="referrals">View all</a></div>
+        <div id="recentReferralsList"><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
+      </div>
+    </div>
+
+    <!-- ============ REFERRALS ============ -->
+    <div class="d-view" id="view-referrals">
+      <div class="app-head"><div><h1>Your referrals</h1><p>Everyone who's signed up through your referral link or code.</p></div></div>
+      <div id="referralsList"><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
+      <button class="pill-btn ghost block" id="refLoadMore" style="display:none;margin-top:14px;">Load more</button>
+    </div>
+
+    <!-- ============ POINTS ============ -->
+    <div class="d-view" id="view-points">
+      <div class="app-head"><div><h1>Points history</h1><p>Every point you've earned (or had adjusted), oldest action last.</p></div></div>
+      <div class="panel-card">
+        <div class="analytics-head">
+          <div><div class="lbl">Current balance</div><div class="num" id="pointsHeadline">—</div></div>
+        </div>
+        <div id="ledgerList"><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
+        <button class="pill-btn ghost block" id="ledgerLoadMore" style="display:none;margin-top:14px;">Load more</button>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+
+<script src="assets/rently.js"></script>
+<script src="assets/api.js"></script>
+<script>
+const session = requireSession();
+</script>
+<script>
+document.getElementById('joinIcon').innerHTML = icon('shield',{size:24});
+document.getElementById('ruleIcon1').innerHTML = icon('check',{size:14,stroke:2.6});
+document.getElementById('ruleIcon2').innerHTML = icon('check',{size:14,stroke:2.6});
+document.getElementById('ruleIcon3').innerHTML = icon('check',{size:14,stroke:2.6});
+document.getElementById('ddSwitch').innerHTML = icon('user',{size:15})+' Switch to Renter';
+document.getElementById('ddLogout').innerHTML = icon('logout',{size:15})+' Log out';
+document.getElementById('linkOverview').innerHTML = icon('grid',{size:17})+' Overview';
+document.getElementById('linkReferrals').innerHTML = icon('share',{size:17})+' Referrals';
+document.getElementById('linkPoints').innerHTML = icon('star',{size:17})+' Points';
+document.getElementById('linkRenterSwitch').innerHTML = icon('user',{size:17})+' Renter dashboard';
+document.getElementById('mLinkOverview').innerHTML = icon('grid',{size:16})+' Overview';
+document.getElementById('mLinkReferrals').innerHTML = icon('share',{size:16})+' Referrals';
+document.getElementById('mLinkPoints').innerHTML = icon('star',{size:16})+' Points';
+document.getElementById('mLinkRenterSwitch').innerHTML = icon('user',{size:16})+' Renter';
+
+document.getElementById('ddLogout').addEventListener('click', async (e)=>{ e.preventDefault(); await apiLogout(); window.location.href='auth'; });
+initAvatarMenu();
+document.getElementById('avatarBtn').textContent = initials(session.user.fullName);
+document.querySelector('#avatarDropdown .n').textContent = session.user.fullName;
+document.querySelector('#avatarDropdown .e').textContent = session.user.email || session.user.phone || '';
+
+/* ---- sidebar + inline view links ---- */
+function goView(v){
+  document.querySelectorAll('.side-link[data-view]').forEach(o=>o.classList.toggle('active',o.dataset.view===v));
+  document.querySelectorAll('.d-view').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(v==='referrals' && !referralsLoaded){ referralsLoaded=true; loadReferrals(true); }
+  if(v==='points' && !ledgerLoaded){ ledgerLoaded=true; loadLedger(true); }
+}
+document.querySelectorAll('.side-link[data-view]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goView(l.dataset.view);}));
+document.querySelectorAll('[data-view-link]').forEach(l=>l.addEventListener('click',(e)=>{e.preventDefault();goView(l.dataset.viewLink);}));
+
+const AMBASSADOR_STATUS_BADGE = {pending:'pending',approved:'info',active:'confirmed',suspended:'cancelled',disqualified:'cancelled'};
+const REFERRAL_STATUS_BADGE = {pending:'pending',qualified:'confirmed',rejected:'cancelled',reversed:'cancelled'};
+const STATUS_COPY = {
+  pending:{t:'Your application is pending review', d:'Most ambassadors are approved within a day. You can share your link already — referrals through it are tracked from the moment you joined.'},
+  approved:{t:'You\'re approved — go get your first referral!', d:'Your Ambassador status becomes Active automatically the moment your first referral qualifies.'},
+  active:{t:'You\'re an active Ambassador', d:'Keep sharing your link — every qualified referral adds to your score.'},
+  suspended:{t:'Your Ambassador account is suspended', d:''},
+  disqualified:{t:'Your Ambassador account has been disqualified', d:''},
+};
+
+let referralsLoaded=false, ledgerLoaded=false;
+let refCursor=null, refRows=[];
+let ledgerCursor=null, ledgerRows=[];
+let myProfile=null;
+
+document.getElementById('overviewKpiRow').innerHTML =
+  kpiCard('kpiPoints','Points balance',{icon:'star',accent:'amber'}) +
+  kpiCard('kpiTotalRef','Total referrals',{icon:'share',accent:'blue'}) +
+  kpiCard('kpiQualified','Qualified referrals',{icon:'check',accent:'green'}) +
+  kpiCard('kpiPending','Pending referrals',{icon:'clock'});
+
+(async function init(){
+  try{
+    const {data} = await apiFetch('/ambassadors/me/summary');
+    myProfile = data.profile;
+    renderShell(data);
+  }catch(e){
+    if(e.code==='RESOURCE_NOT_FOUND'){ showJoinScreen(); return; }
+    document.body.innerHTML = `<div style="padding:80px 40px;color:var(--ink-faint)">Couldn't load your Ambassador dashboard. ${apiErrorMessage(e)}</div>`;
+  }
+})();
+
+function showJoinScreen(){
+  document.getElementById('joinScreen').style.display='flex';
+  document.getElementById('shellRoot').style.display='none';
+}
+
+document.getElementById('joinBtn').addEventListener('click', async ()=>{
+  const btn=document.getElementById('joinBtn'), errEl=document.getElementById('joinError');
+  errEl.style.display='none';
+  btn.disabled=true; const original=btn.textContent; btn.textContent='Joining…';
+  try{
+    await apiFetch('/ambassadors/register',{method:'POST',body:{}});
+    const {data} = await apiFetch('/ambassadors/me/summary');
+    myProfile = data.profile;
+    document.getElementById('joinScreen').style.display='none';
+    document.getElementById('shellRoot').style.display='block';
+    renderShell(data);
+  }catch(e){
+    errEl.innerHTML = icon('alert',{size:15})+`<div>${apiErrorMessage(e)}</div>`;
+    errEl.style.display='flex';
+    btn.disabled=false; btn.textContent=original;
+  }
+});
+
+function renderShell(summary){
+  document.getElementById('shellRoot').style.display='block';
+  const {profile, rank, referralCounts} = summary;
+  const hour = new Date().getHours();
+  document.getElementById('overviewGreeting').textContent = (hour<12?'Good morning':hour<18?'Good afternoon':'Good evening') + ', ' + (session.user.fullName||'').split(' ')[0];
+
+  const copy = STATUS_COPY[profile.status];
+  if(copy){
+    const banner=document.getElementById('statusBanner');
+    banner.className = 'banner ' + (profile.status==='active'?'success':profile.status==='pending'?'warning':profile.status==='approved'?'info':'danger');
+    banner.innerHTML = `<div><div class="t">${copy.t}</div>${copy.d?`<div class="d">${copy.d}</div>`:''}${profile.suspendedReason?`<div class="d">${profile.suspendedReason}</div>`:''}${profile.disqualifiedReason?`<div class="d">${profile.disqualifiedReason}</div>`:''}</div>`;
+    banner.style.display='flex';
+  }
+
+  document.getElementById('kpiPoints').textContent = profile.pointsBalance ?? 0;
+  const counts = referralCounts || {};
+  const total = Object.values(counts).reduce((s,n)=>s+n,0);
+  document.getElementById('kpiTotalRef').textContent = total;
+  document.getElementById('kpiQualified').textContent = counts.qualified || 0;
+  document.getElementById('kpiPending').textContent = counts.pending || 0;
+
+  if(rank){
+    document.getElementById('rankCard').style.display='flex';
+    document.getElementById('rankValue').textContent = '#'+rank.rank;
+    document.getElementById('rankSub').textContent = `out of ${rank.totalParticipants} active Ambassador${rank.totalParticipants===1?'':'s'}`;
+  }
+
+  const shareUrl = `${window.location.origin}/campaign-refer-win?ref=${encodeURIComponent(profile.referralCode)}`;
+  document.getElementById('shareLinkInput').value = shareUrl;
+  document.getElementById('shareCodeText').textContent = profile.referralCode;
+  const waBtn = document.getElementById('waShareBtn');
+  waBtn.innerHTML = icon('share',{size:14})+' Share on WhatsApp';
+  waBtn.href = `https://wa.me/?text=${encodeURIComponent(`Join Rently as a Rental Partner using my referral link: ${shareUrl}`)}`;
+
+  loadRecentReferrals();
+}
+
+document.getElementById('copyLinkBtn').addEventListener('click', async ()=>{
+  const input = document.getElementById('shareLinkInput');
+  const btn = document.getElementById('copyLinkBtn');
+  try{
+    await navigator.clipboard.writeText(input.value);
+  }catch(e){
+    input.select();
+    document.execCommand('copy');
+  }
+  const original = btn.textContent;
+  btn.textContent = 'Copied!';
+  setTimeout(()=>{ btn.textContent = original; }, 1800);
+});
+
+/* ---- recent referrals (overview, top 5, no pagination) ---- */
+async function loadRecentReferrals(){
+  const el = document.getElementById('recentReferralsList');
+  try{
+    const {data} = await apiFetch('/ambassadors/me/referrals?limit=5');
+    if(!data.length){
+      el.innerHTML = `<div class="empty-state" style="padding:40px 20px;"><div class="ic">${icon('share',{size:20})}</div><h3>No referrals yet</h3><p>Share your referral link above to get your first one.</p></div>`;
+      return;
+    }
+    el.innerHTML = data.map(referralRowHtml).join('');
+  }catch(e){ el.innerHTML = `<p style="color:var(--ink-faint);font-size:13px;">Couldn't load your referrals right now.</p>`; }
+}
+
+/* ---- referrals view (cursor-paginated) ---- */
+async function loadReferrals(reset){
+  if(reset){ refCursor=null; refRows=[]; document.getElementById('referralsList').innerHTML='<div class="skel skel-row"></div>'; }
+  const params=new URLSearchParams({limit:'20'});
+  if(refCursor) params.set('cursor',refCursor);
+  try{
+    const {data,meta} = await apiFetch(`/ambassadors/me/referrals?${params}`);
+    refRows = reset ? data : refRows.concat(data);
+    refCursor = meta.nextCursor;
+    document.getElementById('refLoadMore').style.display = meta.hasMore ? '' : 'none';
+    const el = document.getElementById('referralsList');
+    el.innerHTML = refRows.length ? refRows.map(referralRowHtml).join('') : `<div class="empty-state" style="padding:50px 20px;"><div class="ic">${icon('share',{size:20})}</div><h3>No referrals yet</h3><p>Share your referral link to get started.</p></div>`;
+  }catch(e){ document.getElementById('referralsList').innerHTML = `<p style="color:var(--ink-faint);font-size:13px;">Couldn't load your referrals right now.</p>`; }
+}
+document.getElementById('refLoadMore').addEventListener('click',()=>loadReferrals(false));
+
+function referralRowHtml(r){
+  const name = r.referredUser ? r.referredUser.fullName : 'Rently user';
+  return `<div class="ref-row">
+    <div class="r-main">
+      <div class="r-title">${name}</div>
+      <div class="r-sub">Referred ${new Date(r.createdAt).toLocaleDateString()}${r.rejectionReason?' · '+r.rejectionReason:''}</div>
+    </div>
+    <span class="badge ${REFERRAL_STATUS_BADGE[r.status]||''}">${r.status}</span>
+  </div>`;
+}
+
+/* ---- points view (cursor-paginated ledger) ---- */
+const LEDGER_TYPE_LABEL = {
+  milestone_award: 'Milestone reached',
+  manual_adjustment: 'Manual adjustment',
+};
+async function loadLedger(reset){
+  if(reset){
+    ledgerCursor=null; ledgerRows=[];
+    document.getElementById('ledgerList').innerHTML='<div class="skel skel-row"></div>';
+    document.getElementById('pointsHeadline').textContent = myProfile ? (myProfile.pointsBalance ?? 0) : '—';
+  }
+  const params=new URLSearchParams({limit:'20'});
+  if(ledgerCursor) params.set('cursor',ledgerCursor);
+  try{
+    const {data,meta} = await apiFetch(`/ambassadors/me/points?${params}`);
+    ledgerRows = reset ? data : ledgerRows.concat(data);
+    ledgerCursor = meta.nextCursor;
+    document.getElementById('ledgerLoadMore').style.display = meta.hasMore ? '' : 'none';
+    renderLedger();
+  }catch(e){
+    document.getElementById('ledgerList').innerHTML = `<p style="color:var(--ink-faint);font-size:13px;">Couldn't load your points history right now.</p>`;
+    document.getElementById('ledgerLoadMore').style.display='none';
+  }
+}
+function renderLedger(){
+  const el = document.getElementById('ledgerList');
+  if(!ledgerRows.length){ el.innerHTML = `<p style="color:var(--ink-faint);font-size:13px;">No points activity yet.</p>`; return; }
+  el.innerHTML = ledgerRows.map(l=>`
+    <div class="ledger-row">
+      <div class="l-main">
+        <div class="l-title">${LEDGER_TYPE_LABEL[l.type]||l.type}</div>
+        <div class="l-sub">${new Date(l.createdAt).toLocaleDateString()}${l.reason?' · '+l.reason:''}</div>
+      </div>
+      <div class="l-pts ${l.pointsDelta>=0?'pos':'neg'}">${l.pointsDelta>=0?'+':''}${l.pointsDelta}</div>
+    </div>
+  `).join('');
+}
+document.getElementById('ledgerLoadMore').addEventListener('click',()=>loadLedger(false));
+</script>
+</body>
+</html>

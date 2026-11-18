@@ -23,6 +23,7 @@ import { SignupReferralListener } from './listeners/signup-referral.listener';
 import { AmbassadorsController } from './controllers/ambassadors.controller';
 import { AdminAmbassadorsController } from './controllers/admin-ambassadors.controller';
 import { AdminReferralsController } from './controllers/admin-referrals.controller';
+import { CampaignsPublicController } from './controllers/campaigns-public.controller';
 
 /**
  * Phases 2-3 of the Rently x SwapConnect campaign integration (see
@@ -39,7 +40,7 @@ import { AdminReferralsController } from './controllers/admin-referrals.controll
     AuditLogModule,
     IdentityModule,
   ],
-  controllers: [AmbassadorsController, AdminAmbassadorsController, AdminReferralsController],
+  controllers: [AmbassadorsController, AdminAmbassadorsController, AdminReferralsController, CampaignsPublicController],
   providers: [
     AmbassadorProfileRepository,
     ReferralAttributionRepository,

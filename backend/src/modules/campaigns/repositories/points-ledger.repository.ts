@@ -112,4 +112,47 @@ export class PointsLedgerRepository extends BaseRepository<PointsLedgerEntry> {
       [limit],
     );
   }
+
+  /**
+   * One ambassador's own standing — same ranking rule as getLeaderboard()
+   * (verified balance, official tie-break), scoped to a single row via
+   * RANK() rather than materializing and slicing the whole board. Null
+   * when the ambassador isn't approved/active, i.e. not on the board at all.
+   */
+  async getRank(ambassadorId: string): Promise<{ rank: number; totalParticipants: number } | null> {
+    const rows: Array<{ rank: number; totalParticipants: number }> = await this.repository.manager.query(
+      `
+      WITH balances AS (
+        SELECT ambassador_id, COALESCE(SUM(points_delta), 0) AS balance
+        FROM points_ledger_entries
+        GROUP BY ambassador_id
+      ),
+      running AS (
+        SELECT ambassador_id, created_at,
+          SUM(points_delta) OVER (PARTITION BY ambassador_id ORDER BY created_at, id) AS running_total
+        FROM points_ledger_entries
+      ),
+      first_reach AS (
+        SELECT r.ambassador_id, MIN(r.created_at) AS reached_at
+        FROM running r
+        JOIN balances b ON b.ambassador_id = r.ambassador_id
+        WHERE r.running_total = b.balance
+        GROUP BY r.ambassador_id
+      ),
+      ranked AS (
+        SELECT ap.id AS ambassador_id,
+          RANK() OVER (ORDER BY COALESCE(b.balance, 0) DESC, fr.reached_at ASC NULLS LAST) AS rank
+        FROM ambassador_profiles ap
+        LEFT JOIN balances b ON b.ambassador_id = ap.id
+        LEFT JOIN first_reach fr ON fr.ambassador_id = ap.id
+        WHERE ap.deleted_at IS NULL AND ap.status IN ('approved', 'active')
+      )
+      SELECT rank::int AS rank, (SELECT COUNT(*) FROM ranked)::int AS "totalParticipants"
+      FROM ranked
+      WHERE ambassador_id = $1
+      `,
+      [ambassadorId],
+    );
+    return rows[0] ?? null;
+  }
 }

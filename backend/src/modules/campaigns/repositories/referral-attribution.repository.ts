@@ -29,6 +29,18 @@ export class ReferralAttributionRepository extends BaseRepository<ReferralAttrib
     return this.repository.findOne({ where: { referredUserId } });
   }
 
+  /** Dashboard summary tile (admin and self-service "me/summary" alike) — one grouped query, never a count-per-status round trip. */
+  async countsByAmbassador(ambassadorId: string): Promise<Record<string, number>> {
+    const rows = await this.repository
+      .createQueryBuilder('referral')
+      .select('referral.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('referral.ambassadorId = :ambassadorId', { ambassadorId })
+      .groupBy('referral.status')
+      .getRawMany();
+    return Object.fromEntries(rows.map((r) => [r.status, Number(r.count)]));
+  }
+
   /** [Admin] Referrals view, optionally scoped to one ambassador (their own "my referrals" list reuses this with ambassadorId set). */
   async search(ambassadorId?: string, cursor?: string, limit = 20): Promise<CursorPage<ReferralAttribution>> {
     const qb = this.repository.createQueryBuilder('referral');

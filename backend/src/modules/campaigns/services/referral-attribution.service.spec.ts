@@ -11,7 +11,7 @@ const AMBASSADOR = { id: 'ambassador-1', userId: 'ambassador-user-1', referralCo
 
 describe('ReferralAttributionService', () => {
   let service: ReferralAttributionService;
-  let attributionRepository: Record<'findByReferredUserId' | 'create' | 'save' | 'findByIdOrFail' | 'search', jest.Mock>;
+  let attributionRepository: Record<'findByReferredUserId' | 'create' | 'save' | 'findByIdOrFail' | 'search' | 'countsByAmbassador', jest.Mock>;
   let ambassadorRepository: Record<'findByReferralCode' | 'findByIdOrFail' | 'findById', jest.Mock>;
   let providerProfileService: Record<'existsForUser', jest.Mock>;
   let usersService: Record<'getBasicProfilesByIds', jest.Mock>;
@@ -29,6 +29,7 @@ describe('ReferralAttributionService', () => {
         status: ReferralStatus.PENDING,
       })),
       search: jest.fn(),
+      countsByAmbassador: jest.fn(async () => ({ pending: 2, qualified: 1 })),
     };
     ambassadorRepository = {
       findByReferralCode: jest.fn(async () => AMBASSADOR),
@@ -162,6 +163,14 @@ describe('ReferralAttributionService', () => {
       await service.markQualified('attribution-1');
 
       expect(attributionRepository.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getCounts', () => {
+    it('delegates straight through to the repository\'s grouped count query', async () => {
+      const result = await service.getCounts(AMBASSADOR.id);
+      expect(result).toEqual({ pending: 2, qualified: 1 });
+      expect(attributionRepository.countsByAmbassador).toHaveBeenCalledWith(AMBASSADOR.id);
     });
   });
 });

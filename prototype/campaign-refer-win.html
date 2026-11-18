@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-EQ5R7PVBP7"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-EQ5R7PVBP7');
+</script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Refer, Onboard &amp; Win — Rently</title>
+<link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="assets/images/favicon-16.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="assets/images/favicon-180.png" />
+<meta name="description" content="Become a Rently Ambassador: refer Rental Partners, earn points as they onboard, and climb the leaderboard. Top scorer wins an Airtel Outdoor Unit." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/rently.css" />
+<style>
+/* ============================================================
+   CAMPAIGN HERO — dark, same photographic language as the main
+   hero but with a single still (a referral competition isn't a
+   category carousel) and the prize + CTAs doing the work.
+   ============================================================ */
+.camp-hero{position:relative;min-height:88vh;background:var(--dark);overflow:hidden;}
+.camp-hero-art{position:absolute;inset:0;}
+.camp-hero-scrim{position:absolute;inset:0;z-index:1;background:
+  radial-gradient(900px 500px at 15% 20%,rgba(201,162,77,.16),transparent 60%),
+  linear-gradient(180deg,rgba(8,7,5,.65) 0%,rgba(8,7,5,.35) 45%,rgba(8,7,5,.82) 100%);}
+.camp-hero-content{position:relative;z-index:2;min-height:88vh;display:flex;flex-direction:column;justify-content:center;padding:130px 64px 80px;max-width:720px;}
+.camp-eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--amber);font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:22px;}
+.camp-eyebrow .dot{width:5px;height:5px;border-radius:50%;background:var(--amber);}
+.camp-hero h1{font-size:clamp(36px,5vw,58px);line-height:1.08;color:#fff;font-weight:400;letter-spacing:-.02em;margin-bottom:20px;}
+.camp-hero h1 em{color:var(--amber);font-style:normal;}
+.camp-hero-sub{color:rgba(255,255,255,.78);font-size:17px;line-height:1.65;max-width:560px;margin-bottom:36px;}
+.camp-ctas{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:30px;}
+.camp-referred-chip{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#fff;font-size:13px;padding:8px 14px;border-radius:999px;width:fit-content;margin-bottom:24px;}
+.hero-trust{display:flex;flex-wrap:wrap;align-items:center;gap:10px;color:rgba(255,255,255,.68);font-size:13px;font-weight:500;}
+.hero-trust .dot{width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,.4);flex-shrink:0;}
+.pill-btn.ghost-light{background:transparent;border:1.5px solid rgba(255,255,255,.5);color:#fff;}
+.pill-btn.ghost-light:hover{border-color:#fff;background:rgba(255,255,255,.08);transform:translateY(-1px);}
+@media(max-width:720px){
+  .camp-hero-content{padding:120px 24px 60px;}
+  .camp-ctas{flex-direction:column;align-items:stretch;}
+  .camp-ctas .pill-btn{justify-content:center;}
+}
+
+/* ============================================================
+   HOW IT WORKS
+   ============================================================ */
+.camp-steps{padding:120px 0;}
+.camp-step-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:28px;}
+.camp-step{padding:28px 24px;border:1px solid var(--line);border-radius:18px;}
+.camp-step .n{font-family:var(--serif);font-size:30px;color:var(--ink-faint);margin-bottom:16px;}
+.camp-step h4{font-size:15.5px;font-weight:600;margin-bottom:8px;}
+.camp-step p{font-size:13.5px;color:var(--ink-soft);line-height:1.65;}
+@media(max-width:900px){.camp-step-grid{grid-template-columns:1fr 1fr;}}
+@media(max-width:560px){.camp-step-grid{grid-template-columns:1fr;}}
+
+/* ============================================================
+   SCORING — the real MILESTONE_POINTS values, not marketing copy
+   ============================================================ */
+.camp-scoring{padding:120px 0;background:var(--dark);color:#fff;}
+.camp-scoring .sec-head h2{color:#fff;}
+.score-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px;}
+.score-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:22px;}
+.score-card .pts{font-family:var(--serif);font-size:30px;color:var(--amber);margin-bottom:10px;}
+.score-card .lbl{font-size:13px;color:rgba(255,255,255,.78);line-height:1.5;}
+.score-max{display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.6);font-size:13.5px;}
+@media(max-width:900px){.score-row{grid-template-columns:1fr 1fr;}}
+@media(max-width:560px){.score-row{grid-template-columns:1fr;}}
+
+/* ============================================================
+   LEADERBOARD
+   ============================================================ */
+.camp-leaderboard{padding:120px 0;}
+.lb-list{display:flex;flex-direction:column;gap:8px;}
+.lb-row{display:flex;align-items:center;gap:16px;padding:14px 18px;border:1px solid var(--line);border-radius:14px;}
+.lb-row .rank{font-family:var(--serif);font-size:19px;width:34px;color:var(--ink-faint);flex-shrink:0;text-align:center;}
+.lb-row.top .rank{color:var(--amber);font-weight:600;}
+.lb-row .medal{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;}
+.lb-row:nth-child(1) .medal{background:#f4e3b2;color:#8a6d1c;}
+.lb-row:nth-child(2) .medal{background:#e3e5e8;color:#5b6168;}
+.lb-row:nth-child(3) .medal{background:#edd4bb;color:#8a5a2c;}
+.lb-row .name{flex:1;font-size:14px;font-weight:600;}
+.lb-row .pts-val{font-family:var(--serif);font-size:18px;font-variant-numeric:tabular-nums;}
+.lb-row .pts-lbl{font-size:11px;color:var(--ink-faint);margin-left:4px;}
+
+/* ============================================================
+   PRIZE
+   ============================================================ */
+.camp-prize{padding:0 0 130px;}
+.prize-card{display:grid;grid-template-columns:.9fr 1.1fr;gap:0;border:1px solid var(--line);border-radius:22px;overflow:hidden;align-items:stretch;}
+.prize-art{position:relative;background:var(--bg-alt);min-height:260px;}
+.prize-copy{padding:40px;display:flex;flex-direction:column;justify-content:center;}
+.prize-copy .eyebrow{margin-bottom:14px;}
+.prize-copy h3{font-size:24px;font-weight:400;margin-bottom:12px;}
+.prize-copy p{color:var(--ink-soft);font-size:14.5px;line-height:1.7;margin-bottom:8px;}
+@media(max-width:800px){.prize-card{grid-template-columns:1fr;}.prize-art{min-height:160px;}}
+</style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<nav class="nav on-dark" id="nav">
+  <div class="container nav-inner">
+    <a class="wordmark" href="/">
+      <img class="logo-light" src="assets/images/logo.png" alt="Rently" />
+      <img class="logo-ondark" src="assets/images/logo-dark.png" alt="Rently" />
+    </a>
+    <div class="nav-links">
+      <a href="browse">Marketplace</a>
+      <a href="#leaderboard">Leaderboard</a>
+      <a href="#scoring">How scoring works</a>
+    </div>
+    <div class="nav-cta">
+      <a class="become" href="#" id="navLogoutLink" style="display:none;">Log out</a>
+      <a class="pill-btn ghost" href="auth" id="navAuthLink">Log in</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<section class="camp-hero">
+  <div class="camp-hero-art" id="campHeroArt"></div>
+  <div class="camp-hero-scrim"></div>
+  <div class="camp-hero-content">
+    <div class="camp-eyebrow"><span class="dot"></span>Rently × SwapConnect Campaign</div>
+    <div id="referredChip" class="camp-referred-chip" style="display:none;"></div>
+    <h1>Refer. Onboard. <em>Win.</em></h1>
+    <p class="camp-hero-sub" id="heroSub">Become a Rently Ambassador, share your personal referral link, and earn points every time someone you referred registers, gets verified, and lists. The ambassador with the highest score when the challenge closes wins an Airtel Outdoor Unit — hosted and fulfilled on SwapConnect.</p>
+    <div class="camp-ctas">
+      <a class="pill-btn blue lg" href="auth?next=ambassador-dashboard" id="primaryCta">Become an Ambassador</a>
+      <a class="pill-btn ghost-light lg" href="#scoring">See how scoring works</a>
+    </div>
+    <div class="hero-trust">
+      <span>Free to join</span><span class="dot"></span><span>Points tracked automatically</span><span class="dot"></span><span>Winner confirmed by Rently</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section class="camp-steps">
+  <div class="container">
+    <div class="sec-head reveal">
+      <div><div class="eyebrow">How it works</div><h2>Four steps from <em>sign-up to score.</em></h2></div>
+    </div>
+    <div class="camp-step-grid">
+      <div class="camp-step reveal"><div class="n">01</div><h4>Become an Ambassador</h4><p>Create a Rently account (or use your existing one) and accept the Ambassador agreement. You get a personal referral code instantly.</p></div>
+      <div class="camp-step reveal"><div class="n">02</div><h4>Share your link</h4><p>Send your referral link to Rental Partners you know — on WhatsApp, social, wherever. Every signup through it is tracked to you automatically.</p></div>
+      <div class="camp-step reveal"><div class="n">03</div><h4>They onboard, you score</h4><p>As each referral registers, gets verified, and lists a verified listing, points land on your ledger — never for a click alone, only for real progress.</p></div>
+      <div class="camp-step reveal"><div class="n">04</div><h4>Climb the leaderboard</h4><p>Your score updates live. When the challenge closes, the highest-scoring Ambassador is confirmed as the winner by Rently.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SCORING ============ -->
+<section class="camp-scoring" id="scoring">
+  <div class="container">
+    <div class="sec-head reveal">
+      <div><div class="eyebrow" style="color:rgba(255,255,255,.5)">How scoring works</div><h2 style="margin-top:18px">Points for real <em>onboarding progress</em> — nothing else.</h2></div>
+    </div>
+    <div class="score-row reveal">
+      <div class="score-card"><div class="pts">+5</div><div class="lbl">Your referral registers as a Rental Partner</div></div>
+      <div class="score-card"><div class="pts">+5</div><div class="lbl">Their account passes ID verification</div></div>
+      <div class="score-card"><div class="pts">+5</div><div class="lbl">Their first listing is approved and goes live</div></div>
+      <div class="score-card"><div class="pts">+10</div><div class="lbl">They receive a genuine first rental inquiry</div></div>
+    </div>
+    <div class="score-max reveal" id="scoreMaxRow"></div>
+  </div>
+</section>
+
+<!-- ============ LEADERBOARD ============ -->
+<section class="camp-leaderboard" id="leaderboard">
+  <div class="container">
+    <div class="sec-head reveal">
+      <div><div class="eyebrow">Live standings</div><h2>Current <em>leaderboard.</em></h2></div>
+    </div>
+    <div class="lb-list" id="lbList"><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
+  </div>
+</section>
+
+<!-- ============ PRIZE ============ -->
+<section class="camp-prize">
+  <div class="container">
+    <div class="prize-card reveal">
+      <div class="prize-art" id="prizeArt"></div>
+      <div class="prize-copy">
+        <div class="eyebrow">This challenge's prize</div>
+        <h3>An Airtel Outdoor Unit</h3>
+        <p>Hosted and fulfilled through Rently's partner integration with SwapConnect — the winning Ambassador's prize is confirmed by Rently and handed off to SwapConnect for fulfilment once the challenge closes.</p>
+        <p style="color:var(--ink-faint);font-size:12.5px;">Full prize fulfilment tracking is rolling out as the next part of this integration.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="foot">
+  <div class="container">
+    <div class="foot-top">
+      <div>
+        <span class="wordmark wordmark-lg"><img src="assets/images/logo-dark.png" alt="Rently" /></span>
+        <p>Access made simple. Ownership made optional. A Dynamic Technology Ltd. product, built for Nigeria's rental economy.</p>
+      </div>
+      <div><h5>Explore</h5><ul><li><a href="browse">Categories</a></li><li><a href="/#intro">How Rently works</a></li></ul></div>
+      <div><h5>Ambassadors</h5><ul><li><a href="auth?next=ambassador-dashboard">Become an Ambassador</a></li><li><a href="#scoring">Scoring rules</a></li><li><a href="#leaderboard">Leaderboard</a></li></ul></div>
+      <div><h5>Rental Partners</h5><ul><li><a href="auth?role=provider">List &amp; Earn</a></li></ul></div>
+      <div><h5>Support</h5><ul><li><a href="https://wa.me/2347063260000" target="_blank" rel="noopener">WhatsApp: 0706 326 0000</a></li></ul></div>
+    </div>
+    <div class="foot-bottom">
+      <span id="copyrightLine">© 2026 Rently Innovation Hub, a Dynamic Technology Ltd. product.</span>
+      <span>Terms · Privacy · NDPR Compliance</span>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/rently.js"></script>
+<script src="assets/api.js"></script>
+<script>
+/* ============ ART (decorative, same factory as the marketing pages) ============ */
+paintArt(document.getElementById('campHeroArt'),'generator',160,.22);
+paintArt(document.getElementById('prizeArt'),'tools',140,.2);
+document.getElementById('scoreMaxRow').innerHTML = icon('check',{size:14,stroke:2.4}) + '<span>Maximum 25 points per referral — a milestone can only ever be awarded once, and clicking a link alone never earns points.</span>';
+
+/* ============ REFERRAL CODE IN THE URL ============
+   A shared ambassador link looks like campaign-refer-win.html?ref=CODE —
+   carried straight through to the signup CTA, exactly like auth.html
+   expects it (see auth.html's own `referralCode` passthrough). */
+(function(){
+  const ref = new URLSearchParams(window.location.search).get('ref');
+  if(!ref) return;
+  const chip = document.getElementById('referredChip');
+  chip.innerHTML = icon('check',{size:13,stroke:2.6}) + `<span>You're joining via a referral code</span>`;
+  chip.style.display = 'inline-flex';
+  document.getElementById('heroSub').textContent = "You've been invited to join Rently. Create your account below — your referral is tracked automatically, no extra steps needed.";
+  const cta = document.getElementById('primaryCta');
+  cta.textContent = 'Join Rently';
+  cta.href = `auth?ref=${encodeURIComponent(ref)}`;
+})();
+
+/* ============ SESSION-AWARE NAV ============ */
+(function(){
+  const session=getSession();
+  if(session){
+    const link=document.getElementById('navAuthLink');
+    link.textContent='Dashboard';
+    link.href = session.user.roles.includes('ambassador') ? 'ambassador-dashboard' : (session.user.roles.includes('provider') ? 'dashboard-provider' : 'dashboard-renter');
+    const logoutLink=document.getElementById('navLogoutLink');
+    logoutLink.style.display='';
+    logoutLink.addEventListener('click', async (e)=>{ e.preventDefault(); await apiLogout(); window.location.reload(); });
+    // Already a logged-in, non-ambassador visitor with no ?ref in the URL — the primary CTA should still read "Become an Ambassador" and just skip auth entirely.
+    if(!new URLSearchParams(window.location.search).get('ref') && !session.user.roles.includes('ambassador')){
+      document.getElementById('primaryCta').href = 'ambassador-dashboard';
+    } else if(session.user.roles.includes('ambassador')){
+      document.getElementById('primaryCta').textContent = 'Go to your dashboard';
+      document.getElementById('primaryCta').href = 'ambassador-dashboard';
+    }
+  }
+})();
+
+/* ============ LIVE LEADERBOARD (public, no auth) ============ */
+(async function loadLeaderboard(){
+  const el = document.getElementById('lbList');
+  try{
+    const {data} = await apiFetch('/campaigns/leaderboard?limit=10',{auth:false});
+    const rows = data || [];
+    if(!rows.length){
+      el.innerHTML = `<div class="empty-state" style="padding:50px 24px;"><div class="ic">${icon('user',{size:22})}</div><h3>No scores yet</h3><p>Be the first Ambassador to earn points on a referral.</p></div>`;
+      return;
+    }
+    el.innerHTML = rows.map(r=>`
+      <div class="lb-row ${r.rank<=3?'top':''}">
+        ${r.rank<=3 ? `<div class="medal">${r.rank}</div>` : `<div class="rank">${r.rank}</div>`}
+        <div class="name">${r.name}</div>
+        <div><span class="pts-val">${r.balance}</span><span class="pts-lbl">pts</span></div>
+      </div>
+    `).join('');
+  }catch(e){
+    el.innerHTML = `<p style="color:var(--ink-faint);font-size:13px;padding:20px">Couldn't load the leaderboard right now.</p>`;
+  }
+})();
+
+initMarketingNav();
+initReveal();
+setCopyrightYear('copyrightLine');
+</script>
+</body>
+</html>

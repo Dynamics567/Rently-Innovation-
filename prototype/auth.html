@@ -106,6 +106,7 @@ body{min-height:100vh;}
         <div class="field"><label>Email address</label><input type="email" id="emailInput" placeholder="you@example.com" /></div>
         <div id="phoneField" class="field" style="display:none;"><label>Phone number</label><input type="tel" id="phoneInput" placeholder="+2348012345678" value="+234" /></div>
         <div class="field"><label>Password</label><input type="password" id="passwordInput" placeholder="••••••••" /></div>
+        <div id="referralNote" class="banner info" style="display:none;margin-bottom:20px;"></div>
         <div id="providerNote" class="banner info" style="display:none;margin-bottom:20px;"></div>
         <div id="businessNameField" class="field" style="display:none;"><label>Business name <span style="color:var(--ink-faint);font-weight:400">(optional — leave blank if you're an individual)</span></label><input type="text" id="businessNameInput" placeholder="e.g. EventCraft NG" /></div>
         <div id="authError" class="banner danger" style="display:none;margin-bottom:20px;"></div>
@@ -183,6 +184,15 @@ const params=new URLSearchParams(window.location.search);
 const initialProvider = params.get('role')==='provider';
 const inviteToken = params.get('inviteToken');
 const inviteEmail = params.get('inviteEmail');
+// Carried through to /auth/signup untouched — a referred signup, from the
+// campaign landing page's shared links (see campaign-refer-win.html). A
+// bad/unknown code never blocks the signup; Campaigns' own listener drops
+// it silently (see SignupReferralListener).
+const referralCode = params.get('ref');
+// Overrides the usual role-based post-auth redirect — e.g. the campaign
+// page's "Become an Ambassador" CTA sends people here with
+// next=ambassador-dashboard so they land there instead of dashboard-renter.
+const nextPath = params.get('next');
 
 // Already signed in — send straight to the right dashboard. Skipped when
 // landing via a password-reset link: that flow must work even with a
@@ -190,7 +200,7 @@ const inviteEmail = params.get('inviteEmail');
 (function(){
   if(params.get('resetToken') || inviteToken) return;
   const session=getSession();
-  if(session) window.location.href = session.user.roles.includes('provider') ? 'dashboard-provider' : 'dashboard-renter';
+  if(session) window.location.href = nextPath || (session.user.roles.includes('provider') ? 'dashboard-provider' : 'dashboard-renter');
 })();
 
 document.getElementById('backLink').innerHTML = icon('chevronLeft',{size:13})+' Back to Rently';
@@ -252,6 +262,11 @@ if(inviteToken && inviteEmail){
   document.getElementById('emailInput').readOnly = true;
   document.getElementById('formSub').textContent = "You've been invited to join Rently's admin team — create your account to accept.";
 }
+if(referralCode){
+  const note=document.getElementById('referralNote');
+  note.innerHTML = icon('check',{size:15})+`<div><div class="t">You were referred to Rently</div><div class="d">Sign up to get started — your referral is tracked automatically.</div></div>`;
+  note.style.display='flex';
+}
 
 function showAuthError(msg){
   const el=document.getElementById('authError');
@@ -280,7 +295,7 @@ document.getElementById('submitAuthBtn').addEventListener('click', async ()=>{
   try{
     if(mode==='signup'){
       const {data} = await apiFetch('/auth/signup',{method:'POST',auth:false,body:{
-        email, phone, password, fullName, roles:[role], inviteToken: inviteToken||undefined,
+        email, phone, password, fullName, roles:[role], inviteToken: inviteToken||undefined, referralCode: referralCode||undefined,
       }});
       setSession(data.user, data);
       if(role==='provider'){
@@ -291,11 +306,11 @@ document.getElementById('submitAuthBtn').addEventListener('click', async ()=>{
       // account straight in the admin dashboard — that's the only reason
       // they were signing up via this link in the first place.
       const isNewAdmin = data.user.roles.includes('admin') || data.user.roles.includes('super_admin');
-      window.location.href = isNewAdmin ? 'admin' : (role==='provider' ? 'dashboard-provider' : 'dashboard-renter');
+      window.location.href = isNewAdmin ? 'admin' : (nextPath || (role==='provider' ? 'dashboard-provider' : 'dashboard-renter'));
     } else {
       const {data} = await apiFetch('/auth/login',{method:'POST',auth:false,body:{email,password}});
       setSession(data.user, data);
-      window.location.href = data.user.roles.includes('provider') ? 'dashboard-provider' : 'dashboard-renter';
+      window.location.href = nextPath || (data.user.roles.includes('provider') ? 'dashboard-provider' : 'dashboard-renter');
     }
   }catch(err){
     showAuthError(apiErrorMessage(err));

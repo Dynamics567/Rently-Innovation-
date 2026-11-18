@@ -120,6 +120,11 @@ export class ReferralAttributionService {
     return this.attributionRepository.findByReferredUserId(referredUserId);
   }
 
+  /** Referral counts by status for one ambassador — backs the dashboard summary tile. */
+  async getCounts(ambassadorId: string): Promise<Record<string, number>> {
+    return this.attributionRepository.countsByAmbassador(ambassadorId);
+  }
+
   /** [Admin] Attaches the referred person's name and the referring ambassador's name — two small batch lookups, never a per-row query, same Object.assign pattern as AmbassadorService.search(). */
   async search(ambassadorId?: string, cursor?: string, limit?: number): Promise<CursorPage<ReferralAttribution>> {
     const page = await this.attributionRepository.search(ambassadorId, cursor, limit);

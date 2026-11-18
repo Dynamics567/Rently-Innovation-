@@ -7,7 +7,7 @@ import { PointsLedgerEntryType } from '../enums/points-ledger-entry-type.enum';
 
 describe('PointsLedgerService', () => {
   let service: PointsLedgerService;
-  let pointsLedgerRepository: Record<'create' | 'save' | 'getBalance' | 'getBalances' | 'findByAmbassadorId' | 'getLeaderboard', jest.Mock>;
+  let pointsLedgerRepository: Record<'create' | 'save' | 'getBalance' | 'getBalances' | 'findByAmbassadorId' | 'getLeaderboard' | 'getRank', jest.Mock>;
   let ambassadorRepository: Record<'findByIdOrFail', jest.Mock>;
   let usersService: Record<'getBasicProfilesByIds', jest.Mock>;
   let auditLogService: Record<'record', jest.Mock>;
@@ -20,6 +20,7 @@ describe('PointsLedgerService', () => {
       getBalances: jest.fn(async () => new Map()),
       findByAmbassadorId: jest.fn(),
       getLeaderboard: jest.fn(async () => []),
+      getRank: jest.fn(async () => null),
     };
     ambassadorRepository = { findByIdOrFail: jest.fn(async () => ({ id: 'ambassador-1' })) };
     usersService = { getBasicProfilesByIds: jest.fn(async () => []) };
@@ -108,6 +109,38 @@ describe('PointsLedgerService', () => {
       expect(usersService.getBasicProfilesByIds).toHaveBeenCalledTimes(1);
       expect(result[0]).toMatchObject({ ambassadorId: 'a1', balance: 25, name: 'Ada Lovelace' });
       expect(result[1]).toMatchObject({ ambassadorId: 'a2', balance: 10, name: 'Grace Hopper' });
+    });
+  });
+
+  describe('getRank', () => {
+    it('delegates straight through to the repository, null and all', async () => {
+      const result = await service.getRank('ambassador-1');
+      expect(result).toBeNull();
+      expect(pointsLedgerRepository.getRank).toHaveBeenCalledWith('ambassador-1');
+    });
+  });
+
+  describe('getPublicLeaderboard', () => {
+    it('masks every row\'s name to "First L." and never exposes userId/referralCode', async () => {
+      pointsLedgerRepository.getLeaderboard.mockResolvedValue([
+        { ambassadorId: 'a1', userId: 'u1', status: 'active', referralCode: 'AAAA1111', balance: 25, reachedAt: '2026-11-01T00:00:00Z' },
+      ]);
+      usersService.getBasicProfilesByIds.mockResolvedValue([{ id: 'u1', fullName: 'Ada Lovelace' }]);
+
+      const result = await service.getPublicLeaderboard(10);
+
+      expect(result).toEqual([{ rank: 1, name: 'Ada L.', balance: 25 }]);
+    });
+
+    it('falls back to a generic label for a single-word or missing name', async () => {
+      pointsLedgerRepository.getLeaderboard.mockResolvedValue([
+        { ambassadorId: 'a1', userId: 'u1', status: 'active', referralCode: 'AAAA1111', balance: 5, reachedAt: null },
+      ]);
+      usersService.getBasicProfilesByIds.mockResolvedValue([{ id: 'u1', fullName: 'Cher' }]);
+
+      const result = await service.getPublicLeaderboard();
+
+      expect(result[0].name).toBe('Cher');
     });
   });
 });

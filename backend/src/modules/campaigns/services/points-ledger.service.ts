@@ -81,4 +81,31 @@ export class PointsLedgerService {
     const nameById = new Map(users.map((u) => [u.id, u.fullName]));
     return rows.map((r) => ({ ...r, name: nameById.get(r.userId) ?? null }));
   }
+
+  /** An ambassador's own rank + the size of the field — backs their dashboard's "Rank #N of M" tile. */
+  async getRank(ambassadorId: string): Promise<{ rank: number; totalParticipants: number } | null> {
+    return this.pointsLedgerRepository.getRank(ambassadorId);
+  }
+
+  /**
+   * Public leaderboard (campaign landing page, no auth) — same ranking as
+   * getLeaderboard(), but names are masked to "First L." and the
+   * ambassador's own id/referralCode/userId never leave the server. A
+   * competition driving public excitement needs *a* board, not everyone
+   * else's private identifiers.
+   */
+  async getPublicLeaderboard(limit?: number): Promise<Array<{ rank: number; name: string; balance: number }>> {
+    const rows = await this.pointsLedgerRepository.getLeaderboard(limit);
+    if (!rows.length) return [];
+    const users = await this.usersService.getBasicProfilesByIds(rows.map((r) => r.userId));
+    const nameById = new Map(users.map((u) => [u.id, u.fullName]));
+    return rows.map((r, i) => ({ rank: i + 1, name: maskName(nameById.get(r.userId)), balance: r.balance }));
+  }
+}
+
+function maskName(fullName: string | null | undefined): string {
+  if (!fullName) return 'Rently Ambassador';
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return parts[0] || 'Rently Ambassador';
+  return `${parts[0]} ${parts[parts.length - 1][0]}.`;
 }
