@@ -8,10 +8,12 @@ import { UserRole } from '@modules/identity/enums/user-role.enum';
 import { AuthenticatedUser } from '@modules/identity/strategies/jwt.strategy';
 import { AmbassadorService } from '../services/ambassador.service';
 import { ReferralAttributionService } from '../services/referral-attribution.service';
+import { PointsLedgerService } from '../services/points-ledger.service';
 import { ReasonDto } from '../dto/reason.dto';
 import { ManualAttributeReferralDto } from '../dto/manual-attribute-referral.dto';
+import { AdjustPointsDto } from '../dto/adjust-points.dto';
 
-/** Mirrors AdminProvidersController's shape exactly — thin routing layer, business logic stays in AmbassadorService. */
+/** Mirrors AdminProvidersController's shape exactly — thin routing layer, business logic stays in the services. */
 @ApiTags('admin')
 @ApiBearerAuth()
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
@@ -20,11 +22,18 @@ export class AdminAmbassadorsController {
   constructor(
     private readonly ambassadorService: AmbassadorService,
     private readonly referralAttributionService: ReferralAttributionService,
+    private readonly pointsLedgerService: PointsLedgerService,
   ) {}
 
   @Get()
   async search(@Query() query: CursorPaginationDto) {
     return this.ambassadorService.search(query.cursor, query.limit);
+  }
+
+  /** Registered before :id, same reasoning as AdminProvidersController's verification-queue — "leaderboard" would otherwise be swallowed by the :id param route. */
+  @Get('leaderboard')
+  async leaderboard(@Query('limit') limit?: string) {
+    return this.pointsLedgerService.getLeaderboard(limit ? Number(limit) : undefined);
   }
 
   @Get(':id')
@@ -35,6 +44,21 @@ export class AdminAmbassadorsController {
   @Get(':id/referrals')
   async referrals(@Param('id', ParseUUIDPipe) id: string, @Query() query: CursorPaginationDto) {
     return this.referralAttributionService.search(id, query.cursor, query.limit);
+  }
+
+  @Get(':id/points')
+  async points(@Param('id', ParseUUIDPipe) id: string, @Query() query: CursorPaginationDto) {
+    return this.pointsLedgerService.getHistory(id, query.cursor, query.limit);
+  }
+
+  @RequirePermission('campaigns.manage')
+  @Post(':id/points/adjust')
+  async adjustPoints(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AdjustPointsDto,
+    @CurrentUser() admin: AuthenticatedUser,
+  ) {
+    return this.pointsLedgerService.manualAdjust(id, dto.pointsDelta, admin.id, dto.reason);
   }
 
   @RequirePermission('campaigns.manage')

@@ -12,6 +12,7 @@ import { UserRole } from '@modules/identity/enums/user-role.enum';
 import { AmbassadorProfileRepository } from '../repositories/ambassador-profile.repository';
 import { AmbassadorProfile } from '../entities/ambassador-profile.entity';
 import { AmbassadorStatus } from '../enums/ambassador-status.enum';
+import { PointsLedgerService } from './points-ledger.service';
 
 // No 0/O/1/I — avoids ambiguous referral codes read aloud or over WhatsApp.
 const REFERRAL_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -23,6 +24,7 @@ export class AmbassadorService {
   constructor(
     private readonly ambassadorRepository: AmbassadorProfileRepository,
     private readonly usersService: UsersService,
+    private readonly pointsLedgerService: PointsLedgerService,
     private readonly auditLogService: AuditLogService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -55,37 +57,42 @@ export class AmbassadorService {
     return saved;
   }
 
+  /** Own self-service "me" lookup — also carries pointsBalance, since an ambassador should see their own score even before Phase 4's full dashboard exists. */
   async getByUserId(userId: string): Promise<AmbassadorProfile> {
     const profile = await this.ambassadorRepository.findByUserId(userId);
     if (!profile) {
       throw DomainException.notFound(ErrorCode.RESOURCE_NOT_FOUND, 'No ambassador profile exists for this user.');
     }
-    return profile;
+    const pointsBalance = await this.pointsLedgerService.getBalance(profile.id);
+    return Object.assign(profile, { pointsBalance });
   }
 
-  /** [Admin] Attaches the linked user's name/email/phone — Object.assign, same pattern VerificationDocumentsService.listForProvider() uses, so @Exclude() on the entity still applies and the prototype survives. */
+  /** [Admin] Attaches the linked user's name/email/phone and pointsBalance — Object.assign, same pattern VerificationDocumentsService.listForProvider() uses, so @Exclude() on the entity still applies and the prototype survives. */
   async getById(id: string): Promise<AmbassadorProfile> {
     const profile = await this.ambassadorRepository.findByIdOrFail(id, 'Ambassador profile');
-    const [user] = await this.usersService.getBasicProfilesByIds([profile.userId]);
-    return Object.assign(profile, { user: user ?? null });
+    const [[user], pointsBalance] = await Promise.all([
+      this.usersService.getBasicProfilesByIds([profile.userId]),
+      this.pointsLedgerService.getBalance(id),
+    ]);
+    return Object.assign(profile, { user: user ?? null, pointsBalance });
   }
 
   async search(cursor?: string, limit?: number): Promise<CursorPage<AmbassadorProfile>> {
     const page = await this.ambassadorRepository.search(cursor, limit);
     if (!page.data.length) return page;
-    const users = await this.usersService.getBasicProfilesByIds([...new Set(page.data.map((a) => a.userId))]);
+    const ids = page.data.map((a) => a.id);
+    const [users, balances] = await Promise.all([
+      this.usersService.getBasicProfilesByIds([...new Set(page.data.map((a) => a.userId))]),
+      this.pointsLedgerService.getBalances(ids),
+    ]);
     const userById = new Map(users.map((u) => [u.id, u]));
-    for (const row of page.data) Object.assign(row, { user: userById.get(row.userId) ?? null });
+    for (const row of page.data) {
+      Object.assign(row, { user: userById.get(row.userId) ?? null, pointsBalance: balances.get(row.id) ?? 0 });
+    }
     return page;
   }
 
-  /**
-   * Pending -> Approved only. Approved -> Active is deliberately not wired
-   * up here yet — brief §4's lifecycle implies "active" means currently
-   * participating, which only means something once Phase 3's points/
-   * leaderboard engine exists to drive it (e.g. auto-promote on a
-   * qualified referral). Reserved on the enum, not set by any action yet.
-   */
+  /** Pending -> Approved. Approved -> Active happens automatically on the ambassador's first qualified referral — see activateIfApproved(), called from ReferralMilestoneListener. */
   async approve(id: string, adminId: string): Promise<AmbassadorProfile> {
     const profile = await this.ambassadorRepository.findByIdOrFail(id, 'Ambassador profile');
     const before = { status: profile.status };
@@ -162,6 +169,29 @@ export class AmbassadorService {
       after: { status: saved.status, reason },
     });
     return saved;
+  }
+
+  /**
+   * Idempotent — only ever moves Approved -> Active, never touches a
+   * suspended/disqualified/already-active profile. Called by
+   * ReferralMilestoneListener the moment an ambassador's first referral
+   * is marked qualified; no admin action involved (actorType SYSTEM).
+   */
+  async activateIfApproved(id: string): Promise<void> {
+    const profile = await this.ambassadorRepository.findByIdOrFail(id, 'Ambassador profile');
+    if (profile.status !== AmbassadorStatus.APPROVED) return;
+    const before = { status: profile.status };
+    profile.status = AmbassadorStatus.ACTIVE;
+    const saved = await this.ambassadorRepository.save(profile);
+    await this.auditLogService.record({
+      actorId: null,
+      actorType: AuditActorType.SYSTEM,
+      action: 'ambassador_profile.activate',
+      entityType: 'AmbassadorProfile',
+      entityId: id,
+      before,
+      after: { status: saved.status },
+    });
   }
 
   private async generateUniqueReferralCode(): Promise<string> {

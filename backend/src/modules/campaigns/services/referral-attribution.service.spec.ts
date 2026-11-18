@@ -143,4 +143,25 @@ describe('ReferralAttributionService', () => {
       });
     });
   });
+
+  describe('markQualified', () => {
+    it('promotes Pending to Qualified and audit-logs as the system actor', async () => {
+      await service.markQualified('attribution-1');
+
+      expect(attributionRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: ReferralStatus.QUALIFIED }),
+      );
+      expect(auditLogService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'referral_attribution.qualify', actorId: null }),
+      );
+    });
+
+    it('is a no-op for any status other than Pending', async () => {
+      attributionRepository.findByIdOrFail.mockResolvedValue({ id: 'attribution-1', status: ReferralStatus.REJECTED });
+
+      await service.markQualified('attribution-1');
+
+      expect(attributionRepository.save).not.toHaveBeenCalled();
+    });
+  });
 });

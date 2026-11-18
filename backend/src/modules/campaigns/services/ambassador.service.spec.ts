@@ -4,6 +4,7 @@ import { UsersService } from '@modules/identity/services/users.service';
 import { UserRole } from '@modules/identity/enums/user-role.enum';
 import { AuditLogService } from '@common/audit/audit-log.service';
 import { AmbassadorStatus } from '../enums/ambassador-status.enum';
+import { PointsLedgerService } from './points-ledger.service';
 
 /** Unit-level, same shape as every other *.service.spec.ts in this repo: hand-rolled mocks, no real database. */
 describe('AmbassadorService', () => {
@@ -13,6 +14,7 @@ describe('AmbassadorService', () => {
     jest.Mock
   >;
   let usersService: Record<'addSelfServiceRole' | 'getBasicProfilesByIds', jest.Mock>;
+  let pointsLedgerService: Record<'getBalance' | 'getBalances', jest.Mock>;
   let auditLogService: Record<'record', jest.Mock>;
   let eventEmitter: Record<'emit', jest.Mock>;
 
@@ -34,11 +36,16 @@ describe('AmbassadorService', () => {
       addSelfServiceRole: jest.fn(async () => undefined),
       getBasicProfilesByIds: jest.fn(async () => [{ id: 'user-1', fullName: 'Ada Lovelace', email: 'ada@example.com' }]),
     };
+    pointsLedgerService = {
+      getBalance: jest.fn(async () => 0),
+      getBalances: jest.fn(async () => new Map()),
+    };
     auditLogService = { record: jest.fn(async () => undefined) };
     eventEmitter = { emit: jest.fn() };
     service = new AmbassadorService(
       ambassadorRepository as unknown as AmbassadorProfileRepository,
       usersService as unknown as UsersService,
+      pointsLedgerService as unknown as PointsLedgerService,
       auditLogService as unknown as AuditLogService,
       eventEmitter as unknown as any,
     );
@@ -140,6 +147,29 @@ describe('AmbassadorService', () => {
 
       expect(result.status).toBe(AmbassadorStatus.DISQUALIFIED);
       expect(result.disqualifiedReason).toBe('Confirmed self-referral fraud');
+    });
+  });
+
+  describe('activateIfApproved', () => {
+    it('promotes Approved to Active', async () => {
+      ambassadorRepository.findByIdOrFail.mockResolvedValue({ id: 'ambassador-1', status: AmbassadorStatus.APPROVED });
+
+      await service.activateIfApproved('ambassador-1');
+
+      expect(ambassadorRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: AmbassadorStatus.ACTIVE }),
+      );
+      expect(auditLogService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'ambassador_profile.activate', actorId: null }),
+      );
+    });
+
+    it('is a no-op for any status other than Approved', async () => {
+      ambassadorRepository.findByIdOrFail.mockResolvedValue({ id: 'ambassador-1', status: AmbassadorStatus.PENDING });
+
+      await service.activateIfApproved('ambassador-1');
+
+      expect(ambassadorRepository.save).not.toHaveBeenCalled();
     });
   });
 });

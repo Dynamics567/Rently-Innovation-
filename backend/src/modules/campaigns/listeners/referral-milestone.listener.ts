@@ -13,6 +13,11 @@ import { ReferralAttributionRepository } from '../repositories/referral-attribut
 import { ReferralMilestoneRepository } from '../repositories/referral-milestone.repository';
 import { AmbassadorProfileRepository } from '../repositories/ambassador-profile.repository';
 import { ReferralMilestoneType } from '../enums/referral-milestone-type.enum';
+import { PointsLedgerEntryType } from '../enums/points-ledger-entry-type.enum';
+import { MILESTONE_POINTS } from '../constants/milestone-points';
+import { PointsLedgerService } from '../services/points-ledger.service';
+import { ReferralAttributionService } from '../services/referral-attribution.service';
+import { AmbassadorService } from '../services/ambassador.service';
 
 /**
  * Reacts to events Identity/Catalog/Booking already emit for their own
@@ -30,6 +35,9 @@ export class ReferralMilestoneListener {
     private readonly attributionRepository: ReferralAttributionRepository,
     private readonly milestoneRepository: ReferralMilestoneRepository,
     private readonly ambassadorRepository: AmbassadorProfileRepository,
+    private readonly pointsLedgerService: PointsLedgerService,
+    private readonly referralAttributionService: ReferralAttributionService,
+    private readonly ambassadorService: AmbassadorService,
     private readonly auditLogService: AuditLogService,
     private readonly eventEmitter: EventEmitter2,
   ) {}
@@ -76,6 +84,22 @@ export class ReferralMilestoneListener {
         before: null,
         after: { milestoneType },
       });
+
+      // Points, qualification, and activation are side effects of this one
+      // real milestone — brief §7 (points per milestone), §7 again ("do not
+      // award points for an incomplete account" — hence Pending stays
+      // Pending until a real milestone lands), and §4's Approved -> Active
+      // transition, which this is the concrete trigger for (see
+      // AmbassadorService.activateIfApproved()'s own doc comment).
+      await this.pointsLedgerService.record({
+        ambassadorId: attribution.ambassadorId,
+        type: PointsLedgerEntryType.MILESTONE_AWARD,
+        pointsDelta: MILESTONE_POINTS[milestoneType],
+        sourceEntityType: 'ReferralMilestone',
+        sourceEntityId: milestone.id,
+      });
+      await this.referralAttributionService.markQualified(attribution.id);
+      await this.ambassadorService.activateIfApproved(attribution.ambassadorId);
 
       const ambassador = await this.ambassadorRepository.findByIdOrFail(
         attribution.ambassadorId,

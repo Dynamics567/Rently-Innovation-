@@ -87,6 +87,31 @@ export class ReferralAttributionService {
     return saved;
   }
 
+  /**
+   * Idempotent — only ever moves Pending -> Qualified, never touches an
+   * already-qualified/rejected/reversed row. Called by
+   * ReferralMilestoneListener the moment a referral's first real
+   * milestone lands — brief §7: "do not award points simply because a
+   * user clicks a referral link or creates an incomplete account," so a
+   * referral stays Pending until something real actually happens.
+   */
+  async markQualified(id: string): Promise<void> {
+    const attribution = await this.attributionRepository.findByIdOrFail(id, 'Referral attribution');
+    if (attribution.status !== ReferralStatus.PENDING) return;
+    const before = { status: attribution.status };
+    attribution.status = ReferralStatus.QUALIFIED;
+    const saved = await this.attributionRepository.save(attribution);
+    await this.auditLogService.record({
+      actorId: null,
+      actorType: AuditActorType.SYSTEM,
+      action: 'referral_attribution.qualify',
+      entityType: 'ReferralAttribution',
+      entityId: id,
+      before,
+      after: { status: saved.status },
+    });
+  }
+
   async getById(id: string): Promise<ReferralAttribution> {
     return this.attributionRepository.findByIdOrFail(id, 'Referral attribution');
   }
