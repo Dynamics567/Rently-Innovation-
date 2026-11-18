@@ -280,7 +280,7 @@ h1,h2,h3{font-family:var(--sans);}
     <a class="side-link" data-view="ambassadors" id="linkAmbassadors"></a>
     <a class="side-link" data-view="referrals" id="linkReferrals"></a>
     <a class="side-link planned" href="#" data-planned="campaignPoints" id="linkCampaignPoints"></a>
-    <a class="side-link planned" href="#" data-planned="campaignLeaderboard" id="linkCampaignLeaderboard"></a>
+    <a class="side-link" data-view="leaderboard" id="linkCampaignLeaderboard"></a>
     <a class="side-link planned" href="#" data-planned="campaignWinner" id="linkCampaignWinner"></a>
     <a class="side-link planned" href="#" data-planned="campaignSwapConnect" id="linkCampaignSwapConnect"></a>
     <a class="side-link planned" href="#" data-planned="campaignFulfilment" id="linkCampaignFulfilment"></a>
@@ -412,6 +412,12 @@ h1,h2,h3{font-family:var(--sans);}
       <div class="kpi-row-sm" id="referralsKpiRow" style="margin-bottom:16px;"></div>
       <div id="referralsList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
       <div style="margin-top:14px;text-align:center;"><button class="pill-btn ghost sm" id="refLoadMore" style="display:none;">Load more</button></div>
+    </div>
+
+    <!-- ============ LEADERBOARD ============ -->
+    <div class="d-view" id="view-leaderboard">
+      <div class="app-head"><div><h1>Leaderboard</h1><p>Ranked by verified points. Tied scores are broken by whoever reached that score first.</p></div></div>
+      <div id="leaderboardList"><div class="skel-row-sm"></div><div class="skel-row-sm"></div></div>
     </div>
 
     <!-- ============ VERIFICATION ============ -->
@@ -711,6 +717,7 @@ function goView(v){
   if(v==='customers'){ loadCustomers(true); renderCustomersKpis(); }
   if(v==='ambassadors'){ loadAmbassadors(true); renderAmbassadorsKpis(); }
   if(v==='referrals'){ loadReferrals(true); renderReferralsKpis(); }
+  if(v==='leaderboard') loadLeaderboard();
   if(v==='reviews'){ loadReviews(true); renderReviewsKpis(); }
   if(v==='audit') loadAuditLog(true);
   if(v==='team') loadTeam();
@@ -919,6 +926,15 @@ document.getElementById('drawerBody').addEventListener('click', async (e)=>{
       const reason=prompt('Reason this referral is being rejected (visible to the ambassador):');
       if(!reason||reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); btn.disabled=false; return; }
       await apiFetch(`/admin/referrals/${id}/reject`,{method:'POST',body:{reason:reason.trim()}}); closeDrawer(); loadReferrals(true);
+    } else if(action==='ambassador-adjust-points'){
+      const deltaStr=prompt('Points to add or subtract (e.g. 10 or -5):');
+      if(deltaStr===null){ btn.disabled=false; return; }
+      const delta=Number(deltaStr);
+      if(!Number.isInteger(delta)||delta===0){ alert('Enter a non-zero whole number.'); btn.disabled=false; return; }
+      const reason=prompt('Reason for this adjustment (visible in the audit log):');
+      if(!reason||reason.trim().length<5){ if(reason!==null) alert('Please provide a reason of at least 5 characters.'); btn.disabled=false; return; }
+      await apiFetch(`/admin/ambassadors/${id}/points/adjust`,{method:'POST',body:{pointsDelta:delta,reason:reason.trim()}});
+      await selectDrawerTab('points');
     }
   }catch(err){
     alert(apiErrorMessage(err));
@@ -1580,9 +1596,10 @@ const AMBASSADOR_STATUS_CLASS={pending:'',approved:'good',active:'good',suspende
 function renderAmbassadorsTable(){
   const el=document.getElementById('ambassadorsList');
   if(!ambRows.length){ el.innerHTML = stateEmpty('No ambassadors have registered yet.'); return; }
-  el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th>Name</th><th>Referral code</th><th>Status</th><th>Joined</th></tr></thead><tbody>${
+  el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th>Name</th><th>Referral code</th><th>Points</th><th>Status</th><th>Joined</th></tr></thead><tbody>${
     ambRows.map(a=>`<tr class="clickable" data-amb="${a.id}">
       <td>${a.user?a.user.fullName:'—'}</td><td><code>${a.referralCode}</code></td>
+      <td>${a.pointsBalance!=null?a.pointsBalance:0}</td>
       <td><span class="pill-status ${AMBASSADOR_STATUS_CLASS[a.status]||''}">${a.status}</span></td>
       <td>${new Date(a.createdAt).toLocaleDateString()}</td>
     </tr>`).join('')
@@ -1600,7 +1617,7 @@ async function openAmbassadorDrawer(id){
   else if(a.status!=='disqualified') actions.push(`<button class="pill-btn ghost sm" data-admin-action="ambassador-suspend" data-id="${id}">Suspend</button>`);
   if(a.status!=='disqualified') actions.push(`<button class="pill-btn danger sm" data-admin-action="ambassador-disqualify" data-id="${id}">Disqualify</button>`);
   openDrawer(a.user?a.user.fullName:'Ambassador', a.user?(a.user.email||a.user.phone||''):'', [
-    { key:'overview', label:'Overview', render: async ()=> dkv('Referral code', a.referralCode)+dkv('Status', a.status)
+    { key:'overview', label:'Overview', render: async ()=> dkv('Referral code', a.referralCode)+dkv('Points balance', a.pointsBalance!=null?a.pointsBalance:0)+dkv('Status', a.status)
         +dkv('Agreed to rules', new Date(a.agreementAcceptedAt).toLocaleDateString())
         +(a.approvedAt?dkv('Approved', new Date(a.approvedAt).toLocaleDateString()):'')
         +(a.suspendedReason?dkv('Suspension reason', a.suspendedReason):'')
@@ -1610,6 +1627,13 @@ async function openAmbassadorDrawer(id){
       const {data} = await apiFetch(`/admin/ambassadors/${id}/referrals?limit=50`);
       if(!data.length) return stateEmpty('No referrals yet.');
       return data.map(r=>`<div class="dkv"><span class="k">${r.referredUser?r.referredUser.fullName:r.referredUserId}</span><span class="v">${r.status}</span></div>`).join('');
+    }},
+    { key:'points', label:'Points', render: async ()=>{
+      const {data} = await apiFetch(`/admin/ambassadors/${id}/points?limit=50`);
+      const adjustBtn = `<div style="margin-bottom:14px;"><button class="pill-btn ghost sm" data-admin-action="ambassador-adjust-points" data-id="${id}">Adjust points</button></div>`;
+      if(!data.length) return adjustBtn+stateEmpty('No points activity yet.');
+      const POINTS_TYPE_LABEL={milestone_award:'Milestone award',manual_adjustment:'Manual adjustment',reversal:'Reversal'};
+      return adjustBtn+data.map(p=>`<div class="dkv"><span class="k">${POINTS_TYPE_LABEL[p.type]||p.type}${p.reason?' — '+p.reason:''}</span><span class="v">${p.pointsDelta>0?'+':''}${p.pointsDelta}</span></div>`).join('');
     }},
     auditTabFor('AmbassadorProfile', id),
   ]);
@@ -1676,6 +1700,26 @@ async function openReferralDrawer(id){
           </div>`:'') },
     auditTabFor('ReferralAttribution', id),
   ]);
+}
+
+/* ================================================================
+   LEADERBOARD — ranked by verified points, official tie-break
+   already applied server-side (see PointsLedgerRepository's own doc
+   comment). No pagination — the backing query is already LIMIT-ed.
+   ================================================================ */
+async function loadLeaderboard(){
+  const el=document.getElementById('leaderboardList');
+  el.innerHTML='<div class="skel-row-sm"></div>';
+  try{
+    const {data} = await apiFetch('/admin/ambassadors/leaderboard?limit=50');
+    if(!data.length){ el.innerHTML = stateEmpty('No approved or active ambassadors yet.'); return; }
+    el.innerHTML = `<div class="optable-wrap"><table class="optable"><thead><tr><th>#</th><th>Ambassador</th><th>Points</th><th>Status</th></tr></thead><tbody>${
+      data.map((row,i)=>`<tr>
+        <td>${i+1}</td><td>${row.name||row.userId}</td><td>${row.balance}</td>
+        <td><span class="pill-status ${AMBASSADOR_STATUS_CLASS[row.status]||''}">${row.status}</span></td>
+      </tr>`).join('')
+    }</tbody></table></div>`;
+  }catch(e){ el.innerHTML = stateError(e); }
 }
 
 /* ================================================================
@@ -2276,8 +2320,7 @@ const PLANNED_MODULES = {
   locations: { label:'Locations', group:'Marketplace', blurb:"A structured city/region taxonomy for listings, instead of today's free-text location field." },
   promotions: { label:'Promotions', group:'Growth', blurb:'Discount codes and campaigns to grow bookings.' },
   notifications: { label:'Notifications', group:'Growth', blurb:'Admin-authored broadcast notifications to customers or Rental Partners.' },
-  campaignPoints: { label:'Points &amp; milestones', group:'Campaigns', blurb:'Manual point adjustments and the full per-referral milestone ledger for the Refer, Onboard &amp; Win campaign.' },
-  campaignLeaderboard: { label:'Leaderboard', group:'Campaigns', blurb:'Live ambassador ranking by verified points, with the official tie-break rule applied.' },
+  campaignPoints: { label:'Points &amp; milestones', group:'Campaigns', blurb:'A dedicated cross-ambassador ledger view. Per-ambassador history and manual adjustments are already live today — open an ambassador in the Ambassadors view and use its Points tab.' },
   campaignWinner: { label:'Winner verification', group:'Campaigns', blurb:'Reviewing the locked final leaderboard and confirming the campaign winner.' },
   campaignSwapConnect: { label:'SwapConnect integration', group:'Campaigns', blurb:'Prize sync status and connection health with the SwapConnect partner API.' },
   campaignFulfilment: { label:'Prize fulfilment', group:'Campaigns', blurb:'Allocation and delivery status for the confirmed winner’s prize.' },
